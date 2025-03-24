@@ -1,6 +1,5 @@
-
 import { useState, useRef, useEffect } from "react";
-import { Play, Pause, Trash2, Edit2, Calendar, FolderCopy } from "lucide-react";
+import { Play, Pause, Trash2, Edit2, Calendar, Folder } from "lucide-react";
 import { 
   Dialog, 
   DialogContent, 
@@ -178,7 +177,7 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
                 document.getElementById("editFolderDialog")?.click();
               }}
             >
-              <FolderCopy className="h-4 w-4" /> Carpeta
+              <Folder className="h-4 w-4" /> Carpeta
             </Button>
             
             <Button
@@ -219,7 +218,6 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
         )}
       </div>
       
-      {/* Dialog oculto para acceso rápido */}
       <Dialog>
         <DialogTrigger asChild>
           <button id="editFolderDialog" className="hidden"></button>
