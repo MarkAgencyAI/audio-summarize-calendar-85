@@ -13,9 +13,11 @@ import {
 import { Label } from "@/components/ui/label";
 import { Folder as FolderType, useRecordings } from "@/context/RecordingsContext";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function FolderSystem() {
   const { folders, addFolder, updateFolder, deleteFolder } = useRecordings();
+  const isMobile = useIsMobile();
   
   const [showAddFolderDialog, setShowAddFolderDialog] = useState(false);
   const [showEditFolderDialog, setShowEditFolderDialog] = useState(false);
@@ -71,7 +73,7 @@ export function FolderSystem() {
   
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-xl font-medium">Carpetas</h3>
         <Button 
           variant="outline" 
@@ -85,7 +87,7 @@ export function FolderSystem() {
         </Button>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {folders.map(folder => (
           <div 
             key={folder.id}

@@ -11,11 +11,13 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Calendar, CalendarEvent } from "@/components/Calendar";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { recordings, folders } = useRecordings();
+  const isMobile = useIsMobile();
   
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -121,7 +123,7 @@ export default function Dashboard() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredRecordings.map(recording => (
                 <RecordingItem 
                   key={recording.id} 

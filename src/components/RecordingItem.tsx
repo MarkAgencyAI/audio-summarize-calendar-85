@@ -1,6 +1,6 @@
 
 import { useState, useRef, useEffect } from "react";
-import { Play, Pause, Trash2, Edit2, Calendar } from "lucide-react";
+import { Play, Pause, Trash2, Edit2, Calendar, FolderCopy } from "lucide-react";
 import { 
   Dialog, 
   DialogContent, 
@@ -24,9 +24,10 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
   const [isPlaying, setIsPlaying] = useState(false);
   const [editName, setEditName] = useState(recording.name);
   const [showDetails, setShowDetails] = useState(false);
+  const [selectedFolder, setSelectedFolder] = useState(recording.folderId);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const { updateRecording, deleteRecording } = useRecordings();
+  const { updateRecording, deleteRecording, folders } = useRecordings();
   
   useEffect(() => {
     if (!audioRef.current) {
@@ -58,8 +59,11 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
   
   const handleSaveEdit = () => {
     if (editName.trim()) {
-      updateRecording(recording.id, { name: editName });
-      toast.success("Nombre actualizado");
+      updateRecording(recording.id, { 
+        name: editName,
+        folderId: selectedFolder 
+      });
+      toast.success("Grabación actualizada");
     }
   };
   
@@ -109,6 +113,21 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
                       onChange={(e) => setEditName(e.target.value)} 
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="folder">Carpeta</Label>
+                    <select
+                      id="folder"
+                      className="w-full h-10 px-3 py-2 bg-background border border-input rounded-md"
+                      value={selectedFolder}
+                      onChange={(e) => setSelectedFolder(e.target.value)}
+                    >
+                      {folders.map(folder => (
+                        <option key={folder.id} value={folder.id}>
+                          {folder.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button onClick={handleSaveEdit}>Guardar cambios</Button>
@@ -131,7 +150,7 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
           {formatDate(recording.createdAt)} • {formatTime(recording.duration)}
         </div>
         
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -149,14 +168,28 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
             )}
           </Button>
           
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2"
-            onClick={() => onAddToCalendar(recording)}
-          >
-            <Calendar className="h-4 w-4" /> Calendario
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+              onClick={() => {
+                setSelectedFolder(recording.folderId);
+                document.getElementById("editFolderDialog")?.click();
+              }}
+            >
+              <FolderCopy className="h-4 w-4" /> Carpeta
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+              onClick={() => onAddToCalendar(recording)}
+            >
+              <Calendar className="h-4 w-4" /> Calendario
+            </Button>
+          </div>
         </div>
       </div>
       
@@ -185,6 +218,43 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
           </div>
         )}
       </div>
+      
+      {/* Dialog oculto para acceso rápido */}
+      <Dialog>
+        <DialogTrigger asChild>
+          <button id="editFolderDialog" className="hidden"></button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mover grabación a carpeta</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="folderSelect">Seleccionar carpeta</Label>
+              <select
+                id="folderSelect"
+                className="w-full h-10 px-3 py-2 bg-background border border-input rounded-md"
+                value={selectedFolder}
+                onChange={(e) => setSelectedFolder(e.target.value)}
+              >
+                {folders.map(folder => (
+                  <option key={folder.id} value={folder.id}>
+                    {folder.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => {
+              updateRecording(recording.id, { folderId: selectedFolder });
+              toast.success("Grabación movida a carpeta");
+            }}>
+              Mover a carpeta
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
