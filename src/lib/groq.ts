@@ -1,5 +1,7 @@
 
-// API key for Groq
+import axios from "axios";
+
+// API key para Groq
 const GROQ_API_KEY = "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";
 
 export interface TranscriptionResult {
@@ -15,60 +17,145 @@ export interface TranscriptionResult {
 
 export async function transcribeAudio(audioBlob: Blob): Promise<TranscriptionResult> {
   try {
-    // First, we need to convert the audio to a format that can be transcribed
-    // For this example, we'll just convert to base64
-    const base64Audio = await blobToBase64(audioBlob);
+    // Convertir el audio blob a un archivo para enviarlo a la API
+    const formData = new FormData();
+    formData.append("file", audioBlob, "recording.webm");
+    formData.append("model", "whisper-large-v3");
+    formData.append("language", "es");
     
-    // Simulated transcription response (in a real app, this would call the Groq API)
-    // Since we can't make real API calls here, we'll simulate the response
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Generate a plausible fake transcript
-    const transcript = "Buenas tardes, quería consultar sobre la reunión de planificación del proyecto que tenemos pendiente. Creo que deberíamos agendar una sesión para el próximo jueves a las 3 PM para discutir los avances con el equipo de desarrollo. También necesitamos coordinar con el departamento de marketing para la presentación final que está programada para el 15 de noviembre. Por cierto, no olvides que el plazo para enviar el informe preliminar es este viernes.";
-    
-    // Generate a summary
-    const summary = "Consulta sobre reunión de planificación de proyecto, propuesta para reunión el jueves a las 3 PM, coordinación con marketing para presentación del 15 de noviembre, y recordatorio de informe preliminar para este viernes.";
-    
-    // Extract key points
-    const keyPoints = [
-      "Reunión de planificación pendiente",
-      "Propuesta: jueves a las 3 PM",
-      "Coordinación con marketing para presentación (15 nov)",
-      "Plazo de informe preliminar: este viernes"
-    ];
-    
-    // Suggest events for calendar
-    const suggestedEvents = [
+    // Llamada a la API de Groq para transcribir el audio
+    const response = await axios.post(
+      "https://api.groq.com/openai/v1/audio/transcriptions",
+      formData,
       {
-        title: "Reunión de planificación",
-        description: "Discutir avances con el equipo de desarrollo",
-        date: getNextDayOfWeek(4, 15).toISOString() // Next Thursday at a random time
-      },
-      {
-        title: "Presentación final con Marketing",
-        description: "Presentación del proyecto finalizado",
-        date: new Date(new Date().getFullYear(), 10, 15, 10).toISOString() // November 15
-      },
-      {
-        title: "Entrega informe preliminar",
-        description: "Fecha límite para enviar el informe",
-        date: getNextFriday().toISOString() // This Friday
+        headers: {
+          "Authorization": `Bearer ${GROQ_API_KEY}`,
+          "Content-Type": "multipart/form-data",
+        },
       }
-    ];
+    );
+    
+    // Obtener la transcripción del audio
+    const transcript = response.data.text;
+    
+    // Una vez obtenida la transcripción, enviarla a Groq LLM para analizar
+    // y extraer el resumen, puntos clave y eventos sugeridos
+    const analysisResult = await analyzeTranscription(transcript);
     
     return {
       transcript,
-      summary,
-      keyPoints,
-      suggestedEvents
+      summary: analysisResult.summary,
+      keyPoints: analysisResult.keyPoints,
+      suggestedEvents: analysisResult.suggestedEvents,
     };
-    
   } catch (error) {
-    console.error("Error transcribing audio:", error);
-    throw new Error("Failed to transcribe audio. Please try again.");
+    console.error("Error transcribiendo audio:", error);
+    throw new Error("Error al transcribir el audio. Por favor, intenta nuevamente.");
   }
+}
+
+async function analyzeTranscription(transcript: string): Promise<Omit<TranscriptionResult, "transcript">> {
+  try {
+    // Llamada a la API de Groq para analizar la transcripción
+    const response = await axios.post(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        model: "llama3-8b-8192",
+        messages: [
+          {
+            role: "system",
+            content: `Eres un asistente especializado en analizar transcripciones de audio en español.
+            Tu tarea es:
+            1. Crear un resumen conciso (máximo 2 párrafos)
+            2. Extraer 3-5 puntos clave de la conversación
+            3. Sugerir posibles eventos para agendar basados en fechas, horas o reuniones mencionadas
+            
+            El formato de tu respuesta debe ser JSON exactamente así:
+            {
+              "summary": "resumen conciso aquí",
+              "keyPoints": ["punto 1", "punto 2", "punto 3", ...],
+              "suggestedEvents": [
+                {
+                  "title": "título del evento",
+                  "description": "descripción del evento",
+                  "date": "fecha en formato ISO (si se menciona)"
+                },
+                ...
+              ]
+            }`
+          },
+          {
+            role: "user",
+            content: transcript
+          }
+        ],
+        temperature: 0.2,
+        max_tokens: 1024
+      },
+      {
+        headers: {
+          "Authorization": `Bearer ${GROQ_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    
+    try {
+      // Intentar analizar la respuesta de la API
+      const content = response.data.choices[0].message.content;
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      
+      if (jsonMatch) {
+        const jsonResponse = JSON.parse(jsonMatch[0]);
+        return {
+          summary: jsonResponse.summary || "No se pudo generar un resumen.",
+          keyPoints: jsonResponse.keyPoints || [],
+          suggestedEvents: jsonResponse.suggestedEvents || []
+        };
+      } else {
+        throw new Error("No se pudo extraer JSON de la respuesta");
+      }
+    } catch (parseError) {
+      console.error("Error analizando respuesta JSON:", parseError);
+      
+      // Proporcionar un resultado de respaldo en caso de error
+      return fallbackAnalysis(transcript);
+    }
+  } catch (error) {
+    console.error("Error analizando transcripción:", error);
+    return fallbackAnalysis(transcript);
+  }
+}
+
+// Análisis de respaldo para cuando la API falla
+function fallbackAnalysis(transcript: string): Omit<TranscriptionResult, "transcript"> {
+  // Generar un resumen básico (primeras 100 palabras)
+  const words = transcript.split(' ');
+  const summary = words.slice(0, 100).join(' ') + (words.length > 100 ? '...' : '');
+  
+  // Extraer posibles puntos clave (frases que terminan con punto)
+  const sentences = transcript.split('.');
+  const filteredSentences = sentences
+    .filter(s => s.trim().length > 20 && s.trim().length < 100)
+    .slice(0, 4)
+    .map(s => s.trim() + '.');
+  
+  // Crear eventos sugeridos simples
+  const today = new Date();
+  const tomorrow = new Date();
+  tomorrow.setDate(today.getDate() + 1);
+  
+  return {
+    summary,
+    keyPoints: filteredSentences.length > 0 ? filteredSentences : ["No se pudieron identificar puntos clave."],
+    suggestedEvents: [
+      {
+        title: "Revisar transcripción",
+        description: "Revisar la transcripción generada y confirmar su precisión",
+        date: today.toISOString()
+      }
+    ]
+  };
 }
 
 // Helper function to convert Blob to base64
@@ -105,25 +192,3 @@ function getNextDayOfWeek(dayOfWeek: number, hour: number = 9): Date {
 function getNextFriday(): Date {
   return getNextDayOfWeek(5, 17); // Friday at 5 PM
 }
-
-// In a real implementation, we would have a proper API call here using fetch or axios
-// async function callGroqApi(base64Audio: string): Promise<any> {
-//   const response = await fetch('https://api.groq.com/v1/audio/transcribe', {
-//     method: 'POST',
-//     headers: {
-//       'Authorization': `Bearer ${GROQ_API_KEY}`,
-//       'Content-Type': 'application/json'
-//     },
-//     body: JSON.stringify({
-//       audio: base64Audio,
-//       model: 'whisper-large-v3',
-//       language: 'es'
-//     })
-//   });
-//
-//   if (!response.ok) {
-//     throw new Error(`API error: ${response.status}`);
-//   }
-//
-//   return response.json();
-// }
