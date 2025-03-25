@@ -92,6 +92,7 @@ export function FolderSystem() {
           <div 
             key={folder.id}
             className="border border-border rounded-lg p-4 hover:shadow-md transition-shadow bg-card"
+            style={{ backgroundColor: `${folder.color}20` }}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -132,7 +133,7 @@ export function FolderSystem() {
       
       {/* Add folder dialog */}
       <Dialog open={showAddFolderDialog} onOpenChange={setShowAddFolderDialog}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Nueva carpeta</DialogTitle>
           </DialogHeader>
@@ -170,7 +171,7 @@ export function FolderSystem() {
       
       {/* Edit folder dialog */}
       <Dialog open={showEditFolderDialog} onOpenChange={setShowEditFolderDialog}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Editar carpeta</DialogTitle>
           </DialogHeader>

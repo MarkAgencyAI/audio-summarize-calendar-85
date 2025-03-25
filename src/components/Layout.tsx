@@ -2,7 +2,7 @@
 import { ReactNode, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { Mic, Calendar, Folder, User, LogOut, Menu, X } from "lucide-react";
+import { Mic, Calendar, Folder, User, LogOut, Menu, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface LayoutProps {
@@ -14,7 +14,7 @@ export function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const isMobile = useIsMobile();
   
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   
   const isActive = (path: string) => location.pathname === path;
   
@@ -38,10 +38,16 @@ export function Layout({ children }: LayoutProps) {
     <div className="flex min-h-screen bg-background antialiased">
       {/* Sidebar for desktop */}
       {!isMobile && (
-        <div className="fixed h-full z-40 bg-card border-r border-border flex flex-col transition-all duration-300 ease-in-out shadow-sm left-0 w-16 md:w-64">
-          <div className="p-4 border-b border-border">
-            <h2 className="text-xl font-medium hidden md:block">AudioCalendar</h2>
-            <span className="text-xl font-medium block md:hidden">AC</span>
+        <div className={`fixed h-full z-40 bg-card border-r border-border flex flex-col transition-all duration-300 ease-in-out shadow-sm ${
+          sidebarOpen ? 'left-0 w-16 md:w-64' : 'left-[-64px] md:left-[-256px] w-16 md:w-64'
+        }`}>
+          <div className="p-4 border-b border-border flex items-center justify-between">
+            <h2 className={`text-xl font-medium ${sidebarOpen ? 'hidden md:block' : 'hidden'}`}>
+              AudioCalendar
+            </h2>
+            <span className={`text-xl font-medium ${sidebarOpen ? 'block md:hidden' : 'hidden'}`}>
+              AC
+            </span>
           </div>
           
           <nav className="flex-1 p-2">
@@ -57,7 +63,7 @@ export function Layout({ children }: LayoutProps) {
                     }`}
                   >
                     {item.icon}
-                    <span className="hidden md:inline">{item.label}</span>
+                    <span className={`${sidebarOpen ? 'hidden md:inline' : 'hidden'}`}>{item.label}</span>
                   </button>
                 </li>
               ))}
@@ -70,18 +76,28 @@ export function Layout({ children }: LayoutProps) {
               className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors"
             >
               <LogOut className="h-5 w-5" />
-              <span className="hidden md:inline">Cerrar sesión</span>
+              <span className={`${sidebarOpen ? 'hidden md:inline' : 'hidden'}`}>Cerrar sesión</span>
             </button>
             <ThemeToggle />
           </div>
         </div>
       )}
       
+      {/* Toggle button for sidebar */}
+      {!isMobile && (
+        <button 
+          onClick={toggleSidebar}
+          className={`fixed z-50 top-4 ${sidebarOpen ? 'left-[260px] md:left-[252px]' : 'left-4'} bg-card rounded-full h-8 w-8 flex items-center justify-center shadow-md border border-border transition-all duration-300`}
+        >
+          {sidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        </button>
+      )}
+      
       {/* Main content */}
       <div className={`flex-1 flex flex-col transition-all duration-300 ${
         isMobile 
           ? "pb-16" // Add bottom padding for mobile to accommodate the navbar
-          : "pl-16 md:pl-64"
+          : sidebarOpen ? "pl-16 md:pl-64" : "pl-0"
       }`}>
         <main className="flex-1 p-4 md:p-6 animate-fade-in">
           {children}

@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Play, Pause, Trash2, Edit2, Calendar, Folder } from "lucide-react";
 import { 
@@ -24,15 +25,36 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
   const [editName, setEditName] = useState(recording.name);
   const [showDetails, setShowDetails] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState(recording.folderId);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(recording.duration);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const { updateRecording, deleteRecording, folders } = useRecordings();
   
+  // Find the current folder
+  const currentFolder = folders.find(folder => folder.id === recording.folderId);
+  const folderColor = currentFolder?.color || "#3b82f6";
+  
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio(recording.audioUrl);
+      
+      // Setup audio event listeners
       audioRef.current.addEventListener("ended", () => {
         setIsPlaying(false);
+        setCurrentTime(0);
+      });
+      
+      audioRef.current.addEventListener("timeupdate", () => {
+        if (audioRef.current) {
+          setCurrentTime(audioRef.current.currentTime);
+        }
+      });
+      
+      audioRef.current.addEventListener("loadedmetadata", () => {
+        if (audioRef.current) {
+          setDuration(audioRef.current.duration);
+        }
       });
     }
     
@@ -73,7 +95,7 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
   
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
+    const secs = Math.floor(seconds % 60);
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
@@ -87,8 +109,14 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
     });
   };
   
+  // Calculate progress percentage
+  const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
+  
   return (
-    <div className="border border-border rounded-lg overflow-hidden transition-all duration-200 hover:shadow-md bg-card">
+    <div 
+      className="border border-border rounded-lg overflow-hidden transition-all duration-200 hover:shadow-md bg-card"
+      style={{ backgroundColor: `${folderColor}20` }}
+    >
       <div className="p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-medium truncate mr-2">{recording.name}</h3>
@@ -147,6 +175,20 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
         
         <div className="text-xs text-muted-foreground mb-3">
           {formatDate(recording.createdAt)} • {formatTime(recording.duration)}
+        </div>
+        
+        {/* Audio Player */}
+        <div className="mb-3">
+          <div className="w-full bg-secondary rounded-full h-1.5 mb-2">
+            <div 
+              className="bg-primary h-1.5 rounded-full transition-all"
+              style={{ width: `${progressPercentage}%` }}
+            ></div>
+          </div>
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>{formatTime(currentTime)}</span>
+            <span>{formatTime(duration)}</span>
+          </div>
         </div>
         
         <div className="flex items-center justify-between flex-wrap gap-2">

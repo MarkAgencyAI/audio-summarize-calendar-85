@@ -12,6 +12,7 @@ export function AudioRecorder() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -24,8 +25,17 @@ export function AudioRecorder() {
     // Initialize audio element
     if (audioUrl && !audioRef.current) {
       audioRef.current = new Audio(audioUrl);
+      
+      // Setup audio event listeners
       audioRef.current.addEventListener("ended", () => {
         setIsPlaying(false);
+        setCurrentTime(0);
+      });
+      
+      audioRef.current.addEventListener("timeupdate", () => {
+        if (audioRef.current) {
+          setCurrentTime(audioRef.current.currentTime);
+        }
       });
     }
     
@@ -33,6 +43,7 @@ export function AudioRecorder() {
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.src = "";
+        audioRef.current = null;
       }
     };
   }, [audioUrl]);
@@ -130,6 +141,7 @@ export function AudioRecorder() {
       // Reset the recorder
       setAudioUrl(null);
       setRecordingTime(0);
+      setCurrentTime(0);
       
     } catch (error) {
       console.error("Error transcribing audio:", error);
@@ -141,9 +153,12 @@ export function AudioRecorder() {
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
+    const secs = Math.floor(seconds % 60);
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
+  
+  // Calculate progress percentage for playback
+  const progressPercentage = recordingTime > 0 ? (currentTime / recordingTime) * 100 : 0;
   
   return (
     <div className="w-full max-w-md mx-auto">
@@ -190,14 +205,29 @@ export function AudioRecorder() {
             )}
           </div>
           
-          <div className="text-center">
+          <div className="text-center w-full">
             {isRecording ? (
               <div className="text-xl font-medium">{formatTime(recordingTime)}</div>
             ) : audioUrl ? (
-              <div className="space-y-4">
+              <div className="space-y-4 w-full">
                 <div className="text-sm text-muted-foreground">
                   {formatTime(recordingTime)}
                 </div>
+                
+                {/* Audio Player UI */}
+                <div className="w-full">
+                  <div className="w-full bg-secondary rounded-full h-1.5 mb-2">
+                    <div 
+                      className="bg-primary h-1.5 rounded-full transition-all"
+                      style={{ width: `${progressPercentage}%` }}
+                    ></div>
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>{formatTime(currentTime)}</span>
+                    <span>{formatTime(recordingTime)}</span>
+                  </div>
+                </div>
+                
                 <Button 
                   onClick={handleTranscribe}
                   className="w-full"
