@@ -79,7 +79,10 @@ export default function Dashboard() {
         <div className="space-y-6">
           <h1 className="text-3xl font-bold">Grabaciones</h1>
           
-          <AudioRecorder />
+          {/* Only show AudioRecorder to students */}
+          {user?.role === "student" && (
+            <AudioRecorder />
+          )}
           
           <div className="space-y-4">
             <div className="flex flex-col md:flex-row gap-4">
@@ -119,7 +122,9 @@ export default function Dashboard() {
             <div className="text-center py-10 border border-dashed border-border rounded-lg bg-muted/30">
               <p className="text-muted-foreground">No hay grabaciones</p>
               <p className="text-sm text-muted-foreground mt-2">
-                Graba tu primer audio para comenzar
+                {user?.role === "student" 
+                  ? "Graba tu primer audio para comenzar" 
+                  : "Sube material en PDF para obtener resúmenes"}
               </p>
             </div>
           ) : (

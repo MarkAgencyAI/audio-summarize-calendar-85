@@ -22,6 +22,7 @@ export default function FoldersPage() {
       <div className="space-y-8 max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold">Carpetas</h1>
         
+        {/* Only show PdfUploader to teachers */}
         {user?.role === "teacher" && (
           <div className="glassmorphism rounded-xl p-4 md:p-6 shadow-lg">
             <PdfUploader />
