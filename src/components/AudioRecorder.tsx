@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Mic, X, Play, Pause, Loader2, Stop } from "lucide-react";
+import { Mic, X, Play, Pause, Loader2, Square } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -203,7 +203,7 @@ export function AudioRecorder() {
                   Pausar
                 </Button>
                 <Button onClick={stopRecording} disabled={isProcessing} variant="destructive">
-                  <Stop className="h-4 w-4 mr-2" />
+                  <Square className="h-4 w-4 mr-2" />
                   Detener
                 </Button>
               </>
@@ -216,7 +216,7 @@ export function AudioRecorder() {
                   Reanudar
                 </Button>
                 <Button onClick={stopRecording} disabled={isProcessing} variant="destructive">
-                  <Stop className="h-4 w-4 mr-2" />
+                  <Square className="h-4 w-4 mr-2" />
                   Detener
                 </Button>
               </>
