@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth, UserRole } from "@/context/AuthContext";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 
 interface AuthenticationProps {
@@ -23,6 +24,8 @@ export function Authentication({ type }: AuthenticationProps) {
     confirmPassword: "",
     career: ""
   });
+  
+  const [role, setRole] = useState<UserRole>("student");
   
   const updateForm = (field: string, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -59,7 +62,7 @@ export function Authentication({ type }: AuthenticationProps) {
         return;
       }
       
-      await register(form.name, form.email, form.password, form.career);
+      await register(form.name, form.email, form.password, form.career, role);
       navigate("/dashboard");
       
     } catch (error) {
@@ -96,6 +99,24 @@ export function Authentication({ type }: AuthenticationProps) {
                     onChange={(e) => updateForm("name", e.target.value)}
                     required
                   />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Tipo de usuario</Label>
+                  <RadioGroup 
+                    value={role} 
+                    onValueChange={(value) => setRole(value as UserRole)}
+                    className="flex gap-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="student" id="student" />
+                      <Label htmlFor="student" className="cursor-pointer">Estudiante</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="teacher" id="teacher" />
+                      <Label htmlFor="teacher" className="cursor-pointer">Profesor</Label>
+                    </div>
+                  </RadioGroup>
                 </div>
               </div>
             )}

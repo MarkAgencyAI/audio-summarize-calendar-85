@@ -1,19 +1,10 @@
-
 import { useState, useRef, useEffect } from "react";
-import { Play, Pause, Trash2, Edit2, Calendar, Folder } from "lucide-react";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle,
-  DialogFooter,
-  DialogTrigger
-} from "@/components/ui/dialog";
+import { Folder, Calendar, Play, Pause, Clock, FileText } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
 import { Recording, useRecordings } from "@/context/RecordingsContext";
-import { toast } from "sonner";
 
 interface RecordingItemProps {
   recording: Recording;
@@ -22,50 +13,41 @@ interface RecordingItemProps {
 
 export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [editName, setEditName] = useState(recording.name);
-  const [showDetails, setShowDetails] = useState(false);
-  const [selectedFolder, setSelectedFolder] = useState(recording.folderId);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(recording.duration);
-  
+  const [audioUrl, setAudioUrl] = useState<string>("");
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const { updateRecording, deleteRecording, folders } = useRecordings();
   
-  // Find the current folder
-  const currentFolder = folders.find(folder => folder.id === recording.folderId);
-  const folderColor = currentFolder?.color || "#3b82f6";
+  const { folders, getAudioUrl } = useRecordings();
+  
+  // Get the folder for this recording
+  const folder = folders.find((f) => f.id === recording.folderId) || folders[0];
+  
+  // Format the recording date
+  const formattedDate = formatDistanceToNow(recording.createdAt, {
+    addSuffix: true,
+    locale: es
+  });
+  
+  // Format duration in mm:ss
+  const formatDuration = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+  };
   
   useEffect(() => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio(recording.audioUrl);
-      
-      // Setup audio event listeners
-      audioRef.current.addEventListener("ended", () => {
-        setIsPlaying(false);
-        setCurrentTime(0);
-      });
-      
-      audioRef.current.addEventListener("timeupdate", () => {
-        if (audioRef.current) {
-          setCurrentTime(audioRef.current.currentTime);
-        }
-      });
-      
-      audioRef.current.addEventListener("loadedmetadata", () => {
-        if (audioRef.current) {
-          setDuration(audioRef.current.duration);
-        }
-      });
-    }
+    // Get the audio URL from the recording context
+    const url = getAudioUrl(recording);
+    setAudioUrl(url);
     
+    // Clean up audio resources when unmounting
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
-        audioRef.current.src = "";
+        URL.revokeObjectURL(audioUrl);
       }
     };
-  }, [recording.audioUrl]);
-
+  }, [recording, getAudioUrl]);
+  
   const togglePlayback = () => {
     if (!audioRef.current) return;
     
@@ -78,223 +60,84 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
     setIsPlaying(!isPlaying);
   };
   
-  const handleSaveEdit = () => {
-    if (editName.trim()) {
-      updateRecording(recording.id, { 
-        name: editName,
-        folderId: selectedFolder 
-      });
-      toast.success("Grabación actualizada");
-    }
-  };
-  
-  const handleDelete = () => {
-    deleteRecording(recording.id);
-    toast.success("Grabación eliminada");
-  };
-  
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  const handleAudioEnded = () => {
+    setIsPlaying(false);
   };
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('es-ES', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-  
-  // Calculate progress percentage
-  const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
-  
   return (
-    <div 
-      className="border border-border rounded-lg overflow-hidden transition-all duration-200 hover:shadow-md bg-card"
-      style={{ backgroundColor: `${folderColor}20` }}
-    >
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-medium truncate mr-2">{recording.name}</h3>
-          <div className="flex items-center space-x-1">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Edit2 className="h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Editar grabación</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Nombre</Label>
-                    <Input 
-                      id="name" 
-                      value={editName} 
-                      onChange={(e) => setEditName(e.target.value)} 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="folder">Carpeta</Label>
-                    <select
-                      id="folder"
-                      className="w-full h-10 px-3 py-2 bg-background border border-input rounded-md"
-                      value={selectedFolder}
-                      onChange={(e) => setSelectedFolder(e.target.value)}
-                    >
-                      {folders.map(folder => (
-                        <option key={folder.id} value={folder.id}>
-                          {folder.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button onClick={handleSaveEdit}>Guardar cambios</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8"
-              onClick={handleDelete}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+    <Card className="overflow-hidden transition-all hover:shadow-md" 
+      style={{ backgroundColor: `${folder.color}20` }}>
+      <div className="p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="p-2 rounded-full" style={{ backgroundColor: folder.color }}>
+            <Folder className="h-4 w-4 text-white" />
           </div>
+          <span className="text-sm text-muted-foreground">{folder.name}</span>
         </div>
         
-        <div className="text-xs text-muted-foreground mb-3">
-          {formatDate(recording.createdAt)} • {formatTime(recording.duration)}
+        <h3 className="font-semibold truncate">{recording.name}</h3>
+        
+        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            {formatDuration(recording.duration)}
+          </span>
+          <span className="flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
+            {formattedDate}
+          </span>
         </div>
         
-        {/* Audio Player */}
-        <div className="mb-3">
-          <div className="w-full bg-secondary rounded-full h-1.5 mb-2">
-            <div 
-              className="bg-primary h-1.5 rounded-full transition-all"
-              style={{ width: `${progressPercentage}%` }}
-            ></div>
-          </div>
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{formatTime(currentTime)}</span>
-            <span>{formatTime(duration)}</span>
-          </div>
-        </div>
-        
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2"
-            onClick={togglePlayback}
-          >
-            {isPlaying ? (
-              <>
-                <Pause className="h-4 w-4" /> Pausar
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4" /> Reproducir
-              </>
-            )}
-          </Button>
-          
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-              onClick={() => {
-                setSelectedFolder(recording.folderId);
-                document.getElementById("editFolderDialog")?.click();
-              }}
-            >
-              <Folder className="h-4 w-4" /> Carpeta
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-              onClick={() => onAddToCalendar(recording)}
-            >
-              <Calendar className="h-4 w-4" /> Calendario
-            </Button>
-          </div>
-        </div>
-      </div>
-      
-      <div 
-        className="border-t border-border p-4 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
-        onClick={() => setShowDetails(!showDetails)}
-      >
-        <div className="text-sm font-medium mb-2">Resumen</div>
-        <p className="text-sm text-muted-foreground line-clamp-2">
-          {recording.summary}
-        </p>
-        
-        {showDetails && (
-          <div className="mt-4 animate-fade-in">
-            <div className="text-sm font-medium mb-2">Puntos clave</div>
-            <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-              {recording.keyPoints.map((point, index) => (
-                <li key={index}>{point}</li>
-              ))}
-            </ul>
-            
-            <div className="text-sm font-medium mt-4 mb-2">Transcripción</div>
-            <p className="text-sm text-muted-foreground whitespace-pre-line">
-              {recording.transcript}
-            </p>
-          </div>
+        {recording.summary && (
+          <p className="text-sm line-clamp-2">
+            {recording.summary}
+          </p>
         )}
+        
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            {audioUrl ? (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full"
+                onClick={togglePlayback}
+              >
+                {isPlaying ? 
+                  <><Pause className="h-4 w-4 mr-2" /> Pausar</> : 
+                  <><Play className="h-4 w-4 mr-2" /> Reproducir</>
+                }
+              </Button>
+            ) : (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full"
+                disabled
+              >
+                <FileText className="h-4 w-4 mr-2" /> Ver transcripción
+              </Button>
+            )}
+          </div>
+          
+          <Button 
+            variant="secondary" 
+            size="sm"
+            onClick={() => onAddToCalendar(recording)}
+          >
+            <Calendar className="h-4 w-4 mr-2" />
+            Añadir al calendario
+          </Button>
+        </div>
       </div>
       
-      <Dialog>
-        <DialogTrigger asChild>
-          <button id="editFolderDialog" className="hidden"></button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Mover grabación a carpeta</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="folderSelect">Seleccionar carpeta</Label>
-              <select
-                id="folderSelect"
-                className="w-full h-10 px-3 py-2 bg-background border border-input rounded-md"
-                value={selectedFolder}
-                onChange={(e) => setSelectedFolder(e.target.value)}
-              >
-                {folders.map(folder => (
-                  <option key={folder.id} value={folder.id}>
-                    {folder.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => {
-              updateRecording(recording.id, { folderId: selectedFolder });
-              toast.success("Grabación movida a carpeta");
-            }}>
-              Mover a carpeta
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+      {/* Hidden audio element for playback */}
+      <audio 
+        ref={audioRef}
+        src={audioUrl}
+        onEnded={handleAudioEnded}
+        style={{ display: 'none' }}
+      />
+    </Card>
   );
 }

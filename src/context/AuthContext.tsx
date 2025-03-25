@@ -1,17 +1,20 @@
 
 import { createContext, useState, useContext, ReactNode, useEffect } from "react";
 
-interface User {
+export type UserRole = "student" | "teacher";
+
+export interface User {
   id: string;
   name: string;
   email: string;
   career?: string;
+  role: UserRole;
 }
 
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, career: string) => Promise<void>;
+  register: (name: string, email: string, password: string, career: string, role: UserRole) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -66,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (name: string, email: string, password: string, career: string) => {
+  const register = async (name: string, email: string, password: string, career: string, role: UserRole) => {
     setIsLoading(true);
     try {
       // Simulate API delay
@@ -86,7 +89,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name,
         email,
         password, // In a real app, this would be hashed
-        career
+        career,
+        role
       };
       
       // Add user to localStorage

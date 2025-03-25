@@ -5,6 +5,7 @@ export interface Recording {
   id: string;
   name: string;
   audioUrl: string;
+  audioData?: string; // Base64 audio data for persistent storage
   transcript: string;
   summary: string | null;
   keyPoints: string[];
@@ -29,6 +30,7 @@ interface RecordingsContextType {
   addFolder: (name: string, color: string) => Folder;
   updateFolder: (id: string, data: Partial<Folder>) => void;
   deleteFolder: (id: string) => void;
+  getAudioUrl: (recording: Recording) => string;
 }
 
 const RecordingsContext = createContext<RecordingsContextType | undefined>(undefined);
@@ -74,6 +76,31 @@ export function RecordingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem("folders", JSON.stringify(folders));
   }, [folders]);
+
+  // Helper function to get valid audio URL
+  const getAudioUrl = (recording: Recording): string => {
+    // If we have stored audioData (base64), create a blob URL
+    if (recording.audioData) {
+      try {
+        // Convert base64 to blob
+        const byteCharacters = atob(recording.audioData.split(',')[1]);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'audio/webm' });
+        
+        // Create and return blob URL
+        return URL.createObjectURL(blob);
+      } catch (error) {
+        console.error("Error creating audio URL from data:", error);
+      }
+    }
+    
+    // Fall back to stored URL if no data or error occurred
+    return recording.audioUrl;
+  };
 
   const addRecording = (recordingData: Omit<Recording, "id" | "createdAt">) => {
     const newRecording: Recording = {
@@ -139,6 +166,7 @@ export function RecordingsProvider({ children }: { children: ReactNode }) {
         addFolder,
         updateFolder,
         deleteFolder,
+        getAudioUrl,
       }}
     >
       {children}
