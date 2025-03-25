@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Mic, X, Play, Pause, Loader2, Square } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -7,6 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
+
+// For debugging
+console.log("formatDate function:", formatDate);
 
 type RecordingState = "idle" | "recording" | "paused";
 
