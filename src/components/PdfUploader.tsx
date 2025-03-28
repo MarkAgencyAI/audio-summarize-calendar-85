@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import * as ConvertApi from "convertapi";
 
 // Create a ConvertAPI client instance with your secret key
-const convertApiClient = new ConvertApi.ConvertAPI("secret_oQHJ9c5WhDkkjtvH");
+const convertApiClient = ConvertApi.default("secret_oQHJ9c5WhDkkjtvH");
 
 export function PdfUploader() {
   const [file, setFile] = useState<File | null>(null);
@@ -96,7 +96,7 @@ export function PdfUploader() {
       };
       
       // Convert PDF to text using the ConvertAPI client
-      // Using the correct object format for parameters
+      // The convert method expects the parameters as an object
       const result = await convertApiClient.convert('pdf', 'txt', params);
       
       // Get the file URL from the result
