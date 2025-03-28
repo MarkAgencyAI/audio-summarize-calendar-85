@@ -7,7 +7,6 @@ import { Folder, useRecordings } from "@/context/RecordingsContext";
 import { toast } from "sonner";
 import { Loader2, Upload } from "lucide-react";
 import axios from "axios";
-import * as ConvertApi from "convertapi-js";
 
 export function PdfUploader() {
   const [file, setFile] = useState<File | null>(null);
@@ -82,38 +81,71 @@ export function PdfUploader() {
   
   async function extractTextFromPdf(pdfFile: File): Promise<string> {
     try {
-      // Initialize ConvertAPI with your secret
-      const convertApi = ConvertApi.auth('secret_oQHJ9c5WhDkkjtvH');
+      // Use the ConvertAPI REST endpoint directly
+      const apiSecret = "secret_oQHJ9c5WhDkkjtvH";
       
-      // Create parameters
-      const params = convertApi.createParams();
+      // Convert the file to base64
+      const base64File = await fileToBase64(pdfFile);
+      const base64Content = base64File.split(',')[1]; // Remove data URL part
       
-      // Add the PDF file to parameters
-      params.add('File', pdfFile);
+      // Prepare the request payload
+      const payload = {
+        Parameters: [
+          {
+            Name: "File",
+            FileValue: {
+              Name: pdfFile.name,
+              Data: base64Content
+            }
+          }
+        ]
+      };
       
-      // Convert PDF to TXT
-      console.log("Converting PDF to text using ConvertAPI...");
-      const result = await convertApi.convert('pdf', 'txt', params);
-      
-      // Get the URL of the converted file
-      const fileUrl = result.files[0].Url;
-      
-      // Fetch the text content from the URL
-      const response = await fetch(fileUrl);
+      // Make the API request
+      const response = await fetch("https://v2.convertapi.com/convert/pdf/to/txt", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiSecret}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
       
       if (!response.ok) {
-        throw new Error(`Failed to fetch converted text: ${response.status} ${response.statusText}`);
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      
+      // Get the URL of the converted file
+      const fileUrl = result.Files[0].Url;
+      
+      // Fetch the text content from the URL
+      const textResponse = await fetch(fileUrl);
+      
+      if (!textResponse.ok) {
+        throw new Error(`Failed to fetch converted text: ${textResponse.status} ${textResponse.statusText}`);
       }
       
       // Get the text content
-      const textContent = await response.text();
+      const textContent = await textResponse.text();
       
       console.log("PDF successfully converted to text");
       return textContent;
     } catch (error) {
-      console.error("Error extracting text from PDF using ConvertAPI:", error);
+      console.error("Error extracting text from PDF:", error);
       throw new Error("Error al extraer texto del PDF");
     }
+  }
+  
+  // Helper function to convert File to base64
+  function fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
   }
   
   async function analyzeClassContent(content: string): Promise<{
