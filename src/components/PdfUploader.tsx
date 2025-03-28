@@ -96,7 +96,7 @@ export function PdfUploader() {
       };
       
       // Convert PDF to text using the ConvertAPI client
-      // Here we use the correct format for the params - an object, not a string
+      // Using the correct object format for parameters
       const result = await convertApiClient.convert('pdf', 'txt', params);
       
       // Note the lowercase 'url' property instead of 'Url'
