@@ -92,20 +92,22 @@ export function PdfUploader() {
   };
   
   async function extractTextFromPdf(pdfFile: File): Promise<string> {
-    // Using the ConvertAPI correctly
     try {
-      // Create a ConvertApi instance with your secret
-      const convertApi = new ConvertApi('secret_oQHJ9c5WhDkkjtvH');
+      // Initialize ConvertAPI with your secret - using the correct pattern
+      const convertApi = ConvertApi.default;
+      convertApi.api_secret = 'secret_oQHJ9c5WhDkkjtvH';
       
       // Create a FormData object with the file
       const formData = new FormData();
       formData.append('File', pdfFile);
       
-      // Convert PDF to TXT using the instance
-      const result = await convertApi.convert('pdf', 'txt', formData);
+      // Convert PDF to TXT using the correct API call pattern
+      const result = await convertApi.convert('pdf', 'txt', {
+        File: pdfFile
+      });
       
       // Get the URL of the converted file
-      const fileUrl = result.files[0].Url;
+      const fileUrl = result.response.Files[0].Url;
       
       // Fetch the text content from the URL
       const textResponse = await fetch(fileUrl);
