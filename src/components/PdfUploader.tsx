@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import * as ConvertApi from "convertapi";
 
 // Configurar cliente de ConvertAPI correctamente
-const convertApiClient = ConvertApi.default("secret_oQHJ9c5WhDkkjtvH");
+const convertApiInstance = new ConvertApi.default("secret_oQHJ9c5WhDkkjtvH");
 
 export function PdfUploader() {
   // Estados del componente
@@ -97,9 +96,11 @@ export function PdfUploader() {
   async function extractTextFromPdf(pdfFile: File): Promise<string> {
     try {
       // Convertir PDF a texto usando ConvertAPI
-      const result = await convertApiClient.convert('pdf', 'txt', {
+      const params = {
         File: pdfFile
-      });
+      };
+      
+      const result = await convertApiInstance.convert('pdf', 'txt', params);
       
       // Obtener URL del archivo convertido
       const fileUrl = result.files[0].url;
