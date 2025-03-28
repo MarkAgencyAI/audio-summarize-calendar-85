@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Loader2, Upload, FileText, BookOpenText, ListChecks } from "lucide-react";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import * as ConvertApi from "convertapi";
 
 export function PdfUploader() {
   const [file, setFile] = useState<File | null>(null);
@@ -50,10 +51,16 @@ export function PdfUploader() {
     }
     
     setLoading(true);
+    setSummary(null);
+    setKeyPoints([]);
+    setShowAnalysis(false);
     
     try {
       // Convert PDF to text using ConvertAPI
       const pdfText = await extractTextFromPdf(file);
+      
+      console.log("PDF text extracted, length:", pdfText.length);
+      console.log("First 100 chars:", pdfText.substring(0, 100));
       
       // Analyze the text with Groq LLM
       const analysisResult = await analyzeClassContent(pdfText);
@@ -85,45 +92,19 @@ export function PdfUploader() {
   };
   
   async function extractTextFromPdf(pdfFile: File): Promise<string> {
+    // Using the ConvertAPI client library
     try {
-      // Use the ConvertAPI REST endpoint directly
-      const apiSecret = "secret_oQHJ9c5WhDkkjtvH";
+      // Initialize ConvertAPI with your secret
+      const convertApi = ConvertApi.client("secret_oQHJ9c5WhDkkjtvH");
       
-      // Convert the file to base64
-      const base64File = await fileToBase64(pdfFile);
-      const base64Content = base64File.split(',')[1]; // Remove data URL part
+      // Create a params object with the file
+      const params = { File: pdfFile };
       
-      // Prepare the request payload
-      const payload = {
-        Parameters: [
-          {
-            Name: "File",
-            FileValue: {
-              Name: pdfFile.name,
-              Data: base64Content
-            }
-          }
-        ]
-      };
-      
-      // Make the API request
-      const response = await fetch("https://v2.convertapi.com/convert/pdf/to/txt", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiSecret}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
-      });
-      
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status} ${response.statusText}`);
-      }
-      
-      const result = await response.json();
+      // Convert PDF to TXT
+      const result = await convertApi.convert('pdf', 'txt', params);
       
       // Get the URL of the converted file
-      const fileUrl = result.Files[0].Url;
+      const fileUrl = result.files[0].Url;
       
       // Fetch the text content from the URL
       const textResponse = await fetch(fileUrl);
@@ -143,22 +124,23 @@ export function PdfUploader() {
     }
   }
   
-  // Helper function to convert File to base64
-  function fileToBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
-    });
-  }
-  
   async function analyzeClassContent(content: string): Promise<{
     summary: string;
     keyPoints: string[];
     suggestedEvents: { title: string; description: string; date?: string }[];
   }> {
     try {
+      // Make sure we have valid content
+      if (!content || content.trim().length < 10) {
+        throw new Error("El contenido del PDF es demasiado corto o inválido");
+      }
+      
+      // Truncate content if it's too long for the model
+      // Groq models typically have token limits
+      const truncatedContent = content.length > 10000 
+        ? content.substring(0, 10000) + "..." 
+        : content;
+      
       const response = await axios.post(
         "https://api.groq.com/openai/v1/chat/completions",
         {
@@ -200,7 +182,7 @@ export function PdfUploader() {
             },
             {
               role: "user",
-              content: content
+              content: truncatedContent
             }
           ],
           temperature: 0.2,
@@ -214,6 +196,7 @@ export function PdfUploader() {
         }
       );
       
+      console.log("Groq API response received");
       const analysisMarkdown = response.data.choices[0].message.content;
       
       // Extract key points from markdown
@@ -267,14 +250,14 @@ export function PdfUploader() {
     } catch (error) {
       console.error("Error analyzing PDF content:", error);
       
-      // Return fallback analysis
+      // Return meaningful error in analysis format
       return {
-        summary: "# Error al analizar el contenido\n\nNo se pudo generar un análisis detallado del material. Por favor, intenta nuevamente.",
-        keyPoints: ["Revisar el contenido del PDF", "Extraer los conceptos principales", "Preparar ejercicios prácticos"],
+        summary: "# Error al analizar el contenido\n\nHubo un problema al analizar el contenido del PDF. Por favor, verifica que el archivo tenga texto extraíble y no esté protegido.",
+        keyPoints: ["Verificar contenido del PDF", "Revisar permisos del documento", "Intentar con otro documento si el problema persiste"],
         suggestedEvents: [
           {
-            title: "Revisar material",
-            description: "Realizar una revisión completa del material del PDF"
+            title: "Verificar documento",
+            description: "Revisar que el PDF contenga texto extraíble y no esté protegido"
           }
         ]
       };
