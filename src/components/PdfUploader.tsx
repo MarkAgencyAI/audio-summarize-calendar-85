@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Folder, useRecordings } from "@/context/RecordingsContext";
 import { toast } from "sonner";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2, Upload, FileText, BookOpenText, ListChecks } from "lucide-react";
 import axios from "axios";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function PdfUploader() {
   const [file, setFile] = useState<File | null>(null);
@@ -14,6 +15,8 @@ export function PdfUploader() {
   const [summary, setSummary] = useState<string | null>(null);
   const [lessonName, setLessonName] = useState("");
   const [selectedFolder, setSelectedFolder] = useState<string>("default");
+  const [keyPoints, setKeyPoints] = useState<string[]>([]);
+  const [showAnalysis, setShowAnalysis] = useState(false);
   
   const { folders, addRecording } = useRecordings();
   
@@ -55,8 +58,10 @@ export function PdfUploader() {
       // Analyze the text with Groq LLM
       const analysisResult = await analyzeClassContent(pdfText);
       
-      // Update the UI with the generated summary
+      // Update the UI with the generated summary and key points
       setSummary(analysisResult.summary);
+      setKeyPoints(analysisResult.keyPoints);
+      setShowAnalysis(true);
       
       // Create a recording entry for this lesson
       addRecording({
@@ -341,12 +346,48 @@ export function PdfUploader() {
         )}
       </div>
       
-      {summary && (
-        <div className="mt-6 p-4 border border-border rounded-lg bg-card">
-          <h3 className="text-lg font-medium mb-2">Resumen generado</h3>
-          <div className="prose prose-sm dark:prose-invert max-w-none">
-            <pre className="whitespace-pre-wrap text-sm">{summary}</pre>
-          </div>
+      {showAnalysis && (
+        <div className="mt-6 space-y-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center">
+                <FileText className="mr-2 h-5 w-5" />
+                Análisis del Material
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {keyPoints && keyPoints.length > 0 && (
+                <div className="mb-4">
+                  <h3 className="text-md font-medium flex items-center mb-2">
+                    <ListChecks className="mr-2 h-4 w-4" />
+                    Puntos Fuertes
+                  </h3>
+                  <ul className="space-y-2 pl-2">
+                    {keyPoints.map((point, index) => (
+                      <li key={index} className="flex items-start">
+                        <span className="inline-flex items-center justify-center rounded-full bg-primary/10 text-primary h-5 w-5 text-xs mr-2 mt-0.5">
+                          {index + 1}
+                        </span>
+                        <span>{point}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {summary && (
+                <div>
+                  <h3 className="text-md font-medium flex items-center mb-2">
+                    <BookOpenText className="mr-2 h-4 w-4" />
+                    Resumen Completo
+                  </h3>
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <pre className="whitespace-pre-wrap text-sm">{summary}</pre>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
