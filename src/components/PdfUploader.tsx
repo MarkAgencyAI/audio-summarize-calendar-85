@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import * as ConvertApi from "convertapi";
 
 // Create a ConvertAPI client instance with your secret key
-const convertApiClient = ConvertApi.default("secret_oQHJ9c5WhDkkjtvH");
+const convertApiClient = new ConvertApi.ConvertApi("secret_oQHJ9c5WhDkkjtvH");
 
 export function PdfUploader() {
   const [file, setFile] = useState<File | null>(null);
