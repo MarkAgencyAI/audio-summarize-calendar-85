@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,9 +8,10 @@ import { toast } from "sonner";
 import { Loader2, Upload, FileText, BookOpenText, ListChecks } from "lucide-react";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import ConvertApi from "convertapi";
+import * as ConvertApi from "convertapi";
 
-const convertApi = new ConvertApi('secret_oQHJ9c5WhDkkjtvH');
+// Create a ConvertAPI client instance with your secret key
+const convertApiClient = ConvertApi.default('secret_oQHJ9c5WhDkkjtvH');
 
 export function PdfUploader() {
   const [file, setFile] = useState<File | null>(null);
@@ -88,13 +90,16 @@ export function PdfUploader() {
   
   async function extractTextFromPdf(pdfFile: File): Promise<string> {
     try {
+      // Create params object with the file
       const params = {
         File: pdfFile
       };
       
-      const result = await convertApi.convert('pdf', 'txt', params);
+      // Convert PDF to text using the ConvertAPI client
+      const result = await convertApiClient.convert('pdf', 'txt', params);
       
-      const fileUrl = result.files[0].Url;
+      // Note the lowercase 'url' property instead of 'Url'
+      const fileUrl = result.files[0].url;
       
       const textResponse = await fetch(fileUrl);
       
