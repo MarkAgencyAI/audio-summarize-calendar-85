@@ -1,10 +1,13 @@
+
 import { useState, useRef, useEffect } from "react";
-import { Folder, Calendar, Play, Pause, Clock, FileText } from "lucide-react";
+import { Folder, Calendar, Play, Pause, Clock, FileText, Edit, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Recording, useRecordings } from "@/context/RecordingsContext";
+import { RecordingDetails } from "@/components/RecordingDetails";
+import { Input } from "@/components/ui/input";
 
 interface RecordingItemProps {
   recording: Recording;
@@ -35,17 +38,19 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
   };
   
   useEffect(() => {
-    // Get the audio URL from the recording context
-    const url = getAudioUrl(recording);
-    setAudioUrl(url);
-    
-    // Clean up audio resources when unmounting
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        URL.revokeObjectURL(audioUrl);
-      }
-    };
+    // Only get audio URL if this is an audio recording
+    if (recording.audioUrl || recording.audioData) {
+      const url = getAudioUrl(recording);
+      setAudioUrl(url);
+      
+      // Clean up audio resources when unmounting
+      return () => {
+        if (audioRef.current) {
+          audioRef.current.pause();
+          URL.revokeObjectURL(audioUrl);
+        }
+      };
+    }
   }, [recording, getAudioUrl]);
   
   const togglePlayback = () => {
@@ -78,10 +83,12 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
         <h3 className="font-semibold truncate">{recording.name}</h3>
         
         <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            {formatDuration(recording.duration)}
-          </span>
+          {recording.duration > 0 && (
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {formatDuration(recording.duration)}
+            </span>
+          )}
           <span className="flex items-center gap-1">
             <Calendar className="h-3 w-3" />
             {formattedDate}
@@ -90,7 +97,9 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
         
         {recording.summary && (
           <p className="text-sm line-clamp-2">
-            {recording.summary}
+            {typeof recording.summary === 'string' && recording.summary.includes('#') 
+              ? recording.summary.split('\n').find(line => !line.startsWith('#') && line.trim() !== '') || "Sin resumen" 
+              : recording.summary}
           </p>
         )}
         
@@ -109,14 +118,7 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
                 }
               </Button>
             ) : (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full"
-                disabled
-              >
-                <FileText className="h-4 w-4 mr-2" /> Ver transcripción
-              </Button>
+              <RecordingDetails recording={recording} />
             )}
           </div>
           
@@ -132,12 +134,14 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
       </div>
       
       {/* Hidden audio element for playback */}
-      <audio 
-        ref={audioRef}
-        src={audioUrl}
-        onEnded={handleAudioEnded}
-        style={{ display: 'none' }}
-      />
+      {audioUrl && (
+        <audio 
+          ref={audioRef}
+          src={audioUrl}
+          onEnded={handleAudioEnded}
+          style={{ display: 'none' }}
+        />
+      )}
     </Card>
   );
 }

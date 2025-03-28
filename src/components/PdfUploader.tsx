@@ -1,29 +1,27 @@
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Folder, useRecordings } from "@/context/RecordingsContext";
 import { toast } from "sonner";
 import { Loader2, Upload, FileText, BookOpenText, ListChecks } from "lucide-react";
-import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import * as pdfjsLib from "pdfjs-dist";
-
-// Initialize PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+import { usePdfProcessor } from "@/hooks/use-pdf-processor";
+import { Progress } from "@/components/ui/progress";
 
 export function PdfUploader() {
   // Estados del componente
   const [file, setFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
   const [lessonName, setLessonName] = useState("");
   const [selectedFolder, setSelectedFolder] = useState<string>("default");
   const [keyPoints, setKeyPoints] = useState<string[]>([]);
   const [showAnalysis, setShowAnalysis] = useState(false);
   
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { folders, addRecording } = useRecordings();
+  const { processPdf, loading, progress } = usePdfProcessor();
   
   // Manejador para cambio de archivo
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,7 +42,7 @@ export function PdfUploader() {
   };
   
   // Función principal para procesar el PDF
-  const processPdf = async () => {
+  const handleProcessPdf = async () => {
     if (!file) {
       toast.error("Por favor, selecciona un archivo PDF");
       return;
@@ -55,215 +53,52 @@ export function PdfUploader() {
       return;
     }
     
-    setLoading(true);
     setSummary(null);
     setKeyPoints([]);
     setShowAnalysis(false);
     
     try {
-      // Extraer texto del PDF
-      const pdfText = await extractTextFromPdf(file);
+      // Notificar inicio de procesamiento
+      toast.info("Procesando PDF...");
       
-      // Analizar el contenido del PDF
-      const analysisResult = await analyzeContent(pdfText);
+      // Procesar el PDF
+      const result = await processPdf(file);
       
       // Actualizar estados con resultados
-      setSummary(analysisResult.summary);
-      setKeyPoints(analysisResult.keyPoints);
+      setSummary(result.analysis.summary);
+      setKeyPoints(result.analysis.keyPoints);
       setShowAnalysis(true);
       
       // Guardar la grabación
       addRecording({
         name: lessonName,
         audioUrl: "",
-        transcript: pdfText,
-        summary: analysisResult.summary,
-        keyPoints: analysisResult.keyPoints,
+        audioData: "",
+        transcript: result.transcript,
+        summary: result.analysis.summary,
+        keyPoints: result.analysis.keyPoints,
         folderId: selectedFolder,
         duration: 0,
-        suggestedEvents: analysisResult.suggestedEvents
+        suggestedEvents: result.analysis.suggestedEvents
       });
       
       toast.success("PDF procesado correctamente");
-    } catch (error) {
+      
+      // Limpiar el input de archivo
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      setFile(null);
+      setLessonName("");
+    } catch (error: any) {
       console.error("Error processing PDF:", error);
-      toast.error("Error al procesar el PDF");
-    } finally {
-      setLoading(false);
+      toast.error(error.message || "Error al procesar el PDF");
     }
   };
   
-  // Función para extraer texto del PDF usando PDF.js
-  async function extractTextFromPdf(pdfFile: File): Promise<string> {
-    try {
-      // Convert the file to an ArrayBuffer
-      const arrayBuffer = await pdfFile.arrayBuffer();
-      
-      // Load the PDF document
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      
-      let fullText = '';
-      
-      // Extract text from each page
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items.map((item: any) => item.str).join(' ');
-        fullText += pageText + '\n';
-      }
-      
-      return fullText;
-    } catch (error) {
-      console.error("Error extracting text from PDF:", error);
-      throw new Error("Error al extraer texto del PDF");
-    }
-  }
-  
-  // Función para analizar el contenido del PDF con GROQ
-  async function analyzeContent(content: string): Promise<{
-    summary: string;
-    keyPoints: string[];
-    suggestedEvents: { title: string; description: string; date?: string }[];
-  }> {
-    try {
-      // Validar contenido
-      if (!content || content.trim().length < 10) {
-        throw new Error("El contenido del PDF es demasiado corto o inválido");
-      }
-      
-      // Truncar contenido si es muy largo
-      const truncatedContent = content.length > 10000 
-        ? content.substring(0, 10000) + "..." 
-        : content;
-      
-      // Enviar solicitud a la API de GROQ
-      const response = await axios.post(
-        "https://api.groq.com/openai/v1/chat/completions",
-        {
-          model: "llama3-8b-8192",
-          messages: [
-            {
-              role: "system",
-              content: `Eres un asistente especializado en analizar material educativo y generar recursos para profesores.
-              Tu tarea es:
-              1. Crear un resumen estructurado del contenido (máximo 3 párrafos)
-              2. Extraer 3-5 puntos clave para enfatizar en clase
-              3. Sugerir un plan de clase basado en el contenido
-              4. Proponer posibles actividades o tareas para los estudiantes
-              
-              El formato de tu respuesta debe ser Markdown exactamente así:
-              
-              # Resumen del material
-              
-              [Resumen estructurado aquí]
-              
-              ## Puntos clave para enfatizar
-              
-              - [Punto 1]
-              - [Punto 2]
-              - [Punto 3]
-              ...
-              
-              ## Plan de clase sugerido
-              
-              1. [Actividad/Tema 1]
-              2. [Actividad/Tema 2]
-              ...
-              
-              ## Actividades propuestas
-              
-              1. [Descripción de actividad 1]
-              2. [Descripción de actividad 2]
-              ...`
-            },
-            {
-              role: "user",
-              content: truncatedContent
-            }
-          ],
-          temperature: 0.2,
-          max_tokens: 2048
-        },
-        {
-          headers: {
-            "Authorization": `Bearer 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`,
-            "Content-Type": "application/json"
-          }
-        }
-      );
-      
-      // Procesar respuesta de la API
-      const analysisMarkdown = response.data.choices[0].message.content;
-      
-      // Extraer puntos clave
-      const keyPointsMatch = analysisMarkdown.match(/## Puntos clave para enfatizar\s+\n([\s\S]*?)(?=\n##|$)/);
-      const keyPoints = keyPointsMatch ? 
-        keyPointsMatch[1].split("\n")
-          .map(point => point.trim())
-          .filter(point => point.startsWith("- "))
-          .map(point => point.substring(2)) : 
-        [];
-      
-      // Extraer plan de clase y actividades
-      const planMatch = analysisMarkdown.match(/## Plan de clase sugerido\s+\n([\s\S]*?)(?=\n##|$)/);
-      const activitiesMatch = analysisMarkdown.match(/## Actividades propuestas\s+\n([\s\S]*?)(?=\n##|$)/);
-      
-      // Crear eventos sugeridos
-      const suggestedEvents = [];
-      
-      if (planMatch) {
-        const planItems = planMatch[1].split("\n")
-          .map(item => item.trim())
-          .filter(item => /^\d+\./.test(item))
-          .map(item => item.replace(/^\d+\.\s*/, ""));
-        
-        for (let i = 0; i < planItems.length; i++) {
-          suggestedEvents.push({
-            title: `Clase: ${planItems[i]}`,
-            description: `Parte ${i+1} del plan de clase: ${planItems[i]}`
-          });
-        }
-      }
-      
-      if (activitiesMatch) {
-        const activityItems = activitiesMatch[1].split("\n")
-          .map(item => item.trim())
-          .filter(item => /^\d+\./.test(item))
-          .map(item => item.replace(/^\d+\.\s*/, ""));
-        
-        for (const activity of activityItems) {
-          suggestedEvents.push({
-            title: `Actividad: ${activity.substring(0, 30)}...`,
-            description: activity
-          });
-        }
-      }
-      
-      return {
-        summary: analysisMarkdown,
-        keyPoints,
-        suggestedEvents
-      };
-    } catch (error) {
-      console.error("Error analyzing PDF content:", error);
-      
-      // Proporcionar resultados de respaldo en caso de error
-      return {
-        summary: "# Error al analizar el contenido\n\nHubo un problema al analizar el contenido del PDF. Por favor, verifica que el archivo tenga texto extraíble y no esté protegido.",
-        keyPoints: ["Verificar contenido del PDF", "Revisar permisos del documento", "Intentar con otro documento si el problema persiste"],
-        suggestedEvents: [
-          {
-            title: "Verificar documento",
-            description: "Revisar que el PDF contenga texto extraíble y no esté protegido"
-          }
-        ]
-      };
-    }
-  }
-  
   // Interfaz de usuario
   return (
-    <div className="space-y-4 p-4 glassmorphism rounded-xl">
+    <div className="space-y-4">
       <h2 className="text-xl font-semibold">Subir material para clase</h2>
       
       <div className="space-y-4">
@@ -275,6 +110,7 @@ export function PdfUploader() {
             accept="application/pdf"
             onChange={handleFileChange}
             className="cursor-pointer"
+            ref={fileInputRef}
           />
         </div>
         
@@ -307,7 +143,7 @@ export function PdfUploader() {
             </div>
             
             <Button 
-              onClick={processPdf} 
+              onClick={handleProcessPdf} 
               disabled={loading}
               className="w-full"
             >
@@ -323,6 +159,15 @@ export function PdfUploader() {
                 </>
               )}
             </Button>
+            
+            {loading && (
+              <div className="space-y-1">
+                <Progress value={progress} className="h-2" />
+                <p className="text-xs text-muted-foreground text-center">
+                  {progress < 50 ? 'Extrayendo texto...' : 'Analizando contenido...'}
+                </p>
+              </div>
+            )}
           </>
         )}
       </div>
