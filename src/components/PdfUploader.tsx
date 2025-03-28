@@ -99,9 +99,10 @@ export function PdfUploader() {
       // Using the correct object format for parameters
       const result = await convertApiClient.convert('pdf', 'txt', params);
       
-      // Note the lowercase 'url' property instead of 'Url'
+      // Get the file URL from the result
       const fileUrl = result.files[0].url;
       
+      // Fetch the text content from the URL
       const textResponse = await fetch(fileUrl);
       
       if (!textResponse.ok) {
