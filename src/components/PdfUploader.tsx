@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,10 +10,11 @@ import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import * as ConvertApi from "convertapi";
 
-// Create a ConvertAPI client instance with your secret key
+// Configurar cliente de ConvertAPI correctamente
 const convertApiClient = ConvertApi.default("secret_oQHJ9c5WhDkkjtvH");
 
 export function PdfUploader() {
+  // Estados del componente
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
@@ -23,6 +25,7 @@ export function PdfUploader() {
   
   const { folders, addRecording } = useRecordings();
   
+  // Manejador para cambio de archivo
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
@@ -34,11 +37,13 @@ export function PdfUploader() {
       
       setFile(selectedFile);
       
+      // Establecer nombre de lección basado en nombre del archivo
       const fileName = selectedFile.name.replace(/\.pdf$/, "");
       setLessonName(fileName);
     }
   };
   
+  // Función principal para procesar el PDF
   const processPdf = async () => {
     if (!file) {
       toast.error("Por favor, selecciona un archivo PDF");
@@ -56,17 +61,18 @@ export function PdfUploader() {
     setShowAnalysis(false);
     
     try {
+      // Extraer texto del PDF
       const pdfText = await extractTextFromPdf(file);
       
-      console.log("PDF text extracted, length:", pdfText.length);
-      console.log("First 100 chars:", pdfText.substring(0, 100));
+      // Analizar el contenido del PDF
+      const analysisResult = await analyzeContent(pdfText);
       
-      const analysisResult = await analyzeClassContent(pdfText);
-      
+      // Actualizar estados con resultados
       setSummary(analysisResult.summary);
       setKeyPoints(analysisResult.keyPoints);
       setShowAnalysis(true);
       
+      // Guardar la grabación
       addRecording({
         name: lessonName,
         audioUrl: "",
@@ -87,26 +93,25 @@ export function PdfUploader() {
     }
   };
   
+  // Función para extraer texto del PDF usando ConvertAPI
   async function extractTextFromPdf(pdfFile: File): Promise<string> {
     try {
-      // Convert PDF to text using the ConvertAPI client
+      // Convertir PDF a texto usando ConvertAPI
       const result = await convertApiClient.convert('pdf', 'txt', {
         File: pdfFile
       });
       
-      // Get the file URL from the result
+      // Obtener URL del archivo convertido
       const fileUrl = result.files[0].url;
       
-      // Fetch the text content from the URL
+      // Descargar el contenido de texto
       const textResponse = await fetch(fileUrl);
       
       if (!textResponse.ok) {
-        throw new Error(`Failed to fetch converted text: ${textResponse.status} ${textResponse.statusText}`);
+        throw new Error(`Error al descargar texto convertido: ${textResponse.status} ${textResponse.statusText}`);
       }
       
       const textContent = await textResponse.text();
-      
-      console.log("PDF successfully converted to text");
       return textContent;
     } catch (error) {
       console.error("Error extracting text from PDF:", error);
@@ -114,20 +119,24 @@ export function PdfUploader() {
     }
   }
   
-  async function analyzeClassContent(content: string): Promise<{
+  // Función para analizar el contenido del PDF con GROQ
+  async function analyzeContent(content: string): Promise<{
     summary: string;
     keyPoints: string[];
     suggestedEvents: { title: string; description: string; date?: string }[];
   }> {
     try {
+      // Validar contenido
       if (!content || content.trim().length < 10) {
         throw new Error("El contenido del PDF es demasiado corto o inválido");
       }
       
+      // Truncar contenido si es muy largo
       const truncatedContent = content.length > 10000 
         ? content.substring(0, 10000) + "..." 
         : content;
       
+      // Enviar solicitud a la API de GROQ
       const response = await axios.post(
         "https://api.groq.com/openai/v1/chat/completions",
         {
@@ -183,9 +192,10 @@ export function PdfUploader() {
         }
       );
       
-      console.log("Groq API response received");
+      // Procesar respuesta de la API
       const analysisMarkdown = response.data.choices[0].message.content;
       
+      // Extraer puntos clave
       const keyPointsMatch = analysisMarkdown.match(/## Puntos clave para enfatizar\s+\n([\s\S]*?)(?=\n##|$)/);
       const keyPoints = keyPointsMatch ? 
         keyPointsMatch[1].split("\n")
@@ -194,9 +204,11 @@ export function PdfUploader() {
           .map(point => point.substring(2)) : 
         [];
       
+      // Extraer plan de clase y actividades
       const planMatch = analysisMarkdown.match(/## Plan de clase sugerido\s+\n([\s\S]*?)(?=\n##|$)/);
       const activitiesMatch = analysisMarkdown.match(/## Actividades propuestas\s+\n([\s\S]*?)(?=\n##|$)/);
       
+      // Crear eventos sugeridos
       const suggestedEvents = [];
       
       if (planMatch) {
@@ -235,6 +247,7 @@ export function PdfUploader() {
     } catch (error) {
       console.error("Error analyzing PDF content:", error);
       
+      // Proporcionar resultados de respaldo en caso de error
       return {
         summary: "# Error al analizar el contenido\n\nHubo un problema al analizar el contenido del PDF. Por favor, verifica que el archivo tenga texto extraíble y no esté protegido.",
         keyPoints: ["Verificar contenido del PDF", "Revisar permisos del documento", "Intentar con otro documento si el problema persiste"],
@@ -248,6 +261,7 @@ export function PdfUploader() {
     }
   }
   
+  // Interfaz de usuario
   return (
     <div className="space-y-4 p-4 glassmorphism rounded-xl">
       <h2 className="text-xl font-semibold">Subir material para clase</h2>
