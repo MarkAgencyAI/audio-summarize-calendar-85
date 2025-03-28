@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +7,7 @@ import { Folder, useRecordings } from "@/context/RecordingsContext";
 import { toast } from "sonner";
 import { Loader2, Upload } from "lucide-react";
 import axios from "axios";
-import ConvertApi from "convertapi-js";
+import * as ConvertApi from "convertapi-js";
 
 export function PdfUploader() {
   const [file, setFile] = useState<File | null>(null);
