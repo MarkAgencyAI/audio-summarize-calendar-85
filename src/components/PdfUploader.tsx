@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +6,7 @@ import { Folder, useRecordings } from "@/context/RecordingsContext";
 import { toast } from "sonner";
 import { Loader2, Upload } from "lucide-react";
 import axios from "axios";
+import ConvertApi from "convertapi-js";
 
 export function PdfUploader() {
   const [file, setFile] = useState<File | null>(null);
@@ -49,104 +49,68 @@ export function PdfUploader() {
     setLoading(true);
     
     try {
-      // Read the PDF file as a base64 string
-      const fileReader = new FileReader();
-      fileReader.readAsArrayBuffer(file);
+      // Convert PDF to text using ConvertAPI
+      const pdfText = await extractTextFromPdf(file);
       
-      fileReader.onload = async () => {
-        try {
-          // Convert ArrayBuffer to Base64
-          const arrayBuffer = fileReader.result as ArrayBuffer;
-          const bytes = new Uint8Array(arrayBuffer);
-          let binary = '';
-          for (let i = 0; i < bytes.byteLength; i++) {
-            binary += String.fromCharCode(bytes[i]);
-          }
-          const base64 = window.btoa(binary);
-          
-          // Extract text from PDF using Groq API
-          const transcript = await extractTextFromPdf(base64);
-          
-          // Analyze the text with Groq LLM
-          const analysisResult = await analyzeClassContent(transcript);
-          
-          // Update the UI with the generated summary
-          setSummary(analysisResult.summary);
-          
-          // Create a recording entry for this lesson
-          addRecording({
-            name: lessonName,
-            audioUrl: "", // No audio for PDF-based entries
-            transcript: transcript,
-            summary: analysisResult.summary,
-            keyPoints: analysisResult.keyPoints,
-            folderId: selectedFolder,
-            duration: 0, // No duration for PDF-based entries
-            suggestedEvents: analysisResult.suggestedEvents
-          });
-          
-          toast.success("PDF procesado correctamente");
-        } catch (error) {
-          console.error("Error processing PDF:", error);
-          toast.error("Error al procesar el PDF");
-        } finally {
-          setLoading(false);
-        }
-      };
+      // Analyze the text with Groq LLM
+      const analysisResult = await analyzeClassContent(pdfText);
       
-      fileReader.onerror = () => {
-        toast.error("Error al leer el archivo PDF");
-        setLoading(false);
-      };
+      // Update the UI with the generated summary
+      setSummary(analysisResult.summary);
+      
+      // Create a recording entry for this lesson
+      addRecording({
+        name: lessonName,
+        audioUrl: "", // No audio for PDF-based entries
+        transcript: pdfText,
+        summary: analysisResult.summary,
+        keyPoints: analysisResult.keyPoints,
+        folderId: selectedFolder,
+        duration: 0, // No duration for PDF-based entries
+        suggestedEvents: analysisResult.suggestedEvents
+      });
+      
+      toast.success("PDF procesado correctamente");
     } catch (error) {
       console.error("Error processing PDF:", error);
       toast.error("Error al procesar el PDF");
+    } finally {
       setLoading(false);
     }
   };
   
-  async function extractTextFromPdf(base64Pdf: string): Promise<string> {
+  async function extractTextFromPdf(pdfFile: File): Promise<string> {
     try {
-      // Use Groq API to extract text from PDF
-      const extractionResponse = await axios.post(
-        "https://api.groq.com/openai/v1/chat/completions",
-        {
-          model: "llama3-8b-8192",
-          messages: [
-            {
-              role: "system",
-              content: "You are a helpful assistant that extracts and organizes text from PDFs. Return only the extracted text."
-            },
-            {
-              role: "user",
-              content: [
-                { 
-                  type: "text", 
-                  text: "Extract the text content from this PDF document and organize it in a readable format:" 
-                },
-                { 
-                  type: "file_attachment", 
-                  file_attachment: { 
-                    data: base64Pdf, 
-                    content_type: "application/pdf" 
-                  } 
-                }
-              ]
-            }
-          ],
-          temperature: 0.2
-        },
-        {
-          headers: {
-            "Authorization": `Bearer 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`,
-            "Content-Type": "application/json"
-          }
-        }
-      );
+      // Initialize ConvertAPI with your secret
+      const convertApi = ConvertApi.auth('secret_oQHJ9c5WhDkkjtvH');
       
-      return extractionResponse.data.choices[0].message.content;
+      // Create parameters
+      const params = convertApi.createParams();
+      
+      // Add the PDF file to parameters
+      params.add('File', pdfFile);
+      
+      // Convert PDF to TXT
+      console.log("Converting PDF to text using ConvertAPI...");
+      const result = await convertApi.convert('pdf', 'txt', params);
+      
+      // Get the URL of the converted file
+      const fileUrl = result.files[0].Url;
+      
+      // Fetch the text content from the URL
+      const response = await fetch(fileUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch converted text: ${response.status} ${response.statusText}`);
+      }
+      
+      // Get the text content
+      const textContent = await response.text();
+      
+      console.log("PDF successfully converted to text");
+      return textContent;
     } catch (error) {
-      console.error("Error extracting text from PDF:", error);
+      console.error("Error extracting text from PDF using ConvertAPI:", error);
       throw new Error("Error al extraer texto del PDF");
     }
   }
