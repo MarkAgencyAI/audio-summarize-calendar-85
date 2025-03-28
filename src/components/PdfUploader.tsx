@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,10 +8,10 @@ import { toast } from "sonner";
 import { Loader2, Upload, FileText, BookOpenText, ListChecks } from "lucide-react";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import * as ConvertApi from "convertapi";
+import * as pdfjsLib from "pdfjs-dist";
 
-// Configurar cliente de ConvertAPI correctamente
-const convertApiInstance = new ConvertApi.default("secret_oQHJ9c5WhDkkjtvH");
+// Initialize PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 export function PdfUploader() {
   // Estados del componente
@@ -92,28 +93,26 @@ export function PdfUploader() {
     }
   };
   
-  // Función para extraer texto del PDF usando ConvertAPI
+  // Función para extraer texto del PDF usando PDF.js
   async function extractTextFromPdf(pdfFile: File): Promise<string> {
     try {
-      // Convertir PDF a texto usando ConvertAPI
-      const params = {
-        File: pdfFile
-      };
+      // Convert the file to an ArrayBuffer
+      const arrayBuffer = await pdfFile.arrayBuffer();
       
-      const result = await convertApiInstance.convert('pdf', 'txt', params);
+      // Load the PDF document
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
       
-      // Obtener URL del archivo convertido
-      const fileUrl = result.files[0].url;
+      let fullText = '';
       
-      // Descargar el contenido de texto
-      const textResponse = await fetch(fileUrl);
-      
-      if (!textResponse.ok) {
-        throw new Error(`Error al descargar texto convertido: ${textResponse.status} ${textResponse.statusText}`);
+      // Extract text from each page
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map((item: any) => item.str).join(' ');
+        fullText += pageText + '\n';
       }
       
-      const textContent = await textResponse.text();
-      return textContent;
+      return fullText;
     } catch (error) {
       console.error("Error extracting text from PDF:", error);
       throw new Error("Error al extraer texto del PDF");
