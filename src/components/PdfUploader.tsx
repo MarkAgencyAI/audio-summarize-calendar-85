@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +7,9 @@ import { toast } from "sonner";
 import { Loader2, Upload, FileText, BookOpenText, ListChecks } from "lucide-react";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import * as ConvertApi from "convertapi";
+import ConvertApi from "convertapi";
+
+const convertApi = new ConvertApi('secret_oQHJ9c5WhDkkjtvH');
 
 export function PdfUploader() {
   const [file, setFile] = useState<File | null>(null);
@@ -25,7 +26,6 @@ export function PdfUploader() {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       
-      // Check if it's a PDF
       if (selectedFile.type !== "application/pdf") {
         toast.error("Por favor, sube un archivo PDF");
         return;
@@ -33,7 +33,6 @@ export function PdfUploader() {
       
       setFile(selectedFile);
       
-      // Set default lesson name from filename
       const fileName = selectedFile.name.replace(/\.pdf$/, "");
       setLessonName(fileName);
     }
@@ -56,29 +55,25 @@ export function PdfUploader() {
     setShowAnalysis(false);
     
     try {
-      // Convert PDF to text using ConvertAPI
       const pdfText = await extractTextFromPdf(file);
       
       console.log("PDF text extracted, length:", pdfText.length);
       console.log("First 100 chars:", pdfText.substring(0, 100));
       
-      // Analyze the text with Groq LLM
       const analysisResult = await analyzeClassContent(pdfText);
       
-      // Update the UI with the generated summary and key points
       setSummary(analysisResult.summary);
       setKeyPoints(analysisResult.keyPoints);
       setShowAnalysis(true);
       
-      // Create a recording entry for this lesson
       addRecording({
         name: lessonName,
-        audioUrl: "", // No audio for PDF-based entries
+        audioUrl: "",
         transcript: pdfText,
         summary: analysisResult.summary,
         keyPoints: analysisResult.keyPoints,
         folderId: selectedFolder,
-        duration: 0, // No duration for PDF-based entries
+        duration: 0,
         suggestedEvents: analysisResult.suggestedEvents
       });
       
@@ -93,30 +88,20 @@ export function PdfUploader() {
   
   async function extractTextFromPdf(pdfFile: File): Promise<string> {
     try {
-      // Initialize ConvertAPI with your secret - using the correct pattern
-      const convertApi = ConvertApi.default;
-      convertApi.api_secret = 'secret_oQHJ9c5WhDkkjtvH';
-      
-      // Create a FormData object with the file
-      const formData = new FormData();
-      formData.append('File', pdfFile);
-      
-      // Convert PDF to TXT using the correct API call pattern
-      const result = await convertApi.convert('pdf', 'txt', {
+      const params = {
         File: pdfFile
-      });
+      };
       
-      // Get the URL of the converted file
-      const fileUrl = result.response.Files[0].Url;
+      const result = await convertApi.convert('pdf', 'txt', params);
       
-      // Fetch the text content from the URL
+      const fileUrl = result.files[0].Url;
+      
       const textResponse = await fetch(fileUrl);
       
       if (!textResponse.ok) {
         throw new Error(`Failed to fetch converted text: ${textResponse.status} ${textResponse.statusText}`);
       }
       
-      // Get the text content
       const textContent = await textResponse.text();
       
       console.log("PDF successfully converted to text");
@@ -133,13 +118,10 @@ export function PdfUploader() {
     suggestedEvents: { title: string; description: string; date?: string }[];
   }> {
     try {
-      // Make sure we have valid content
       if (!content || content.trim().length < 10) {
         throw new Error("El contenido del PDF es demasiado corto o inválido");
       }
       
-      // Truncate content if it's too long for the model
-      // Groq models typically have token limits
       const truncatedContent = content.length > 10000 
         ? content.substring(0, 10000) + "..." 
         : content;
@@ -202,7 +184,6 @@ export function PdfUploader() {
       console.log("Groq API response received");
       const analysisMarkdown = response.data.choices[0].message.content;
       
-      // Extract key points from markdown
       const keyPointsMatch = analysisMarkdown.match(/## Puntos clave para enfatizar\s+\n([\s\S]*?)(?=\n##|$)/);
       const keyPoints = keyPointsMatch ? 
         keyPointsMatch[1].split("\n")
@@ -211,7 +192,6 @@ export function PdfUploader() {
           .map(point => point.substring(2)) : 
         [];
       
-      // Extract suggested events from the plan
       const planMatch = analysisMarkdown.match(/## Plan de clase sugerido\s+\n([\s\S]*?)(?=\n##|$)/);
       const activitiesMatch = analysisMarkdown.match(/## Actividades propuestas\s+\n([\s\S]*?)(?=\n##|$)/);
       
@@ -253,7 +233,6 @@ export function PdfUploader() {
     } catch (error) {
       console.error("Error analyzing PDF content:", error);
       
-      // Return meaningful error in analysis format
       return {
         summary: "# Error al analizar el contenido\n\nHubo un problema al analizar el contenido del PDF. Por favor, verifica que el archivo tenga texto extraíble y no esté protegido.",
         keyPoints: ["Verificar contenido del PDF", "Revisar permisos del documento", "Intentar con otro documento si el problema persiste"],
