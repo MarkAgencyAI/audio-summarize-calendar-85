@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 
 export interface Recording {
@@ -11,6 +12,7 @@ export interface Recording {
   folderId: string;
   createdAt: Date;
   duration: number;
+  language?: string;
   suggestedEvents?: {
     title: string;
     description: string;

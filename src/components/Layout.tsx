@@ -2,8 +2,9 @@
 import { ReactNode, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { Mic, Calendar, Folder, User, LogOut, Menu, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Mic, Calendar, Folder, User, LogOut, Menu, X, ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/context/AuthContext";
 
 interface LayoutProps {
   children: ReactNode;
@@ -13,6 +14,7 @@ export function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
+  const { user } = useAuth();
   
   const [sidebarOpen, setSidebarOpen] = useState(true);
   
@@ -27,8 +29,18 @@ export function Layout({ children }: LayoutProps) {
     setSidebarOpen(!sidebarOpen);
   };
 
+  // Use different icon for dashboard based on user role
+  const getDashboardIcon = () => {
+    return user?.role === "teacher" ? <FileText className="h-5 w-5" /> : <Mic className="h-5 w-5" />;
+  };
+
+  // Use different label for dashboard based on user role
+  const getDashboardLabel = () => {
+    return user?.role === "teacher" ? "Transcripciones" : "Grabaciones";
+  };
+
   const navItems = [
-    { path: "/dashboard", icon: <Mic className="h-5 w-5" />, label: "Grabaciones" },
+    { path: "/dashboard", icon: getDashboardIcon(), label: getDashboardLabel() },
     { path: "/calendar", icon: <Calendar className="h-5 w-5" />, label: "Calendario" },
     { path: "/folders", icon: <Folder className="h-5 w-5" />, label: "Carpetas" },
     { path: "/profile", icon: <User className="h-5 w-5" />, label: "Perfil" },
@@ -43,10 +55,10 @@ export function Layout({ children }: LayoutProps) {
         }`}>
           <div className="p-4 border-b border-border flex items-center justify-between">
             <h2 className={`text-xl font-medium ${sidebarOpen ? 'hidden md:block' : 'hidden'}`}>
-              AudioCalendar
+              Cali
             </h2>
             <span className={`text-xl font-medium ${sidebarOpen ? 'block md:hidden' : 'hidden'}`}>
-              AC
+              C
             </span>
           </div>
           

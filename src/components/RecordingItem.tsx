@@ -1,6 +1,6 @@
 
 import { useState, useRef, useEffect } from "react";
-import { Folder, Calendar, Play, Pause, Clock, FileText, Edit, Trash2 } from "lucide-react";
+import { Folder, Calendar, Play, Pause, Clock, FileText, Edit, Trash2, Globe } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,16 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+  };
+  
+  // Format language display
+  const getLanguageDisplay = (code?: string) => {
+    const languages: Record<string, string> = {
+      es: "Español",
+      en: "English",
+      fr: "Français"
+    };
+    return code ? languages[code] || code.toUpperCase() : "Español";
   };
   
   useEffect(() => {
@@ -73,11 +83,20 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
     <Card className="overflow-hidden transition-all hover:shadow-md" 
       style={{ backgroundColor: `${folder.color}20` }}>
       <div className="p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-full" style={{ backgroundColor: folder.color }}>
-            <Folder className="h-4 w-4 text-white" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-full" style={{ backgroundColor: folder.color }}>
+              <Folder className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-sm text-muted-foreground">{folder.name}</span>
           </div>
-          <span className="text-sm text-muted-foreground">{folder.name}</span>
+          
+          {recording.language && (
+            <div className="flex items-center gap-1 text-xs bg-muted px-2 py-1 rounded-full">
+              <Globe className="h-3 w-3" />
+              <span>{getLanguageDisplay(recording.language)}</span>
+            </div>
+          )}
         </div>
         
         <h3 className="font-semibold truncate">{recording.name}</h3>

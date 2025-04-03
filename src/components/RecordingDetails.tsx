@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { FileText, Edit, Trash2, Save, X } from "lucide-react";
+import { FileText, Edit, Trash2, Save, X, Globe } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface RecordingDetailsProps {
@@ -15,10 +15,23 @@ interface RecordingDetailsProps {
 }
 
 export function RecordingDetails({ recording }: RecordingDetailsProps) {
-  const { updateRecording, deleteRecording } = useRecordings();
+  const { updateRecording, deleteRecording, folders } = useRecordings();
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(recording.name);
   const [isOpen, setIsOpen] = useState(false);
+  
+  // Get folder details
+  const folder = folders.find(f => f.id === recording.folderId) || folders[0];
+  
+  // Format language display
+  const getLanguageDisplay = (code?: string) => {
+    const languages: Record<string, string> = {
+      es: "Español",
+      en: "English",
+      fr: "Français"
+    };
+    return code ? languages[code] || code.toUpperCase() : "Español";
+  };
   
   const handleSaveRename = () => {
     if (newName.trim() === "") {
@@ -118,7 +131,24 @@ export function RecordingDetails({ recording }: RecordingDetailsProps) {
           </DialogTitle>
         </DialogHeader>
         
-        <Separator />
+        <div className="flex items-center gap-2 mt-2">
+          <div 
+            className="h-6 w-6 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: folder.color }}
+          >
+            <Folder className="h-3 w-3 text-white" />
+          </div>
+          <span className="text-sm">{folder.name}</span>
+          
+          {recording.language && (
+            <div className="flex items-center gap-1 ml-auto text-xs bg-muted px-2 py-1 rounded-full">
+              <Globe className="h-3 w-3" />
+              <span>{getLanguageDisplay(recording.language)}</span>
+            </div>
+          )}
+        </div>
+        
+        <Separator className="my-2" />
         
         <div className="flex-1 overflow-hidden pt-2">
           <ScrollArea className="h-full">

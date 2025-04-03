@@ -21,6 +21,9 @@ const queryClient = new QueryClient();
 
 // Use function declaration instead of arrow function to avoid issues
 function App() {
+  // Set the app name in the document title
+  document.title = "Cali - Asistente de clases";
+  
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

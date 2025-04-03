@@ -69,6 +69,9 @@ export function PdfUploader() {
       setKeyPoints(result.analysis.keyPoints);
       setShowAnalysis(true);
       
+      // Buscar la carpeta seleccionada
+      const folder = folders.find(f => f.id === selectedFolder);
+      
       // Guardar la grabación
       addRecording({
         name: lessonName,
@@ -79,7 +82,8 @@ export function PdfUploader() {
         keyPoints: result.analysis.keyPoints,
         folderId: selectedFolder,
         duration: 0,
-        suggestedEvents: result.analysis.suggestedEvents
+        suggestedEvents: result.analysis.suggestedEvents,
+        language: result.language || "es"
       });
       
       toast.success("PDF procesado correctamente");

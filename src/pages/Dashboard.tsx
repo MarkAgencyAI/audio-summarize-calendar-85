@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar, CalendarEvent } from "@/components/Calendar";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { PdfUploader } from "@/components/PdfUploader";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -73,15 +74,25 @@ export default function Dashboard() {
     navigate("/calendar", { state: { recording } });
   };
   
+  // Determine if user is a teacher or student
+  const isTeacher = user?.role === "teacher";
+  
+  // Get the page title based on user role
+  const pageTitle = isTeacher ? "Transcripciones" : "Grabaciones";
+  
   return (
     <Layout>
       <div className="space-y-10">
         <div className="space-y-6">
-          <h1 className="text-3xl font-bold">Grabaciones</h1>
+          <h1 className="text-3xl font-bold">{pageTitle}</h1>
           
-          {/* Only show AudioRecorder to students */}
-          {user?.role === "student" && (
+          {/* Show AudioRecorder to students, PdfUploader to teachers */}
+          {!isTeacher ? (
             <AudioRecorder />
+          ) : (
+            <div className="glassmorphism rounded-xl p-4 md:p-6 shadow-lg mb-8">
+              <PdfUploader />
+            </div>
           )}
           
           <div className="space-y-4">
@@ -90,7 +101,7 @@ export default function Dashboard() {
                 <Label htmlFor="search">Buscar</Label>
                 <Input
                   id="search"
-                  placeholder="Buscar grabaciones..."
+                  placeholder={`Buscar ${pageTitle.toLowerCase()}...`}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -116,15 +127,15 @@ export default function Dashboard() {
         </div>
         
         <div className="space-y-6">
-          <h2 className="text-2xl font-semibold">Tus grabaciones</h2>
+          <h2 className="text-2xl font-semibold">{`Tus ${pageTitle}`}</h2>
           
           {filteredRecordings.length === 0 ? (
             <div className="text-center py-10 border border-dashed border-border rounded-lg bg-muted/30">
-              <p className="text-muted-foreground">No hay grabaciones</p>
+              <p className="text-muted-foreground">No hay {pageTitle.toLowerCase()}</p>
               <p className="text-sm text-muted-foreground mt-2">
-                {user?.role === "student" 
-                  ? "Graba tu primer audio para comenzar" 
-                  : "Sube material en PDF para obtener resúmenes"}
+                {isTeacher 
+                  ? "Sube material en PDF para obtener resúmenes" 
+                  : "Graba tu primer audio para comenzar"}
               </p>
             </div>
           ) : (
