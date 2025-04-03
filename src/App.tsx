@@ -16,9 +16,10 @@ import FoldersPage from "./pages/FoldersPage";
 import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 
-// Create a client
+// Create a client outside the component
 const queryClient = new QueryClient();
 
+// Use function declaration instead of arrow function to avoid issues
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
