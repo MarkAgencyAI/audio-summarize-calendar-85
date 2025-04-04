@@ -1,122 +1,209 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Layout } from "@/components/Layout";
-import { AudioRecorder } from "@/components/AudioRecorder";
-import { RecordingItem } from "@/components/RecordingItem";
+
+import React, { useEffect, useState } from "react";
+import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity } from "react-native";
+import { useNavigation } from '@react-navigation/native';
 import { Recording, useRecordings } from "@/context/RecordingsContext";
-import { useAuth } from "@/context/AuthContext";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Calendar, CalendarEvent } from "@/components/Calendar";
-import { toast } from "sonner";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { PdfUploader } from "@/components/PdfUploader";
+
 export default function Dashboard() {
-  const navigate = useNavigate();
-  const {
-    user
-  } = useAuth();
-  const {
-    recordings,
-    folders
-  } = useRecordings();
-  const isMobile = useIsMobile();
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const navigation = useNavigation();
+  const { recordings, folders } = useRecordings();
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFolder, setSelectedFolder] = useState("default");
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!user) {
-      navigate("/login");
-    }
-  }, [user, navigate]);
-
-  // Load events from localStorage
-  useEffect(() => {
-    const storedEvents = localStorage.getItem("events");
-    if (storedEvents) {
-      setEvents(JSON.parse(storedEvents));
-    }
-  }, []);
-
-  // Save events to localStorage when they change
-  useEffect(() => {
-    localStorage.setItem("events", JSON.stringify(events));
-  }, [events]);
+  
+  // Filter recordings based on search term and selected folder
   const filteredRecordings = recordings.filter(recording => {
     // Filter by folder
     const folderMatch = selectedFolder === "default" ? true : recording.folderId === selectedFolder;
 
     // Filter by search term
-    const searchMatch = searchTerm ? recording.name.toLowerCase().includes(searchTerm.toLowerCase()) || recording.transcript.toLowerCase().includes(searchTerm.toLowerCase()) || (recording.summary?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) : true;
+    const searchMatch = searchTerm 
+      ? recording.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        recording.transcript.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        (recording.summary?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) 
+      : true;
+      
     return folderMatch && searchMatch;
   });
-  const handleAddEvent = (event: Omit<CalendarEvent, "id">) => {
-    const newEvent: CalendarEvent = {
-      ...event,
-      id: crypto.randomUUID()
-    };
-    setEvents(prev => [...prev, newEvent]);
-  };
-  const handleDeleteEvent = (id: string) => {
-    setEvents(prev => prev.filter(event => event.id !== id));
-  };
+  
   const handleAddToCalendar = (recording: Recording) => {
-    navigate("/calendar", {
-      state: {
-        recording
-      }
-    });
+    // In React Native, we would navigate to the Calendar screen
+    // This is a placeholder until we create the Calendar screen
+    console.log("Navigate to calendar with recording:", recording.id);
   };
 
-  // Determine if user is a teacher or student
-  const isTeacher = user?.role === "teacher";
-
-  // Get the page title based on user role
-  const pageTitle = isTeacher ? "Transcripciones" : "Grabaciones";
-  return <Layout>
-      <div className="space-y-10">
-        <div className="space-y-6">
-          <h1 className="text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">{pageTitle}</h1>
-          
-          {/* Show AudioRecorder to students, PdfUploader to teachers */}
-          {!isTeacher ? <AudioRecorder className="background bg-[005c5f] bg-[#001b1b]" /> : <div className="glassmorphism rounded-xl p-4 md:p-6 shadow-lg mb-8 dark:bg-custom-secondary/20 dark:border-custom-secondary/40">
-              <PdfUploader />
-            </div>}
-          
-          <div className="space-y-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <Label htmlFor="search" className="dark:text-white">Buscar</Label>
-                <Input id="search" placeholder={`Buscar ${pageTitle.toLowerCase()}...`} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="dark:bg-custom-secondary/30 dark:border-custom-secondary/60 dark:placeholder:text-white/50 dark:text-white" />
-              </div>
-              
-              <div className="w-full md:w-64">
-                <Label htmlFor="folder" className="dark:text-white">Carpeta</Label>
-                <select id="folder" className="w-full h-10 px-3 py-2 bg-background border border-input rounded-md dark:bg-custom-secondary/30 dark:border-custom-secondary/60 dark:text-white" value={selectedFolder} onChange={e => setSelectedFolder(e.target.value)}>
-                  {folders.map(folder => <option key={folder.id} value={folder.id}>
-                      {folder.name}
-                    </option>)}
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
+  return (
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Transcripciones</Text>
+      </View>
+      
+      <View style={styles.searchContainer}>
+        <Text style={styles.label}>Buscar</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Buscar transcripciones..."
+          value={searchTerm}
+          onChangeText={setSearchTerm}
+        />
         
-        <div className="space-y-6">
-          <h2 className="text-2xl font-semibold text-custom-primary dark:text-custom-accent">{`Tus ${pageTitle}`}</h2>
-          
-          {filteredRecordings.length === 0 ? <div className="text-center py-10 border border-dashed border-border rounded-lg bg-muted/30 dark:bg-custom-secondary/20 dark:border-custom-secondary/40 dark:text-white">
-              <p className="text-muted-foreground dark:text-white/60">No hay {pageTitle.toLowerCase()}</p>
-              <p className="text-sm text-muted-foreground dark:text-white/60 mt-2">
-                {isTeacher ? "Sube material en PDF para obtener resúmenes" : "Graba tu primer audio para comenzar"}
-              </p>
-            </div> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredRecordings.map(recording => <RecordingItem key={recording.id} recording={recording} onAddToCalendar={handleAddToCalendar} />)}
-            </div>}
-        </div>
-      </div>
-    </Layout>;
+        <Text style={styles.label}>Carpeta</Text>
+        {/* In a real app, this would be a proper picker/dropdown */}
+        <View style={styles.folderSelector}>
+          {folders.map(folder => (
+            <TouchableOpacity
+              key={folder.id}
+              style={[
+                styles.folderOption,
+                selectedFolder === folder.id && styles.selectedFolder
+              ]}
+              onPress={() => setSelectedFolder(folder.id)}
+            >
+              <Text style={styles.folderText}>{folder.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+      
+      <View style={styles.recordingsSection}>
+        <Text style={styles.sectionTitle}>Tus Transcripciones</Text>
+        
+        {filteredRecordings.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>No hay transcripciones</Text>
+            <Text style={styles.emptySubtext}>
+              Graba tu primer audio para comenzar
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.recordingsList}>
+            {filteredRecordings.map(recording => (
+              <View key={recording.id} style={styles.recordingItem}>
+                <Text style={styles.recordingTitle}>{recording.name}</Text>
+                {recording.summary && (
+                  <Text style={styles.recordingSummary}>{recording.summary}</Text>
+                )}
+                <TouchableOpacity
+                  style={styles.calendarButton}
+                  onPress={() => handleAddToCalendar(recording)}
+                >
+                  <Text style={styles.calendarButtonText}>Agregar al calendario</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+    </ScrollView>
+  );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  header: {
+    padding: 16,
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#005c5f',
+  },
+  searchContainer: {
+    padding: 16,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    margin: 16,
+  },
+  label: {
+    fontSize: 16,
+    marginBottom: 8,
+    color: '#333333',
+  },
+  input: {
+    backgroundColor: '#ffffff',
+    padding: 8,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#dddddd',
+    marginBottom: 16,
+  },
+  folderSelector: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  folderOption: {
+    padding: 8,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 4,
+    margin: 4,
+  },
+  selectedFolder: {
+    backgroundColor: '#3b82f6',
+  },
+  folderText: {
+    color: '#333333',
+  },
+  recordingsSection: {
+    padding: 16,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 16,
+    color: '#005c5f',
+  },
+  emptyState: {
+    padding: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#dddddd',
+    borderStyle: 'dashed',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666666',
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#999999',
+    marginTop: 8,
+  },
+  recordingsList: {
+    gap: 16,
+  },
+  recordingItem: {
+    padding: 16,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  recordingTitle: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#333333',
+    marginBottom: 8,
+  },
+  recordingSummary: {
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: 16,
+  },
+  calendarButton: {
+    backgroundColor: '#3b82f6',
+    padding: 8,
+    borderRadius: 4,
+    alignItems: 'center',
+  },
+  calendarButtonText: {
+    color: '#ffffff',
+    fontWeight: '500',
+  },
+});

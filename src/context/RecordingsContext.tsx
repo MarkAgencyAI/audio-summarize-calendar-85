@@ -1,5 +1,6 @@
 
-import { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface Recording {
   id: string;
@@ -55,53 +56,64 @@ export function RecordingsProvider({ children }: { children: ReactNode }) {
   const [folders, setFolders] = useState<Folder[]>(DEFAULT_FOLDERS);
 
   useEffect(() => {
-    // Load recordings and folders from localStorage
-    const storedRecordings = localStorage.getItem("recordings");
-    const storedFolders = localStorage.getItem("folders");
+    // Load recordings and folders from AsyncStorage
+    const loadData = async () => {
+      try {
+        const storedRecordings = await AsyncStorage.getItem("recordings");
+        const storedFolders = await AsyncStorage.getItem("folders");
 
-    if (storedRecordings) {
-      setRecordings(JSON.parse(storedRecordings).map((r: any) => ({
-        ...r,
-        createdAt: new Date(r.createdAt),
-      })));
-    }
+        if (storedRecordings) {
+          setRecordings(JSON.parse(storedRecordings).map((r: any) => ({
+            ...r,
+            createdAt: new Date(r.createdAt),
+          })));
+        }
 
-    if (storedFolders) {
-      setFolders(JSON.parse(storedFolders).map((f: any) => ({
-        ...f,
-        createdAt: new Date(f.createdAt),
-      })));
-    }
+        if (storedFolders) {
+          setFolders(JSON.parse(storedFolders).map((f: any) => ({
+            ...f,
+            createdAt: new Date(f.createdAt),
+          })));
+        }
+      } catch (error) {
+        console.error("Error loading data from AsyncStorage:", error);
+      }
+    };
+
+    loadData();
   }, []);
 
-  // Save to localStorage when state changes
+  // Save to AsyncStorage when state changes
   useEffect(() => {
-    localStorage.setItem("recordings", JSON.stringify(recordings));
+    const saveRecordings = async () => {
+      try {
+        await AsyncStorage.setItem("recordings", JSON.stringify(recordings));
+      } catch (error) {
+        console.error("Error saving recordings to AsyncStorage:", error);
+      }
+    };
+    
+    saveRecordings();
   }, [recordings]);
 
   useEffect(() => {
-    localStorage.setItem("folders", JSON.stringify(folders));
+    const saveFolders = async () => {
+      try {
+        await AsyncStorage.setItem("folders", JSON.stringify(folders));
+      } catch (error) {
+        console.error("Error saving folders to AsyncStorage:", error);
+      }
+    };
+    
+    saveFolders();
   }, [folders]);
 
   // Helper function to get valid audio URL
   const getAudioUrl = (recording: Recording): string => {
     // If we have stored audioData (base64), create a blob URL
     if (recording.audioData) {
-      try {
-        // Convert base64 to blob
-        const byteCharacters = atob(recording.audioData.split(',')[1]);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: 'audio/webm' });
-        
-        // Create and return blob URL
-        return URL.createObjectURL(blob);
-      } catch (error) {
-        console.error("Error creating audio URL from data:", error);
-      }
+      // In React Native, we'd return the base64 string directly as it can be used with the Audio API
+      return recording.audioData;
     }
     
     // Fall back to stored URL if no data or error occurred
@@ -110,7 +122,7 @@ export function RecordingsProvider({ children }: { children: ReactNode }) {
 
   const addRecording = (recordingData: Omit<Recording, "id" | "createdAt">) => {
     const newRecording: Recording = {
-      id: crypto.randomUUID(),
+      id: Math.random().toString(36).substring(2, 15),
       createdAt: new Date(),
       ...recordingData,
     };
@@ -131,7 +143,7 @@ export function RecordingsProvider({ children }: { children: ReactNode }) {
 
   const addFolder = (name: string, color: string): Folder => {
     const newFolder: Folder = {
-      id: crypto.randomUUID(),
+      id: Math.random().toString(36).substring(2, 15),
       name,
       color,
       createdAt: new Date(),

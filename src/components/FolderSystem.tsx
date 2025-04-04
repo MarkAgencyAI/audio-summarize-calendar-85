@@ -1,12 +1,8 @@
-import { useState } from "react";
-import { Folder, Trash2, Edit2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+
+import React, { useState } from "react";
+import { View, Text, TouchableOpacity, Modal, TextInput, StyleSheet } from "react-native";
 import { Folder as FolderType, useRecordings } from "@/context/RecordingsContext";
-import { toast } from "sonner";
-import { useIsMobile } from "@/hooks/use-mobile";
+
 export function FolderSystem() {
   const {
     folders,
@@ -14,142 +10,326 @@ export function FolderSystem() {
     updateFolder,
     deleteFolder
   } = useRecordings();
-  const isMobile = useIsMobile();
+
   const [showAddFolderDialog, setShowAddFolderDialog] = useState(false);
   const [showEditFolderDialog, setShowEditFolderDialog] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<FolderType | null>(null);
   const [folderName, setFolderName] = useState("");
   const [folderColor, setFolderColor] = useState("#3b82f6");
+
   const handleAddFolder = () => {
     if (!folderName.trim()) {
-      toast.error("El nombre de la carpeta es obligatorio");
+      // Toast message would be shown here in React Native
+      console.error("El nombre de la carpeta es obligatorio");
       return;
     }
     addFolder(folderName, folderColor);
-    toast.success("Carpeta creada");
+    console.log("Carpeta creada");
     setFolderName("");
     setShowAddFolderDialog(false);
   };
+
   const handleEditFolder = () => {
     if (!selectedFolder) return;
     if (!folderName.trim()) {
-      toast.error("El nombre de la carpeta es obligatorio");
+      console.error("El nombre de la carpeta es obligatorio");
       return;
     }
     updateFolder(selectedFolder.id, {
       name: folderName,
       color: folderColor
     });
-    toast.success("Carpeta actualizada");
+    console.log("Carpeta actualizada");
     setSelectedFolder(null);
     setShowEditFolderDialog(false);
   };
+
   const handleDeleteFolder = (folder: FolderType) => {
     // Don't allow deleting the default folder
     if (folder.id === "default") {
-      toast.error("No puedes eliminar la carpeta predeterminada");
+      console.error("No puedes eliminar la carpeta predeterminada");
       return;
     }
     deleteFolder(folder.id);
-    toast.success("Carpeta eliminada");
+    console.log("Carpeta eliminada");
   };
+
   const openEditDialog = (folder: FolderType) => {
     setSelectedFolder(folder);
     setFolderName(folder.name);
     setFolderColor(folder.color);
     setShowEditFolderDialog(true);
   };
-  return <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h3 className="text-xl font-medium text-[#005c5f] dark:text-white">Carpetas</h3>
-        <Button variant="outline" onClick={() => {
-        setFolderName("");
-        setFolderColor("#3b82f6");
-        setShowAddFolderDialog(true);
-      }}>
-          Nueva carpeta
-        </Button>
-      </div>
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Carpetas</Text>
+        <TouchableOpacity 
+          style={styles.button}
+          onPress={() => {
+            setFolderName("");
+            setFolderColor("#3b82f6");
+            setShowAddFolderDialog(true);
+          }}
+        >
+          <Text style={styles.buttonText}>Nueva carpeta</Text>
+        </TouchableOpacity>
+      </View>
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {folders.map(folder => <div key={folder.id} className="border border-border rounded-lg p-4 hover:shadow-md transition-shadow bg-card" style={{
-        backgroundColor: `${folder.color}20`
-      }}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{
-              backgroundColor: folder.color
-            }}>
-                  <Folder className="h-5 w-5 text-white" />
-                </div>
-                <h4 className="font-medium text-black dark:text-white">{folder.name}</h4>
-              </div>
+      <View style={styles.folderGrid}>
+        {folders.map(folder => (
+          <View 
+            key={folder.id} 
+            style={[
+              styles.folderItem, 
+              { backgroundColor: `${folder.color}20` }
+            ]}
+          >
+            <View style={styles.folderItemHeader}>
+              <View style={styles.folderInfo}>
+                <View style={[styles.folderIcon, { backgroundColor: folder.color }]}>
+                  {/* Folder icon would be here */}
+                </View>
+                <Text style={styles.folderName}>{folder.name}</Text>
+              </View>
               
-              <div className="flex items-center space-x-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(folder)} disabled={folder.id === "default"}>
-                  <Edit2 className="h-4 w-4" />
-                </Button>
+              <View style={styles.folderActions}>
+                <TouchableOpacity 
+                  style={styles.iconButton}
+                  onPress={() => openEditDialog(folder)}
+                  disabled={folder.id === "default"}
+                >
+                  <Text>Edit</Text> {/* Would be an icon in real app */}
+                </TouchableOpacity>
                 
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteFolder(folder)} disabled={folder.id === "default"}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>)}
-      </div>
+                <TouchableOpacity 
+                  style={styles.iconButton}
+                  onPress={() => handleDeleteFolder(folder)}
+                  disabled={folder.id === "default"}
+                >
+                  <Text>Delete</Text> {/* Would be an icon in real app */}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        ))}
+      </View>
       
       {/* Add folder dialog */}
-      <Dialog open={showAddFolderDialog} onOpenChange={setShowAddFolderDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Nueva carpeta</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="folderName">Nombre</Label>
-              <Input id="folderName" value={folderName} onChange={e => setFolderName(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="folderColor">Color</Label>
-              <div className="flex items-center space-x-2">
-                <Input id="folderColor" type="color" value={folderColor} onChange={e => setFolderColor(e.target.value)} className="w-16 h-10 p-1 cursor-pointer" />
-                <div className="h-10 w-10 rounded-lg" style={{
-                backgroundColor: folderColor
-              }}></div>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={handleAddFolder}>Crear carpeta</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Modal
+        visible={showAddFolderDialog}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowAddFolderDialog(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Nueva carpeta</Text>
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Nombre</Text>
+              <TextInput
+                style={styles.input}
+                value={folderName}
+                onChangeText={setFolderName}
+              />
+            </View>
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Color</Text>
+              <View style={styles.colorPickerContainer}>
+                {/* Color picker would be here - simplified for now */}
+                <TextInput
+                  style={[styles.colorInput, { backgroundColor: folderColor }]}
+                  value={folderColor}
+                  onChangeText={setFolderColor}
+                />
+                <View style={[styles.colorPreview, { backgroundColor: folderColor }]} />
+              </View>
+            </View>
+            <TouchableOpacity style={styles.submitButton} onPress={handleAddFolder}>
+              <Text style={styles.submitButtonText}>Crear carpeta</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cancelButton} onPress={() => setShowAddFolderDialog(false)}>
+              <Text style={styles.cancelButtonText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       
       {/* Edit folder dialog */}
-      <Dialog open={showEditFolderDialog} onOpenChange={setShowEditFolderDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Editar carpeta</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="editFolderName">Nombre</Label>
-              <Input id="editFolderName" value={folderName} onChange={e => setFolderName(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editFolderColor">Color</Label>
-              <div className="flex items-center space-x-2">
-                <Input id="editFolderColor" type="color" value={folderColor} onChange={e => setFolderColor(e.target.value)} className="w-16 h-10 p-1 cursor-pointer" />
-                <div className="h-10 w-10 rounded-lg" style={{
-                backgroundColor: folderColor
-              }}></div>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={handleEditFolder}>Guardar cambios</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>;
+      <Modal
+        visible={showEditFolderDialog}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowEditFolderDialog(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Editar carpeta</Text>
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Nombre</Text>
+              <TextInput
+                style={styles.input}
+                value={folderName}
+                onChangeText={setFolderName}
+              />
+            </View>
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Color</Text>
+              <View style={styles.colorPickerContainer}>
+                {/* Color picker would be here - simplified for now */}
+                <TextInput
+                  style={[styles.colorInput, { backgroundColor: folderColor }]}
+                  value={folderColor}
+                  onChangeText={setFolderColor}
+                />
+                <View style={[styles.colorPreview, { backgroundColor: folderColor }]} />
+              </View>
+            </View>
+            <TouchableOpacity style={styles.submitButton} onPress={handleEditFolder}>
+              <Text style={styles.submitButtonText}>Guardar cambios</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cancelButton} onPress={() => setShowEditFolderDialog(false)}>
+              <Text style={styles.cancelButtonText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 16,
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#005c5f',
+  },
+  button: {
+    backgroundColor: '#f0f0f0',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#d0d0d0',
+  },
+  buttonText: {
+    color: '#000000',
+  },
+  folderGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  folderItem: {
+    width: '100%',
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#d0d0d0',
+    marginBottom: 16,
+  },
+  folderItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  folderInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  folderIcon: {
+    height: 40,
+    width: 40,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  folderName: {
+    marginLeft: 12,
+    fontWeight: '500',
+    color: '#000000',
+  },
+  folderActions: {
+    flexDirection: 'row',
+  },
+  iconButton: {
+    padding: 8,
+    marginLeft: 4,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  formGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#d0d0d0',
+    padding: 8,
+    borderRadius: 4,
+  },
+  colorPickerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  colorInput: {
+    width: 60,
+    height: 40,
+    borderWidth: 1,
+    borderColor: '#d0d0d0',
+    padding: 8,
+    borderRadius: 4,
+  },
+  colorPreview: {
+    width: 40,
+    height: 40,
+    marginLeft: 8,
+    borderRadius: 8,
+  },
+  submitButton: {
+    backgroundColor: '#3b82f6',
+    padding: 12,
+    borderRadius: 4,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  submitButtonText: {
+    color: 'white',
+    fontWeight: '500',
+  },
+  cancelButton: {
+    padding: 12,
+    borderRadius: 4,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#3b82f6',
+  },
+});
