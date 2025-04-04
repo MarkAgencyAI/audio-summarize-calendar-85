@@ -92,7 +92,7 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-medium tracking-tight text-foreground/90 dark:text-foreground/95;
+    @apply font-medium tracking-tight text-white dark:text-white;
   }
 
   h1 {
