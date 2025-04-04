@@ -17,12 +17,20 @@ export function ThemeToggle() {
     const root = window.document.documentElement;
     
     if (theme === "dark") {
-      root.classList.add("dark");
+      root.classList.add("dark", "theme-transition");
     } else {
       root.classList.remove("dark");
+      root.classList.add("theme-transition");
     }
     
     localStorage.setItem("theme", theme);
+
+    // Add small timeout to allow transitions to complete before removing transition class
+    const timer = setTimeout(() => {
+      root.classList.remove("theme-transition");
+    }, 500);
+
+    return () => clearTimeout(timer);
   }, [theme]);
 
   const toggleTheme = () => {
