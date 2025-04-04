@@ -12,13 +12,18 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useGroq } from "@/lib/groq";
 
 interface RecordingDetailsProps {
   recording: Recording;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function RecordingDetails({
-  recording
+  recording,
+  isOpen: propIsOpen,
+  onOpenChange
 }: RecordingDetailsProps) {
   const {
     updateRecording,
@@ -26,12 +31,19 @@ export function RecordingDetails({
     folders
   } = useRecordings();
   
+  const { llama3 } = useGroq();
+  
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(recording.name);
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpenState] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState(recording.folderId);
   const [isEditingSummary, setIsEditingSummary] = useState(false);
   const [editedSummary, setEditedSummary] = useState(recording.summary || "");
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  
+  // Use controlled or uncontrolled state based on whether props are provided
+  const dialogOpen = propIsOpen !== undefined ? propIsOpen : isOpen;
+  const setDialogOpen = onOpenChange || setIsOpenState;
   
   const folder = folders.find(f => f.id === recording.folderId) || folders[0];
   
@@ -63,7 +75,7 @@ export function RecordingDetails({
   
   const handleDelete = () => {
     deleteRecording(recording.id);
-    setIsOpen(false);
+    setDialogOpen(false);
     toast.success("Grabación eliminada");
   };
   
@@ -88,36 +100,83 @@ export function RecordingDetails({
     setIsEditingSummary(false);
   };
 
+  const generateSummaryWithGroq = async () => {
+    if (!recording.transcript) {
+      toast.error("No hay transcripción para generar un resumen");
+      return;
+    }
+
+    try {
+      setIsGeneratingSummary(true);
+      toast.info("Generando resumen con IA...");
+
+      // Generate a prompt for the summary
+      const prompt = `Genera un resumen conciso de la siguiente transcripción. Destaca los puntos principales, las fechas importantes si las hay, y organiza la información de forma clara y coherente. Si hay temas educativos, enfócate en explicarlos de manera didáctica:
+
+${recording.transcript}
+
+Por favor proporciona un resumen bien estructurado de aproximadamente 5-10 oraciones.`;
+
+      // Call the GROQ API
+      const response = await llama3({
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 800,
+      });
+
+      if (response && response.choices && response.choices[0]?.message?.content) {
+        const summary = response.choices[0].message.content;
+        
+        // Update the recording with the generated summary
+        updateRecording(recording.id, {
+          summary: summary
+        });
+        
+        // Update local state
+        setEditedSummary(summary);
+        
+        toast.success("Resumen generado exitosamente");
+      } else {
+        toast.error("No se pudo generar el resumen");
+      }
+    } catch (error) {
+      console.error("Error al generar el resumen:", error);
+      toast.error("Error al generar el resumen");
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="w-full text-[#001011] hover:bg-[#001011]/10 border-[#001011]/20 dark:border-custom-primary/30 dark:text-custom-accent dark:hover:bg-custom-primary/20">
-          <FileText className="h-4 w-4 mr-2" /> Ver transcripción
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col dark:bg-[#001A29] dark:border-custom-secondary">
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <DialogContent className="max-w-3xl w-[95vw] md:w-auto max-h-[90vh] flex flex-col dark:bg-[#001A29] dark:border-custom-secondary">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <div className="flex-1">
+            <div className="flex-1 max-w-[calc(100%-40px)]">
               {isRenaming ? (
                 <div className="flex items-center gap-2">
                   <Input 
                     value={newName} 
                     onChange={e => setNewName(e.target.value)} 
-                    className="h-8" 
+                    className="h-8 max-w-[200px]" 
                     autoFocus 
                   />
-                  <Button variant="ghost" size="icon" onClick={handleSaveRename}>
+                  <Button variant="ghost" size="icon" onClick={handleSaveRename} className="h-7 w-7 p-0">
                     <Save className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={handleCancelRename}>
+                  <Button variant="ghost" size="icon" onClick={handleCancelRename} className="h-7 w-7 p-0">
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <span className="text-[#005c5f] dark:text-[#f1f2f6]">{recording.name}</span>
-                  <Button variant="ghost" size="icon" onClick={() => setIsRenaming(true)}>
+                  <span className="text-[#005c5f] dark:text-[#f1f2f6] truncate">{recording.name}</span>
+                  <Button variant="ghost" size="icon" onClick={() => setIsRenaming(true)} className="h-7 w-7 p-0 flex-shrink-0">
                     <Edit className="h-4 w-4" />
                   </Button>
                 </div>
@@ -126,11 +185,11 @@ export function RecordingDetails({
             
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-destructive">
+                <Button variant="ghost" size="icon" className="text-destructive h-7 w-7 p-0 flex-shrink-0">
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent className="dark:bg-[#001A29] dark:border-custom-secondary">
+              <AlertDialogContent className="dark:bg-[#001A29] dark:border-custom-secondary max-w-[95vw] md:max-w-md">
                 <AlertDialogHeader>
                   <AlertDialogTitle>¿Eliminar esta grabación?</AlertDialogTitle>
                   <AlertDialogDescription className="dark:text-gray-300">
@@ -148,7 +207,7 @@ export function RecordingDetails({
           </DialogTitle>
         </DialogHeader>
         
-        <div className="flex items-center gap-2 mt-2">
+        <div className="flex flex-wrap items-center gap-2 mt-2">
           <div className="flex items-center gap-2">
             <div 
               className="h-6 w-6 rounded-full flex items-center justify-center" 
@@ -160,7 +219,7 @@ export function RecordingDetails({
             </div>
             
             <Select value={selectedFolder} onValueChange={handleFolderChange}>
-              <SelectTrigger className="h-7 w-auto min-w-32 dark:bg-custom-secondary/40 dark:border-custom-secondary">
+              <SelectTrigger className="h-7 w-auto min-w-24 max-w-40 dark:bg-custom-secondary/40 dark:border-custom-secondary">
                 <SelectValue placeholder="Seleccionar carpeta" />
               </SelectTrigger>
               <SelectContent className="dark:bg-[#001A29] dark:border-custom-secondary">
@@ -173,7 +232,7 @@ export function RecordingDetails({
                           backgroundColor: f.color
                         }}
                       />
-                      <span>{f.name}</span>
+                      <span className="truncate">{f.name}</span>
                     </div>
                   </SelectItem>
                 ))}
@@ -192,46 +251,60 @@ export function RecordingDetails({
         <Separator className="my-2 dark:bg-custom-secondary/40" />
         
         <div className="flex-1 overflow-hidden pt-2">
-          <ScrollArea className="h-[60vh]">
-            {recording.summary && (
-              <div className="mb-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-medium mb-2 dark:text-custom-accent text-[#005c5f] dark:text-[#f1f2f6]">
-                    Resumen
-                  </h3>
-                  <div className="flex gap-1">
-                    {isEditingSummary ? (
-                      <>
-                        <Button variant="ghost" size="sm" onClick={handleSaveSummary}>
-                          <Save className="h-3.5 w-3.5 mr-1" /> Guardar
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={handleCancelSummaryEdit}>
-                          <X className="h-3.5 w-3.5 mr-1" /> Cancelar
-                        </Button>
-                      </>
-                    ) : (
-                      <Button variant="ghost" size="sm" onClick={() => setIsEditingSummary(true)}>
+          <ScrollArea className="h-[60vh] md:h-[65vh] pr-2">
+            <div className="mb-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <h3 className="font-medium mb-2 dark:text-custom-accent text-[#005c5f] dark:text-[#f1f2f6]">
+                  Resumen
+                </h3>
+                <div className="flex gap-1 flex-wrap">
+                  {isEditingSummary ? (
+                    <>
+                      <Button variant="ghost" size="sm" onClick={handleSaveSummary} className="h-7 py-0">
+                        <Save className="h-3.5 w-3.5 mr-1" /> Guardar
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={handleCancelSummaryEdit} className="h-7 py-0">
+                        <X className="h-3.5 w-3.5 mr-1" /> Cancelar
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setIsEditingSummary(true)} 
+                        className="h-7 py-0"
+                      >
                         <Edit className="h-3.5 w-3.5 mr-1" /> Editar
                       </Button>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  {isEditingSummary ? (
-                    <Textarea 
-                      value={editedSummary} 
-                      onChange={e => setEditedSummary(e.target.value)}
-                      className="min-h-[150px] whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90"
-                    />
-                  ) : (
-                    <pre className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90">
-                      {recording.summary}
-                    </pre>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={generateSummaryWithGroq}
+                        disabled={isGeneratingSummary}
+                        className="h-7 py-0"
+                      >
+                        {isGeneratingSummary ? 'Generando...' : 'Generar con IA'}
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
-            )}
+              
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                {isEditingSummary ? (
+                  <Textarea 
+                    value={editedSummary} 
+                    onChange={e => setEditedSummary(e.target.value)}
+                    className="min-h-[150px] whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90"
+                  />
+                ) : (
+                  <pre className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 overflow-x-auto">
+                    {recording.summary || "No hay resumen disponible. Edita o genera un resumen con IA."}
+                  </pre>
+                )}
+              </div>
+            </div>
             
             {recording.keyPoints && recording.keyPoints.length > 0 && (
               <div className="mb-4">
@@ -245,14 +318,14 @@ export function RecordingDetails({
             )}
             
             <h3 className="font-medium mb-2 dark:text-custom-accent">Transcripción completa</h3>
-            <pre className="whitespace-pre-wrap text-sm font-sans bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90">
+            <pre className="whitespace-pre-wrap text-sm font-sans bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 overflow-x-auto">
               {recording.transcript}
             </pre>
           </ScrollArea>
         </div>
         
         <DialogFooter>
-          <Button onClick={() => setIsOpen(false)} className="dark:bg-custom-primary dark:text-white dark:hover:bg-custom-primary/90 text-white">
+          <Button onClick={() => setDialogOpen(false)} className="dark:bg-custom-primary dark:text-white dark:hover:bg-custom-primary/90 text-white">
             Cerrar
           </Button>
         </DialogFooter>

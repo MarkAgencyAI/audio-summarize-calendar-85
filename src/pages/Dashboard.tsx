@@ -91,7 +91,7 @@ export default function Dashboard() {
                       className="w-2 h-2 rounded-full flex-shrink-0" 
                       style={{ backgroundColor: folder.color }}
                     />
-                    <span className="truncate max-w-[150px]">{folder.name}</span>
+                    <span className="truncate max-w-[100px] md:max-w-[150px]">{folder.name}</span>
                   </Button>
                 ))}
                 
@@ -118,7 +118,7 @@ export default function Dashboard() {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                   {filteredRecordings.map(recording => (
                     <RecordingItem 
                       key={recording.id} 
