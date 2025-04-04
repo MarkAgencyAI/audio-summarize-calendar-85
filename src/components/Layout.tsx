@@ -54,10 +54,10 @@ export function Layout({ children }: LayoutProps) {
           sidebarOpen ? 'left-0 w-16 md:w-64' : 'left-[-64px] md:left-[-256px] w-16 md:w-64'
         }`}>
           <div className="p-4 border-b border-border flex items-center justify-between">
-            <h2 className={`text-xl font-medium ${sidebarOpen ? 'hidden md:block' : 'hidden'}`}>
+            <h2 className={`text-xl font-bold italic ${sidebarOpen ? 'hidden md:block' : 'hidden'}`}>
               Cali
             </h2>
-            <span className={`text-xl font-medium ${sidebarOpen ? 'block md:hidden' : 'hidden'}`}>
+            <span className={`text-xl font-bold italic ${sidebarOpen ? 'block md:hidden' : 'hidden'}`}>
               C
             </span>
           </div>

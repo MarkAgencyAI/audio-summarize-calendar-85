@@ -9,6 +9,8 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { FileText, Edit, Trash2, Save, X, Globe, Folder } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 interface RecordingDetailsProps {
   recording: Recording;
@@ -19,6 +21,7 @@ export function RecordingDetails({ recording }: RecordingDetailsProps) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(recording.name);
   const [isOpen, setIsOpen] = useState(false);
+  const [selectedFolder, setSelectedFolder] = useState(recording.folderId);
   
   // Get folder details
   const folder = folders.find(f => f.id === recording.folderId) || folders[0];
@@ -53,6 +56,12 @@ export function RecordingDetails({ recording }: RecordingDetailsProps) {
     deleteRecording(recording.id);
     setIsOpen(false);
     toast.success("Grabación eliminada");
+  };
+
+  const handleFolderChange = (folderId: string) => {
+    setSelectedFolder(folderId);
+    updateRecording(recording.id, { folderId });
+    toast.success("Carpeta actualizada");
   };
   
   return (
@@ -132,13 +141,33 @@ export function RecordingDetails({ recording }: RecordingDetailsProps) {
         </DialogHeader>
         
         <div className="flex items-center gap-2 mt-2">
-          <div 
-            className="h-6 w-6 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: folder.color }}
-          >
-            <Folder className="h-3 w-3 text-white" />
+          <div className="flex items-center gap-2">
+            <div 
+              className="h-6 w-6 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: folder.color }}
+            >
+              <Folder className="h-3 w-3 text-white" />
+            </div>
+            
+            <Select value={selectedFolder} onValueChange={handleFolderChange}>
+              <SelectTrigger className="h-7 w-auto min-w-32">
+                <SelectValue placeholder="Seleccionar carpeta" />
+              </SelectTrigger>
+              <SelectContent>
+                {folders.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="h-3 w-3 rounded-full"
+                        style={{ backgroundColor: f.color }}
+                      ></div>
+                      <span>{f.name}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <span className="text-sm">{folder.name}</span>
           
           {recording.language && (
             <div className="flex items-center gap-1 ml-auto text-xs bg-muted px-2 py-1 rounded-full">
@@ -151,7 +180,7 @@ export function RecordingDetails({ recording }: RecordingDetailsProps) {
         <Separator className="my-2" />
         
         <div className="flex-1 overflow-hidden pt-2">
-          <ScrollArea className="h-full">
+          <ScrollArea className="h-[60vh]">
             {recording.summary && (
               <div className="mb-4">
                 <h3 className="font-medium mb-2">Resumen</h3>
