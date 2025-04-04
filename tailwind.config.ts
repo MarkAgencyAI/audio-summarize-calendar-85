@@ -52,7 +52,7 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Colores personalizados para Cali
+        // Custom colors kept as fallback
         custom: {
           background: "#f1f2f6",
           text: "#005c5f",

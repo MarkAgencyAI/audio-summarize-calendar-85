@@ -16,19 +16,21 @@ export function ThemeToggle() {
   useEffect(() => {
     const root = window.document.documentElement;
     
+    // Add transition class before changing theme to enable smooth transitions
+    root.classList.add("theme-transition");
+    
     if (theme === "dark") {
-      root.classList.add("dark", "theme-transition");
+      root.classList.add("dark");
     } else {
       root.classList.remove("dark");
-      root.classList.add("theme-transition");
     }
     
     localStorage.setItem("theme", theme);
 
-    // Add small timeout to allow transitions to complete before removing transition class
+    // Add small timeout to allow transitions to complete
     const timer = setTimeout(() => {
       root.classList.remove("theme-transition");
-    }, 500);
+    }, 300);
 
     return () => clearTimeout(timer);
   }, [theme]);
@@ -42,13 +44,13 @@ export function ThemeToggle() {
       variant="ghost" 
       size="icon" 
       onClick={toggleTheme}
-      className="rounded-full h-10 w-10 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-custom-primary dark:text-white"
+      className="rounded-full h-10 w-10 hover:bg-accent/10 dark:hover:bg-accent/20 transition-colors"
       aria-label="Toggle theme"
     >
       {theme === "light" ? (
-        <Sun className="h-5 w-5 transition-all" />
+        <Sun className="h-5 w-5 transition-all text-primary" />
       ) : (
-        <Moon className="h-5 w-5 transition-all" />
+        <Moon className="h-5 w-5 transition-all text-foreground" />
       )}
     </Button>
   );

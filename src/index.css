@@ -5,6 +5,7 @@
 
 @layer base {
   :root {
+    /* Light mode colors */
     --background: 180 16% 96%;
     --foreground: 182 100% 18%;
     --primary: 182 100% 18%;
@@ -44,14 +45,14 @@
   }
 
   .dark {
-    /* Updated dark mode colors to match navbar style */
+    /* New and improved dark mode colors */
     --background: 195 100% 7%;
     --foreground: 180 16% 96%;
     
-    --card: 195 100% 7%;
+    --card: 195 100% 4%;
     --card-foreground: 180 16% 96%;
     
-    --popover: 195 100% 7%;
+    --popover: 195 100% 4%;
     --popover-foreground: 180 16% 96%;
     
     --primary: 177 100% 27%;
@@ -73,8 +74,7 @@
     --input: 195 100% 15%;
     --ring: 177 100% 27%;
     
-    /* Update sidebar colors to match the navbar */
-    --sidebar-background: 195 100% 7%;
+    --sidebar-background: 195 100% 4%;
     --sidebar-foreground: 180 16% 96%;
     --sidebar-primary: 177 100% 27%;
     --sidebar-primary-foreground: 180 16% 96%;
@@ -91,11 +91,11 @@
   }
 
   body {
-    @apply bg-custom-background text-custom-text antialiased font-sans;
+    @apply bg-background text-foreground antialiased font-sans;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-medium tracking-tight text-custom-primary dark:text-custom-accent;
+    @apply font-medium tracking-tight text-foreground dark:text-foreground;
   }
 
   h1 {
@@ -132,6 +132,11 @@
   .calendar-event {
     @apply rounded-md px-2 py-1 text-xs truncate cursor-pointer transition-colors;
   }
+  
+  /* Theme transition for smoother color changes */
+  .theme-transition {
+    @apply transition-colors duration-300;
+  }
 }
 
 @layer components {
@@ -140,10 +145,9 @@
   }
 
   .btn-primary {
-    @apply bg-custom-primary text-white rounded-lg px-4 py-2 
+    @apply bg-primary text-primary-foreground rounded-lg px-4 py-2 
     hover:bg-opacity-90 transition-colors
-    focus:outline-none focus:ring-2 focus:ring-custom-primary focus:ring-offset-2
-    dark:bg-custom-accent dark:hover:bg-custom-accent/90;
+    focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
   }
 
   .btn-secondary {
@@ -154,22 +158,21 @@
 
   .input-field {
     @apply bg-background border border-input rounded-lg px-4 py-2 
-    focus:outline-none focus:ring-2 focus:ring-ring
-    dark:bg-custom-secondary/30 dark:border-custom-secondary/60 dark:text-white;
+    focus:outline-none focus:ring-2 focus:ring-ring;
   }
 }
 
 @layer utilities {
   .text-primary {
-    @apply text-custom-primary dark:text-custom-accent;
+    @apply text-primary;
   }
   .bg-primary {
-    @apply bg-custom-primary dark:bg-custom-accent;
+    @apply bg-primary;
   }
   .text-custom-gradient {
-    @apply bg-gradient-to-r from-custom-primary to-custom-accent bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
   }
   .bg-custom-gradient {
-    @apply bg-gradient-to-r from-custom-primary to-custom-accent;
+    @apply bg-gradient-to-r from-primary to-accent;
   }
 }

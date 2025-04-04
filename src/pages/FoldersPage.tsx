@@ -22,9 +22,9 @@ export default function FoldersPage() {
   return (
     <Layout>
       <div className="space-y-8 max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-custom-primary dark:text-custom-accent">Carpetas</h1>
+        <h1 className="text-3xl font-bold">Carpetas</h1>
         
-        <div className="glassmorphism rounded-xl p-4 md:p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40">
+        <div className="glassmorphism rounded-xl p-4 md:p-6 shadow-lg">
           <FolderSystem />
         </div>
       </div>

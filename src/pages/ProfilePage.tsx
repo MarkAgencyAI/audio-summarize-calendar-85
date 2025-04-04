@@ -44,47 +44,44 @@ export default function ProfilePage() {
   return (
     <Layout>
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-custom-primary dark:text-custom-accent">Perfil</h1>
+        <h1 className="text-3xl font-bold">Perfil</h1>
         
-        <div className="glassmorphism rounded-xl p-6 shadow-lg max-w-md dark:bg-custom-secondary/20 dark:border-custom-secondary/40">
+        <div className="glassmorphism rounded-xl p-6 shadow-lg max-w-md">
           <div className="space-y-6">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name" className="dark:text-white">Nombre</Label>
+                <Label htmlFor="name">Nombre</Label>
                 <Input
                   id="name"
                   value={profile.name}
                   onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                  className="dark:bg-custom-secondary/30 dark:border-custom-secondary/60 dark:text-white"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="email" className="dark:text-white">Correo electrónico</Label>
+                <Label htmlFor="email">Correo electrónico</Label>
                 <Input
                   id="email"
                   value={profile.email}
                   readOnly
-                  className="dark:bg-custom-secondary/30 dark:border-custom-secondary/60 dark:text-white"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="career" className="dark:text-white">Carrera</Label>
+                <Label htmlFor="career">Carrera</Label>
                 <Input
                   id="career"
                   value={profile.career}
                   onChange={(e) => setProfile({ ...profile, career: e.target.value })}
-                  className="dark:bg-custom-secondary/30 dark:border-custom-secondary/60 dark:text-white"
                 />
               </div>
             </div>
             
             <div className="flex justify-between">
-              <Button variant="outline" onClick={handleLogout} className="dark:bg-custom-secondary/30 dark:border-custom-secondary/60 dark:text-white">
+              <Button variant="outline" onClick={handleLogout}>
                 Cerrar sesión
               </Button>
-              <Button onClick={handleSaveProfile} className="dark:bg-custom-accent dark:hover:bg-custom-accent/90">
+              <Button onClick={handleSaveProfile}>
                 Guardar cambios
               </Button>
             </div>
