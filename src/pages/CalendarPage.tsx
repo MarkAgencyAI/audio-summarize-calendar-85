@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Layout } from "@/components/Layout";
@@ -6,21 +5,21 @@ import { Calendar, CalendarEvent } from "@/components/Calendar";
 import { useAuth } from "@/context/AuthContext";
 import { format } from "date-fns";
 import { toast } from "sonner";
-
 export default function CalendarPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
-  
+  const {
+    user
+  } = useAuth();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  
+
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!user) {
       navigate("/login");
     }
   }, [user, navigate]);
-  
+
   // Load events from localStorage
   useEffect(() => {
     const storedEvents = localStorage.getItem("events");
@@ -28,17 +27,16 @@ export default function CalendarPage() {
       setEvents(JSON.parse(storedEvents));
     }
   }, []);
-  
+
   // Save events to localStorage when they change
   useEffect(() => {
     localStorage.setItem("events", JSON.stringify(events));
   }, [events]);
-  
+
   // Handle recording from state (if coming from dashboard)
   useEffect(() => {
     if (location.state?.recording) {
       const recording = location.state.recording;
-      
       if (recording.keyPoints?.length > 0) {
         // Create a dialog to add events from the recording
         const dialog = document.createElement("dialog");
@@ -61,18 +59,15 @@ export default function CalendarPage() {
             </div>
           </div>
         `;
-        
         document.body.appendChild(dialog);
         dialog.showModal();
-        
         const suggestedEventsContainer = dialog.querySelector("#suggested-events");
-        
+
         // Create suggested events based on key points
         if (suggestedEventsContainer) {
           recording.keyPoints.forEach((point, index) => {
             const now = new Date();
             const eventDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (index + 1));
-            
             const eventEl = document.createElement("div");
             eventEl.className = "flex items-center space-x-2";
             eventEl.innerHTML = `
@@ -84,78 +79,64 @@ export default function CalendarPage() {
                 </div>
               </label>
             `;
-            
             suggestedEventsContainer.appendChild(eventEl);
           });
         }
-        
+
         // Add event listeners
         const cancelButton = dialog.querySelector("#cancel-button");
         const addButton = dialog.querySelector("#add-button");
-        
         if (cancelButton) {
           cancelButton.addEventListener("click", () => {
             dialog.close();
             dialog.remove();
           });
         }
-        
         if (addButton) {
           addButton.addEventListener("click", () => {
             // Get selected events
             const checkboxes = dialog.querySelectorAll("input[type=checkbox]:checked");
-            
             checkboxes.forEach((checkbox, index) => {
               const now = new Date();
               const eventDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (index + 1));
-              
               const newEvent: CalendarEvent = {
                 id: crypto.randomUUID(),
                 title: recording.keyPoints[index],
                 description: `Evento basado en la grabación: ${recording.name}`,
-                date: eventDate.toISOString(),
+                date: eventDate.toISOString()
               };
-              
               setEvents(prev => [...prev, newEvent]);
             });
-            
             toast.success("Eventos agregados al calendario");
             dialog.close();
             dialog.remove();
           });
         }
       }
-      
+
       // Clear the state
-      navigate("/calendar", { replace: true });
+      navigate("/calendar", {
+        replace: true
+      });
     }
   }, [location.state, navigate]);
-  
   const handleAddEvent = (event: Omit<CalendarEvent, "id">) => {
     const newEvent: CalendarEvent = {
       ...event,
-      id: crypto.randomUUID(),
+      id: crypto.randomUUID()
     };
     setEvents(prev => [...prev, newEvent]);
   };
-  
   const handleDeleteEvent = (id: string) => {
     setEvents(prev => prev.filter(event => event.id !== id));
   };
-  
-  return (
-    <Layout>
+  return <Layout>
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-custom-primary dark:text-custom-accent">Calendario</h1>
+        <h1 className="text-3xl font-bold text-slate-50">Calendario</h1>
         
         <div className="glassmorphism rounded-xl p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40">
-          <Calendar 
-            events={events} 
-            onAddEvent={handleAddEvent} 
-            onDeleteEvent={handleDeleteEvent} 
-          />
+          <Calendar events={events} onAddEvent={handleAddEvent} onDeleteEvent={handleDeleteEvent} />
         </div>
       </div>
-    </Layout>
-  );
+    </Layout>;
 }
