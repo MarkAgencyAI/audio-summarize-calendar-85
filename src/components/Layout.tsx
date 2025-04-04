@@ -29,12 +29,12 @@ export function Layout({ children }: LayoutProps) {
     setSidebarOpen(!sidebarOpen);
   };
 
-  // Use different icon for dashboard based on user role
+  // Usar diferentes iconos para el dashboard según el rol del usuario
   const getDashboardIcon = () => {
     return user?.role === "teacher" ? <FileText className="h-5 w-5" /> : <Mic className="h-5 w-5" />;
   };
 
-  // Use different label for dashboard based on user role
+  // Usar diferentes etiquetas para el dashboard según el rol del usuario
   const getDashboardLabel = () => {
     return user?.role === "teacher" ? "Transcripciones" : "Grabaciones";
   };
@@ -47,17 +47,17 @@ export function Layout({ children }: LayoutProps) {
   ];
 
   return (
-    <div className="flex min-h-screen bg-custom-background text-custom-text antialiased">
-      {/* Sidebar for desktop */}
+    <div className="flex min-h-screen bg-background text-foreground antialiased">
+      {/* Sidebar para escritorio */}
       {!isMobile && (
-        <div className={`fixed h-full z-40 bg-white dark:bg-custom-secondary border-r border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300 ease-in-out shadow-sm ${
+        <div className={`fixed h-full z-40 bg-sidebar-background dark:bg-sidebar-background border-r border-sidebar-border dark:border-sidebar-border flex flex-col transition-all duration-300 ease-in-out shadow-sm ${
           sidebarOpen ? 'left-0 w-16 md:w-64' : 'left-[-64px] md:left-[-256px] w-16 md:w-64'
         }`}>
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <h2 className={`text-xl font-bold italic text-custom-primary dark:text-custom-accent ${sidebarOpen ? 'hidden md:block' : 'hidden'}`}>
+          <div className="p-4 border-b border-sidebar-border dark:border-sidebar-border flex items-center justify-between">
+            <h2 className={`text-xl font-bold italic text-sidebar-primary dark:text-sidebar-primary ${sidebarOpen ? 'hidden md:block' : 'hidden'}`}>
               Cali
             </h2>
-            <span className={`text-xl font-bold italic text-custom-primary dark:text-custom-accent ${sidebarOpen ? 'block md:hidden' : 'hidden'}`}>
+            <span className={`text-xl font-bold italic text-sidebar-primary dark:text-sidebar-primary ${sidebarOpen ? 'block md:hidden' : 'hidden'}`}>
               C
             </span>
           </div>
@@ -70,8 +70,8 @@ export function Layout({ children }: LayoutProps) {
                     onClick={() => navigate(item.path)}
                     className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
                       isActive(item.path) 
-                        ? "bg-custom-primary text-white dark:bg-custom-accent dark:text-white" 
-                        : "hover:bg-gray-100 dark:hover:bg-gray-800 text-custom-text dark:text-gray-200"
+                        ? "bg-sidebar-primary text-sidebar-primary-foreground dark:bg-sidebar-primary dark:text-sidebar-primary-foreground" 
+                        : "hover:bg-sidebar-accent/50 dark:hover:bg-sidebar-accent/50 text-sidebar-foreground dark:text-sidebar-foreground"
                     }`}
                   >
                     {item.icon}
@@ -82,10 +82,10 @@ export function Layout({ children }: LayoutProps) {
             </ul>
           </nav>
           
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div className="p-4 border-t border-sidebar-border dark:border-sidebar-border flex items-center justify-between">
             <button 
               onClick={handleLogout}
-              className="flex items-center space-x-2 text-custom-text dark:text-gray-300 hover:text-custom-primary dark:hover:text-custom-accent transition-colors"
+              className="flex items-center space-x-2 text-sidebar-foreground dark:text-sidebar-foreground hover:text-sidebar-primary dark:hover:text-sidebar-primary transition-colors"
             >
               <LogOut className="h-5 w-5" />
               <span className={`${sidebarOpen ? 'hidden md:inline' : 'hidden'}`}>Cerrar sesión</span>
@@ -95,29 +95,29 @@ export function Layout({ children }: LayoutProps) {
         </div>
       )}
       
-      {/* Toggle button for sidebar */}
+      {/* Botón de alternar barra lateral */}
       {!isMobile && (
         <button 
           onClick={toggleSidebar}
-          className={`fixed z-50 top-4 ${sidebarOpen ? 'left-[260px] md:left-[252px]' : 'left-4'} bg-white dark:bg-gray-800 rounded-full h-8 w-8 flex items-center justify-center shadow-md border border-gray-200 dark:border-gray-700 transition-all duration-300 text-custom-primary dark:text-white`}
+          className={`fixed z-50 top-4 ${sidebarOpen ? 'left-[260px] md:left-[252px]' : 'left-4'} bg-card dark:bg-card rounded-full h-8 w-8 flex items-center justify-center shadow-md border border-border dark:border-border transition-all duration-300 text-foreground dark:text-foreground`}
         >
           {sidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         </button>
       )}
       
-      {/* Main content */}
+      {/* Contenido principal */}
       <div className={`flex-1 flex flex-col transition-all duration-300 ${
         isMobile 
-          ? "pb-16" // Add bottom padding for mobile to accommodate the navbar
+          ? "pb-16" // Añadir padding inferior para móvil para acomodar la barra de navegación
           : sidebarOpen ? "pl-16 md:pl-64" : "pl-0"
       }`}>
         <main className="flex-1 p-4 md:p-6 animate-fade-in">
           {children}
         </main>
         
-        {/* Bottom navigation for mobile */}
+        {/* Navegación inferior para móvil */}
         {isMobile && (
-          <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-custom-secondary border-t border-gray-200 dark:border-gray-700 z-40 h-16">
+          <div className="fixed bottom-0 left-0 right-0 bg-card dark:bg-card border-t border-border dark:border-border z-40 h-16">
             <div className="grid grid-cols-4 h-full">
               {navItems.map((item) => (
                 <button
@@ -125,8 +125,8 @@ export function Layout({ children }: LayoutProps) {
                   onClick={() => navigate(item.path)}
                   className={`flex flex-col items-center justify-center h-full px-1 ${
                     isActive(item.path)
-                      ? "text-custom-primary dark:text-custom-accent"
-                      : "text-gray-400 dark:text-gray-500"
+                      ? "text-primary dark:text-primary"
+                      : "text-muted-foreground dark:text-muted-foreground"
                   }`}
                 >
                   {item.icon}

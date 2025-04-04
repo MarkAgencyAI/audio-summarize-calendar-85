@@ -71,7 +71,7 @@ export function Authentication({ type }: AuthenticationProps) {
   };
   
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-custom-background to-custom-primary/20">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-b from-background to-primary/20 dark:from-background dark:to-primary/10">
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
@@ -79,8 +79,8 @@ export function Authentication({ type }: AuthenticationProps) {
       <div className="w-full max-w-md glassmorphism rounded-xl shadow-lg overflow-hidden animate-scale-in">
         <div className="p-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2 text-custom-primary">Cali</h1>
-            <p className="text-custom-text">
+            <h1 className="text-3xl font-bold mb-2 text-primary dark:text-primary">Cali</h1>
+            <p className="text-foreground dark:text-foreground">
               {type === "login" 
                 ? "Inicia sesión en tu cuenta" 
                 : "Crea una nueva cuenta"}
@@ -91,19 +91,19 @@ export function Authentication({ type }: AuthenticationProps) {
             {type === "register" && (
               <div className="space-y-4 mb-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="text-custom-text">Nombre</Label>
+                  <Label htmlFor="name" className="text-foreground dark:text-foreground">Nombre</Label>
                   <Input
                     id="name"
                     placeholder="Tu nombre"
                     value={form.name}
                     onChange={(e) => updateForm("name", e.target.value)}
                     required
-                    className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
+                    className="border-input dark:border-input focus:border-primary dark:focus:border-primary focus:ring-primary dark:focus:ring-primary"
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-custom-text">Tipo de usuario</Label>
+                  <Label className="text-foreground dark:text-foreground">Tipo de usuario</Label>
                   <RadioGroup 
                     value={role} 
                     onValueChange={(value) => setRole(value as UserRole)}
@@ -111,11 +111,11 @@ export function Authentication({ type }: AuthenticationProps) {
                   >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="student" id="student" />
-                      <Label htmlFor="student" className="cursor-pointer text-custom-text">Estudiante</Label>
+                      <Label htmlFor="student" className="cursor-pointer text-foreground dark:text-foreground">Estudiante</Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="teacher" id="teacher" />
-                      <Label htmlFor="teacher" className="cursor-pointer text-custom-text">Profesor</Label>
+                      <Label htmlFor="teacher" className="cursor-pointer text-foreground dark:text-foreground">Profesor</Label>
                     </div>
                   </RadioGroup>
                 </div>
@@ -124,7 +124,7 @@ export function Authentication({ type }: AuthenticationProps) {
             
             <div className="space-y-4 mb-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-custom-text">Correo electrónico</Label>
+                <Label htmlFor="email" className="text-foreground dark:text-foreground">Correo electrónico</Label>
                 <Input
                   id="email"
                   type="email"
@@ -132,12 +132,12 @@ export function Authentication({ type }: AuthenticationProps) {
                   value={form.email}
                   onChange={(e) => updateForm("email", e.target.value)}
                   required
-                  className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
+                  className="border-input dark:border-input focus:border-primary dark:focus:border-primary focus:ring-primary dark:focus:ring-primary"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-custom-text">Contraseña</Label>
+                <Label htmlFor="password" className="text-foreground dark:text-foreground">Contraseña</Label>
                 <Input
                   id="password"
                   type="password"
@@ -145,14 +145,14 @@ export function Authentication({ type }: AuthenticationProps) {
                   value={form.password}
                   onChange={(e) => updateForm("password", e.target.value)}
                   required
-                  className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
+                  className="border-input dark:border-input focus:border-primary dark:focus:border-primary focus:ring-primary dark:focus:ring-primary"
                 />
               </div>
               
               {type === "register" && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword" className="text-custom-text">Confirmar contraseña</Label>
+                    <Label htmlFor="confirmPassword" className="text-foreground dark:text-foreground">Confirmar contraseña</Label>
                     <Input
                       id="confirmPassword"
                       type="password"
@@ -160,19 +160,19 @@ export function Authentication({ type }: AuthenticationProps) {
                       value={form.confirmPassword}
                       onChange={(e) => updateForm("confirmPassword", e.target.value)}
                       required
-                      className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
+                      className="border-input dark:border-input focus:border-primary dark:focus:border-primary focus:ring-primary dark:focus:ring-primary"
                     />
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="career" className="text-custom-text">Carrera</Label>
+                    <Label htmlFor="career" className="text-foreground dark:text-foreground">Carrera</Label>
                     <Input
                       id="career"
                       placeholder="Ingeniería, Medicina, etc."
                       value={form.career}
                       onChange={(e) => updateForm("career", e.target.value)}
                       required
-                      className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
+                      className="border-input dark:border-input focus:border-primary dark:focus:border-primary focus:ring-primary dark:focus:ring-primary"
                     />
                   </div>
                 </>
@@ -180,7 +180,7 @@ export function Authentication({ type }: AuthenticationProps) {
             </div>
             
             <Button 
-              className="w-full bg-custom-primary hover:bg-custom-primary/90 text-white" 
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground" 
               type="submit"
               disabled={isLoading}
             >
@@ -191,22 +191,22 @@ export function Authentication({ type }: AuthenticationProps) {
             
             <div className="mt-4 text-center text-sm">
               {type === "login" ? (
-                <p className="text-custom-text">
+                <p className="text-foreground dark:text-foreground">
                   ¿No tienes una cuenta?{" "}
                   <Button 
                     variant="link" 
-                    className="p-0 text-custom-primary" 
+                    className="p-0 text-primary dark:text-primary" 
                     onClick={() => navigate("/register")}
                   >
                     Regístrate
                   </Button>
                 </p>
               ) : (
-                <p className="text-custom-text">
+                <p className="text-foreground dark:text-foreground">
                   ¿Ya tienes una cuenta?{" "}
                   <Button 
                     variant="link" 
-                    className="p-0 text-custom-primary" 
+                    className="p-0 text-primary dark:text-primary" 
                     onClick={() => navigate("/login")}
                   >
                     Inicia sesión

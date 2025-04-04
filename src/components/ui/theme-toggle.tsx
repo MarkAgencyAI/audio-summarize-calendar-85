@@ -16,7 +16,7 @@ export function ThemeToggle() {
   useEffect(() => {
     const root = window.document.documentElement;
     
-    // Add transition class before changing theme to enable smooth transitions
+    // Añadir clase de transición antes de cambiar el tema para permitir transiciones suaves
     root.classList.add("theme-transition");
     
     if (theme === "dark") {
@@ -27,7 +27,7 @@ export function ThemeToggle() {
     
     localStorage.setItem("theme", theme);
 
-    // Add small timeout to allow transitions to complete
+    // Añadir pequeño timeout para permitir que las transiciones se completen
     const timer = setTimeout(() => {
       root.classList.remove("theme-transition");
     }, 300);
@@ -45,7 +45,7 @@ export function ThemeToggle() {
       size="icon" 
       onClick={toggleTheme}
       className="rounded-full h-10 w-10 hover:bg-accent/10 dark:hover:bg-accent/20 transition-colors"
-      aria-label="Toggle theme"
+      aria-label="Cambiar tema"
     >
       {theme === "light" ? (
         <Sun className="h-5 w-5 transition-all text-primary" />
