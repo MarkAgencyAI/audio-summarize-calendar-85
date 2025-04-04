@@ -168,7 +168,7 @@ export function RecordingDetails({
         </div>
         
         <DialogFooter>
-          <Button onClick={() => setIsOpen(false)} className="dark:bg-custom-primary dark:text-white dark:hover:bg-custom-primary/90">Cerrar</Button>
+          <Button onClick={() => setIsOpen(false)} className="dark:bg-custom-primary dark:text-white dark:hover:bg-custom-primary/90 text-white">Cerrar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>;
