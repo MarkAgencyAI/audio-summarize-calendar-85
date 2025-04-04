@@ -14,14 +14,14 @@ export function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   
   const [sidebarOpen, setSidebarOpen] = useState(true);
   
   const isActive = (path: string) => location.pathname === path;
   
   const handleLogout = () => {
-    localStorage.removeItem("user");
+    logout();
     navigate("/login");
   };
 
