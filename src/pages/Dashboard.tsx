@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRecordings } from "@/context/RecordingsContext";
+import { useAuth } from "@/context/AuthContext";
 import { Layout } from "@/components/Layout";
 import { PdfUploader } from "@/components/PdfUploader";
 import { AudioRecorder } from "@/components/AudioRecorder";
@@ -12,6 +13,7 @@ import { Button } from "@/components/ui/button";
 export default function Dashboard() {
   const navigate = useNavigate();
   const { recordings, folders } = useRecordings();
+  const { user } = useAuth();
   
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFolder, setSelectedFolder] = useState("default");
@@ -40,11 +42,14 @@ export default function Dashboard() {
       <div className="space-y-6">
         <h1 className="text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">Mi Dashboard</h1>
         
-        {/* Teacher section: PDF Uploader */}
-        <PdfUploader />
-        
-        {/* Student section: Audio Recorder */}
-        <AudioRecorder />
+        {/* Mostrar componentes según el rol del usuario */}
+        {user?.role === "teacher" ? (
+          /* Teacher section: PDF Uploader */
+          <PdfUploader />
+        ) : (
+          /* Student section: Audio Recorder */
+          <AudioRecorder />
+        )}
         
         <div className="glassmorphism rounded-xl p-4 md:p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40">
           <div className="flex flex-col space-y-6">
@@ -89,7 +94,11 @@ export default function Dashboard() {
               {filteredRecordings.length === 0 ? (
                 <div className="p-8 text-center bg-gray-50 dark:bg-gray-800/30 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
                   <p className="text-gray-600 dark:text-gray-400 font-medium">No hay transcripciones</p>
-                  <p className="text-gray-500 dark:text-gray-500 text-sm mt-2">Graba tu primer audio para comenzar</p>
+                  <p className="text-gray-500 dark:text-gray-500 text-sm mt-2">
+                    {user?.role === "teacher" 
+                      ? "Sube tu primer PDF para comenzar" 
+                      : "Graba tu primer audio para comenzar"}
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-4">
