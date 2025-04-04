@@ -68,7 +68,7 @@ export function Layout({ children }: LayoutProps) {
                     onClick={() => navigate(item.path)}
                     className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
                       isActive(item.path) 
-                        ? "bg-green-600 text-white dark:bg-green-700 dark:text-white" 
+                        ? "bg-[#008C85] text-white dark:bg-[#008C85] dark:text-white" 
                         : "hover:bg-sidebar-accent/50 dark:hover:bg-sidebar-accent/50 text-sidebar-foreground dark:text-sidebar-foreground"
                     }`}
                   >
@@ -113,7 +113,7 @@ export function Layout({ children }: LayoutProps) {
                 onClick={() => navigate(item.path)}
                 className={`flex flex-col items-center justify-center h-full px-1 ${
                   isActive(item.path)
-                    ? "bg-green-600 text-white dark:bg-green-700 dark:text-white"
+                    ? "bg-[#008C85] text-white dark:bg-[#008C85] dark:text-white"
                     : "text-muted-foreground dark:text-muted-foreground"
                 }`}
               >
