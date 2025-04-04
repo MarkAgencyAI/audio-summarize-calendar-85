@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import AsyncStorage from '@/lib/storage';
 
@@ -112,7 +111,6 @@ export function RecordingsProvider({ children }: { children: ReactNode }) {
   const getAudioUrl = (recording: Recording): string => {
     // If we have stored audioData (base64), create a blob URL
     if (recording.audioData) {
-      // In React Native, we'd return the base64 string directly as it can be used with the Audio API
       return recording.audioData;
     }
     

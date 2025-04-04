@@ -1,16 +1,16 @@
 
-import { AppRegistry } from 'react-native-web';
-import App from './App';
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import "./index.css";
 
-// Register the app for web
-AppRegistry.registerComponent('AudioSummaryApp', () => App);
+// Render the app directly to the DOM
+const rootElement = document.getElementById("root") || document.getElementById("app");
 
-// Web-specific setup
-if (typeof document !== 'undefined') {
-  const rootTag = document.getElementById('root') || document.getElementById('app');
-  if (rootTag) {
-    AppRegistry.runApplication('AudioSummaryApp', {
-      rootTag
-    });
-  }
+if (rootElement) {
+  ReactDOM.createRoot(rootElement).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
 }

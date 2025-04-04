@@ -2,7 +2,7 @@
 /**
  * A simple localStorage wrapper to provide AsyncStorage API for web
  */
-export default {
+const AsyncStorage = {
   getItem: async (key: string): Promise<string | null> => {
     try {
       return localStorage.getItem(key);
@@ -26,3 +26,5 @@ export default {
     }
   }
 };
+
+export default AsyncStorage;
