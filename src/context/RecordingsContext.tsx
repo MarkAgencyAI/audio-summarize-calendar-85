@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import AsyncStorage from '@/lib/storage';
 
@@ -25,6 +24,7 @@ export interface Folder {
   id: string;
   name: string;
   color: string;
+  icon?: string; // Nuevo campo para almacenar el nombre del icono
   createdAt: Date;
 }
 
@@ -34,7 +34,7 @@ interface RecordingsContextType {
   addRecording: (recording: Omit<Recording, "id" | "createdAt">) => void;
   updateRecording: (id: string, data: Partial<Recording>) => void;
   deleteRecording: (id: string) => void;
-  addFolder: (name: string, color: string) => Folder;
+  addFolder: (name: string, color: string, icon: string) => Folder;
   updateFolder: (id: string, data: Partial<Folder>) => void;
   deleteFolder: (id: string) => void;
   getAudioUrl: (recording: Recording) => string;
@@ -47,6 +47,7 @@ const DEFAULT_FOLDERS: Folder[] = [
     id: "default",
     name: "Todas las grabaciones",
     color: "#3b82f6",
+    icon: "folder", // Icono predeterminado
     createdAt: new Date(),
   },
 ];
@@ -56,7 +57,6 @@ export function RecordingsProvider({ children }: { children: ReactNode }) {
   const [folders, setFolders] = useState<Folder[]>(DEFAULT_FOLDERS);
 
   useEffect(() => {
-    // Load recordings and folders from AsyncStorage
     const loadData = async () => {
       try {
         const storedRecordings = await AsyncStorage.getItem("recordings");
@@ -83,7 +83,6 @@ export function RecordingsProvider({ children }: { children: ReactNode }) {
     loadData();
   }, []);
 
-  // Save to storage when state changes
   useEffect(() => {
     const saveRecordings = async () => {
       try {
@@ -108,14 +107,11 @@ export function RecordingsProvider({ children }: { children: ReactNode }) {
     saveFolders();
   }, [folders]);
 
-  // Helper function to get valid audio URL
   const getAudioUrl = (recording: Recording): string => {
-    // If we have stored audioData (base64), create a blob URL
     if (recording.audioData) {
       return recording.audioData;
     }
     
-    // Fall back to stored URL if no data or error occurred
     return recording.audioUrl;
   };
 
@@ -140,11 +136,12 @@ export function RecordingsProvider({ children }: { children: ReactNode }) {
     setRecordings(prev => prev.filter(recording => recording.id !== id));
   };
 
-  const addFolder = (name: string, color: string): Folder => {
+  const addFolder = (name: string, color: string, icon: string = "folder"): Folder => {
     const newFolder: Folder = {
       id: Math.random().toString(36).substring(2, 15),
       name,
       color,
+      icon,
       createdAt: new Date(),
     };
     setFolders(prev => [...prev, newFolder]);
@@ -158,17 +155,14 @@ export function RecordingsProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteFolder = (id: string) => {
-    // Don't allow deleting the default folder
     if (id === "default") return;
     
-    // Move recordings from deleted folder to default folder
     setRecordings(prev =>
       prev.map(recording =>
         recording.folderId === id ? { ...recording, folderId: "default" } : recording
       )
     );
     
-    // Delete the folder
     setFolders(prev => prev.filter(folder => folder.id !== id));
   };
 
