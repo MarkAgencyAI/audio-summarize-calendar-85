@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Recording, useRecordings } from "@/context/RecordingsContext";
 import { Button } from "@/components/ui/button";
@@ -23,10 +22,8 @@ export function RecordingDetails({ recording }: RecordingDetailsProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState(recording.folderId);
   
-  // Get folder details
   const folder = folders.find(f => f.id === recording.folderId) || folders[0];
   
-  // Format language display
   const getLanguageDisplay = (code?: string) => {
     const languages: Record<string, string> = {
       es: "Español",
@@ -70,7 +67,7 @@ export function RecordingDetails({ recording }: RecordingDetailsProps) {
         <Button 
           variant="outline" 
           size="sm"
-          className="w-full"
+          className="w-full text-[#001011] hover:bg-[#001011]/10 border-[#001011]/20"
         >
           <FileText className="h-4 w-4 mr-2" /> Ver transcripción
         </Button>

@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,8 +101,8 @@ export function PdfUploader() {
   
   // Interfaz de usuario
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-semibold">Subir material para clase</h2>
+    <div className="space-y-4 bg-[#005c5f] text-[#f1f2f6] rounded-xl p-4 md:p-6 shadow-lg mb-8">
+      <h2 className="text-xl font-semibold text-[#f1f2f6]">Subir material para clase</h2>
       
       <div className="space-y-4">
         <div className="space-y-2">
@@ -149,7 +148,7 @@ export function PdfUploader() {
             <Button 
               onClick={handleProcessPdf} 
               disabled={loading}
-              className="w-full"
+              className="w-full bg-[#001011] text-[#f1f2f6] hover:bg-[#001011]/90"
             >
               {loading ? (
                 <>
