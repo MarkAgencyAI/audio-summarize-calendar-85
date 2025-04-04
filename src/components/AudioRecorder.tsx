@@ -8,9 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
-
-// For debugging
-console.log("formatDate function:", formatDate);
+import { transcribeAudio } from "@/lib/groq";
 
 type RecordingState = "idle" | "recording" | "paused";
 
@@ -134,7 +132,7 @@ export function AudioRecorder() {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
   
-  const saveRecording = async (audioBlob) => {
+  const saveRecording = async (audioBlob: Blob) => {
     try {
       setIsProcessing(true);
       
@@ -149,13 +147,20 @@ export function AudioRecorder() {
         const base64AudioData = reader.result as string;
         
         // Get the transcription
-        // const result = await transcribeAudio(audioBlob);
-        const result = {
-          transcript: "Simulated transcript",
-          summary: "Simulated summary",
-          keyPoints: ["Simulated key point 1", "Simulated key point 2"],
-          suggestedEvents: []
-        };
+        let result;
+        try {
+          result = await transcribeAudio(audioBlob);
+          toast.success("Audio transcrito correctamente");
+        } catch (error) {
+          console.error("Error transcribing audio:", error);
+          result = {
+            transcript: "Error en la transcripción",
+            summary: "No se pudo generar un resumen",
+            keyPoints: ["No se pudieron extraer puntos clave"],
+            suggestedEvents: []
+          };
+          toast.error("Error al transcribir el audio");
+        }
         
         // Add the recording to context
         addRecording({
@@ -166,7 +171,8 @@ export function AudioRecorder() {
           summary: result.summary,
           keyPoints: result.keyPoints,
           folderId: selectedFolder,
-          duration: recordingDuration
+          duration: recordingDuration,
+          suggestedEvents: result.suggestedEvents || []
         });
         
         // Reset the state

@@ -3,6 +3,11 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRecordings } from "@/context/RecordingsContext";
 import { Layout } from "@/components/Layout";
+import { PdfUploader } from "@/components/PdfUploader";
+import { AudioRecorder } from "@/components/AudioRecorder";
+import { RecordingItem } from "@/components/RecordingItem";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -33,7 +38,13 @@ export default function Dashboard() {
   return (
     <Layout>
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">Transcripciones</h1>
+        <h1 className="text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">Mi Dashboard</h1>
+        
+        {/* Teacher section: PDF Uploader */}
+        <PdfUploader />
+        
+        {/* Student section: Audio Recorder */}
+        <AudioRecorder />
         
         <div className="glassmorphism rounded-xl p-4 md:p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40">
           <div className="flex flex-col space-y-6">
@@ -45,7 +56,7 @@ export default function Dashboard() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Buscar
               </label>
-              <input
+              <Input
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md mb-4 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
                 placeholder="Buscar transcripciones..."
                 value={searchTerm}
@@ -57,7 +68,7 @@ export default function Dashboard() {
               </label>
               <div className="flex flex-wrap gap-2 mb-4">
                 {folders.map(folder => (
-                  <button
+                  <Button
                     key={folder.id}
                     className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
                       selectedFolder === folder.id 
@@ -67,7 +78,7 @@ export default function Dashboard() {
                     onClick={() => setSelectedFolder(folder.id)}
                   >
                     {folder.name}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -83,23 +94,11 @@ export default function Dashboard() {
               ) : (
                 <div className="space-y-4">
                   {filteredRecordings.map(recording => (
-                    <div 
-                      key={recording.id}
-                      className="p-4 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700"
-                    >
-                      <h4 className="text-base font-medium text-gray-800 dark:text-gray-200 mb-2">{recording.name}</h4>
-                      
-                      {recording.summary && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{recording.summary}</p>
-                      )}
-                      
-                      <button
-                        className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm font-medium"
-                        onClick={() => handleAddToCalendar(recording)}
-                      >
-                        Agregar al calendario
-                      </button>
-                    </div>
+                    <RecordingItem 
+                      key={recording.id} 
+                      recording={recording} 
+                      onAddToCalendar={handleAddToCalendar} 
+                    />
                   ))}
                 </div>
               )}
