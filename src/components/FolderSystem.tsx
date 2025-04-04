@@ -82,7 +82,7 @@ export function FolderSystem() {
             }}>
                   <Folder className="h-5 w-5 text-white" />
                 </div>
-                <h4 className="font-medium text-black dark:text-[#005c5f]">{folder.name}</h4>
+                <h4 className="font-medium text-black dark:text-white">{folder.name}</h4>
               </div>
               
               <div className="flex items-center space-x-1">
