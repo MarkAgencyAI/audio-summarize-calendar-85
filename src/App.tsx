@@ -26,11 +26,11 @@ function App() {
   
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <AuthProvider>
-          <RecordingsProvider>
+      <AuthProvider>
+        <RecordingsProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
@@ -43,9 +43,9 @@ function App() {
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
-          </RecordingsProvider>
-        </AuthProvider>
-      </TooltipProvider>
+          </TooltipProvider>
+        </RecordingsProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
