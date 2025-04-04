@@ -80,7 +80,7 @@ export function RecordingDetails({
                     <X className="h-4 w-4" />
                   </Button>
                 </div> : <div className="flex items-center gap-2">
-                  <span>{recording.name}</span>
+                  <span className="text-[#005c5f] dark:text-[#f1f2f6]">{recording.name}</span>
                   <Button variant="ghost" size="icon" onClick={() => setIsRenaming(true)}>
                     <Edit className="h-4 w-4" />
                   </Button>
