@@ -131,7 +131,7 @@ export function Layout({ children }: LayoutProps) {
           ? "pb-16" 
           : sidebarOpen ? "pl-16 md:pl-64" : "pl-0"
       }`}>
-        <main className="flex-1 p-4 md:p-6 animate-fade-in">
+        <main className="flex-1 p-3 md:p-6 animate-fade-in overflow-x-hidden">
           {children}
         </main>
       </div>

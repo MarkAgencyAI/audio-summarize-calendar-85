@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -85,6 +86,10 @@
 @layer base {
   * {
     @apply border-border;
+  }
+
+  html, body {
+    @apply overflow-x-hidden max-w-full; /* Prevent horizontal scrolling */
   }
 
   body {
@@ -176,6 +181,16 @@
   .bg-custom-gradient {
     @apply bg-gradient-to-r from-primary to-accent;
   }
+  
+  /* Add utility for ensuring content always stays within container */
+  .content-container {
+    @apply max-w-full overflow-x-hidden;
+  }
+  
+  /* Add responsive width controls for dialogs */
+  .responsive-dialog {
+    @apply max-w-[95vw] w-full sm:max-w-md md:max-w-lg;
+  }
 }
 
 /* Enhanced theme transition for all elements */
@@ -198,4 +213,9 @@
 .interaction-highlight {
   @apply hover:bg-custom-primary/10 dark:hover:bg-custom-primary/20 
   focus:ring-2 focus:ring-custom-primary focus:ring-opacity-50;
+}
+
+/* Ensure scroll areas are properly responsive */
+.scrollbar-responsive {
+  @apply max-w-full overflow-x-auto md:overflow-x-hidden; 
 }

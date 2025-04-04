@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { Folder as FolderType, useRecordings } from "@/context/RecordingsContext";
 import { toast } from "sonner";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Book, 
   FlaskConical, 
@@ -18,7 +19,9 @@ import {
   Music, 
   Film,
   Languages,
-  Folder 
+  Folder,
+  Edit,
+  Trash
 } from "lucide-react";
 import { 
   Select, 
@@ -27,6 +30,9 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 // Definir iconos académicos
 interface IconOption {
@@ -129,22 +135,23 @@ export function FolderSystem() {
   };
 
   return (
-    <div className="p-4 flex-1">
+    <div className="p-2 md:p-4 flex-1">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold text-emerald-800 dark:text-emerald-400">Carpetas</h2>
-        <button 
+        <Button 
           onClick={() => {
             setFolderName("");
             setFolderColor("#3b82f6");
             setFolderIcon("folder");
             setShowAddFolderDialog(true);
-          }} 
-          className="bg-gray-100 dark:bg-gray-800 py-2 px-4 rounded border border-gray-300 dark:border-gray-600 text-black dark:text-white">
+          }}
+          className="bg-gray-100 dark:bg-gray-800 text-black dark:text-white"
+        >
           Nueva carpeta
-        </button>
+        </Button>
       </div>
       
-      <div className="flex flex-wrap">
+      <div className="grid gap-4 grid-cols-1">
         {folders.map(folder => (
           <div 
             key={folder.id} 
@@ -153,10 +160,10 @@ export function FolderSystem() {
               backgroundColor: `${folder.color}20`
             }}
           >
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center flex-wrap gap-2">
               <div className="flex items-center">
                 <div 
-                  className="h-10 w-10 rounded flex justify-center items-center" 
+                  className="h-10 w-10 rounded flex justify-center items-center flex-shrink-0" 
                   style={{
                     backgroundColor: folder.color
                   }}
@@ -167,21 +174,27 @@ export function FolderSystem() {
               </div>
               
               <div className="flex">
-                <button 
-                  className="p-2 ml-1 text-blue-500 dark:text-blue-400 disabled:opacity-50" 
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-blue-500 dark:text-blue-400 disabled:opacity-50" 
                   onClick={() => openEditDialog(folder)} 
                   disabled={folder.id === "default"}
                 >
-                  Edit
-                </button>
+                  <Edit className="h-4 w-4 mr-1" />
+                  <span className="hidden sm:inline">Editar</span>
+                </Button>
                 
-                <button 
-                  className="p-2 ml-1 text-red-500 dark:text-red-400 disabled:opacity-50" 
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-red-500 dark:text-red-400 disabled:opacity-50" 
                   onClick={() => handleDeleteFolder(folder)} 
                   disabled={folder.id === "default"}
                 >
-                  Delete
-                </button>
+                  <Trash className="h-4 w-4 mr-1" />
+                  <span className="hidden sm:inline">Eliminar</span>
+                </Button>
               </div>
             </div>
           </div>
@@ -189,38 +202,42 @@ export function FolderSystem() {
       </div>
       
       {/* Add folder dialog */}
-      {showAddFolderDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="w-4/5 max-w-md rounded p-4 bg-white dark:bg-slate-900">
-            <h3 className="text-lg font-bold mb-4 text-black dark:text-white">Nueva carpeta</h3>
-            
+      <Dialog open={showAddFolderDialog} onOpenChange={setShowAddFolderDialog}>
+        <DialogContent className="max-w-[95vw] w-[450px]">
+          <DialogHeader>
+            <DialogTitle>Nueva carpeta</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
             <div className="mb-4">
-              <label className="block mb-2 text-black dark:text-white">Nombre</label>
-              <input 
+              <label className="block mb-2 text-sm font-medium">Nombre</label>
+              <Input 
                 value={folderName} 
                 onChange={e => setFolderName(e.target.value)} 
-                className="border border-gray-300 dark:border-gray-700 p-2 rounded w-full bg-white dark:bg-slate-800 text-black dark:text-white" 
+                className="w-full" 
               />
             </div>
             
             <div className="mb-4">
-              <label className="block mb-2 text-black dark:text-white">Icono</label>
+              <label className="block mb-2 text-sm font-medium">Icono</label>
               <Select value={folderIcon} onValueChange={setFolderIcon}>
-                <SelectTrigger className="w-full mb-2 bg-white dark:bg-slate-800">
+                <SelectTrigger className="w-full mb-2">
                   <SelectValue placeholder="Seleccionar icono" />
                 </SelectTrigger>
-                <SelectContent className="max-h-[300px] overflow-y-auto bg-white dark:bg-slate-800">
-                  {academicIcons.map((icon) => (
-                    <SelectItem key={icon.name} value={icon.name} className="flex items-center py-2">
-                      <div className="flex items-center">
-                        <span className="mr-2">
-                          {React.cloneElement(icon.component as React.ReactElement, { size: 20 })}
-                        </span>
-                        <span>{icon.label}</span>
-                        <span className="ml-2 text-xs text-gray-500">({icon.area})</span>
-                      </div>
-                    </SelectItem>
-                  ))}
+                <SelectContent className="max-h-[300px] overflow-y-auto">
+                  <ScrollArea className="h-[200px]">
+                    {academicIcons.map((icon) => (
+                      <SelectItem key={icon.name} value={icon.name} className="flex items-center py-2">
+                        <div className="flex items-center">
+                          <span className="mr-2">
+                            {React.cloneElement(icon.component as React.ReactElement, { size: 20 })}
+                          </span>
+                          <span>{icon.label}</span>
+                          <span className="ml-2 text-xs text-gray-500">({icon.area})</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </ScrollArea>
                 </SelectContent>
               </Select>
               
@@ -233,7 +250,7 @@ export function FolderSystem() {
             </div>
             
             <div className="mb-4">
-              <label className="block mb-2 text-black dark:text-white">Color</label>
+              <label className="block mb-2 text-sm font-medium">Color</label>
               <div className="flex items-center">
                 <input 
                   type="color"
@@ -251,56 +268,56 @@ export function FolderSystem() {
                 </div>
               </div>
             </div>
-            
-            <button 
-              className="bg-blue-500 text-white p-3 rounded w-full mb-2" 
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              className="w-full sm:w-auto" 
               onClick={handleAddFolder}
             >
               Crear carpeta
-            </button>
-            <button 
-              className="p-3 rounded w-full text-blue-500 dark:text-blue-400" 
-              onClick={() => setShowAddFolderDialog(false)}
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       {/* Edit folder dialog */}
-      {showEditFolderDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white dark:bg-slate-900 w-4/5 max-w-md rounded p-4">
-            <h3 className="text-lg font-bold mb-4 text-black dark:text-white">Editar carpeta</h3>
-            
+      <Dialog open={showEditFolderDialog} onOpenChange={setShowEditFolderDialog}>
+        <DialogContent className="max-w-[95vw] w-[450px]">
+          <DialogHeader>
+            <DialogTitle>Editar carpeta</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
             <div className="mb-4">
-              <label className="block mb-2 text-black dark:text-white">Nombre</label>
-              <input 
-                className="border border-gray-300 dark:border-gray-700 p-2 rounded w-full bg-white dark:bg-slate-800 text-black dark:text-white" 
+              <label className="block mb-2 text-sm font-medium">Nombre</label>
+              <Input 
+                className="w-full" 
                 value={folderName} 
                 onChange={e => setFolderName(e.target.value)} 
               />
             </div>
             
             <div className="mb-4">
-              <label className="block mb-2 text-black dark:text-white">Icono</label>
+              <label className="block mb-2 text-sm font-medium">Icono</label>
               <Select value={folderIcon} onValueChange={setFolderIcon}>
-                <SelectTrigger className="w-full mb-2 bg-white dark:bg-slate-800">
+                <SelectTrigger className="w-full mb-2">
                   <SelectValue placeholder="Seleccionar icono" />
                 </SelectTrigger>
-                <SelectContent className="max-h-[300px] overflow-y-auto bg-white dark:bg-slate-800">
-                  {academicIcons.map((icon) => (
-                    <SelectItem key={icon.name} value={icon.name} className="flex items-center py-2">
-                      <div className="flex items-center">
-                        <span className="mr-2">
-                          {React.cloneElement(icon.component as React.ReactElement, { size: 20 })}
-                        </span>
-                        <span>{icon.label}</span>
-                        <span className="ml-2 text-xs text-gray-500">({icon.area})</span>
-                      </div>
-                    </SelectItem>
-                  ))}
+                <SelectContent className="max-h-[300px] overflow-y-auto">
+                  <ScrollArea className="h-[200px]">
+                    {academicIcons.map((icon) => (
+                      <SelectItem key={icon.name} value={icon.name} className="flex items-center py-2">
+                        <div className="flex items-center">
+                          <span className="mr-2">
+                            {React.cloneElement(icon.component as React.ReactElement, { size: 20 })}
+                          </span>
+                          <span>{icon.label}</span>
+                          <span className="ml-2 text-xs text-gray-500">({icon.area})</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </ScrollArea>
                 </SelectContent>
               </Select>
               
@@ -313,14 +330,11 @@ export function FolderSystem() {
             </div>
             
             <div className="mb-4">
-              <label className="block mb-2 text-black dark:text-white">Color</label>
+              <label className="block mb-2 text-sm font-medium">Color</label>
               <div className="flex items-center">
                 <input 
                   type="color"
                   className="border border-gray-300 dark:border-gray-700 p-2 rounded w-16 h-10" 
-                  style={{
-                    backgroundColor: folderColor
-                  }} 
                   value={folderColor} 
                   onChange={e => setFolderColor(e.target.value)} 
                 />
@@ -334,22 +348,18 @@ export function FolderSystem() {
                 </div>
               </div>
             </div>
-            
-            <button 
-              className="bg-blue-500 text-white p-3 rounded w-full mb-2" 
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              className="w-full sm:w-auto" 
               onClick={handleEditFolder}
             >
               Guardar cambios
-            </button>
-            <button 
-              className="p-3 rounded w-full text-blue-500 dark:text-blue-400" 
-              onClick={() => setShowEditFolderDialog(false)}
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { Calendar, CalendarEvent } from "@/components/Calendar";
 import { useAuth } from "@/context/AuthContext";
 import { format } from "date-fns";
 import { toast } from "sonner";
+
 export default function CalendarPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -120,6 +121,7 @@ export default function CalendarPage() {
       });
     }
   }, [location.state, navigate]);
+
   const handleAddEvent = (event: Omit<CalendarEvent, "id">) => {
     const newEvent: CalendarEvent = {
       ...event,
@@ -127,16 +129,20 @@ export default function CalendarPage() {
     };
     setEvents(prev => [...prev, newEvent]);
   };
+
   const handleDeleteEvent = (id: string) => {
     setEvents(prev => prev.filter(event => event.id !== id));
   };
-  return <Layout>
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">Calendario</h1>
+
+  return (
+    <Layout>
+      <div className="space-y-6 max-w-full overflow-hidden">
+        <h1 className="text-2xl md:text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">Calendario</h1>
         
-        <div className="glassmorphism rounded-xl p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40">
+        <div className="glassmorphism rounded-xl p-3 md:p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40 overflow-hidden">
           <Calendar events={events} onAddEvent={handleAddEvent} onDeleteEvent={handleDeleteEvent} />
         </div>
       </div>
-    </Layout>;
+    </Layout>
+  );
 }
