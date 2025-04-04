@@ -56,23 +56,24 @@ export async function transcribeAudio(audioBlob: Blob): Promise<TranscriptionRes
 
 async function analyzeTranscription(transcript: string): Promise<Omit<TranscriptionResult, "transcript">> {
   try {
-    // Llamada a la API de Groq para analizar la transcripción
+    // Llamada a la API de Groq para analizar la transcripción con un mejor modelo
     const response = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
       {
-        model: "llama3-8b-8192",
+        model: "llama3-70b-8192", // Usando un modelo más potente para mejores resúmenes
         messages: [
           {
             role: "system",
             content: `Eres un asistente especializado en analizar transcripciones de audio en español.
             Tu tarea es:
-            1. Crear un resumen conciso (máximo 2 párrafos)
-            2. Extraer 3-5 puntos clave de la conversación
+            1. Crear un resumen completo y detallado (2-3 párrafos) que capture los puntos más importantes
+            2. Extraer 5-7 puntos clave de la conversación, ordenados por importancia
             3. Sugerir posibles eventos para agendar basados en fechas, horas o reuniones mencionadas
+            4. Identificar conceptos importantes o términos técnicos mencionados
             
             El formato de tu respuesta debe ser JSON exactamente así:
             {
-              "summary": "resumen conciso aquí",
+              "summary": "resumen detallado aquí",
               "keyPoints": ["punto 1", "punto 2", "punto 3", ...],
               "suggestedEvents": [
                 {
@@ -89,8 +90,8 @@ async function analyzeTranscription(transcript: string): Promise<Omit<Transcript
             content: transcript
           }
         ],
-        temperature: 0.2,
-        max_tokens: 1024
+        temperature: 0.1, // Temperatura más baja para respuestas más precisas
+        max_tokens: 2048 // Tokens aumentados para resúmenes más completos
       },
       {
         headers: {
@@ -129,15 +130,15 @@ async function analyzeTranscription(transcript: string): Promise<Omit<Transcript
 
 // Análisis de respaldo para cuando la API falla
 function fallbackAnalysis(transcript: string): Omit<TranscriptionResult, "transcript"> {
-  // Generar un resumen básico (primeras 100 palabras)
+  // Generar un resumen básico (primeras 150 palabras)
   const words = transcript.split(' ');
-  const summary = words.slice(0, 100).join(' ') + (words.length > 100 ? '...' : '');
+  const summary = words.slice(0, 150).join(' ') + (words.length > 150 ? '...' : '');
   
   // Extraer posibles puntos clave (frases que terminan con punto)
   const sentences = transcript.split('.');
   const filteredSentences = sentences
     .filter(s => s.trim().length > 20 && s.trim().length < 100)
-    .slice(0, 4)
+    .slice(0, 5)
     .map(s => s.trim() + '.');
   
   // Crear eventos sugeridos simples

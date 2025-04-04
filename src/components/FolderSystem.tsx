@@ -1,5 +1,8 @@
+
 import React, { useState } from "react";
 import { Folder as FolderType, useRecordings } from "@/context/RecordingsContext";
+import { toast } from "sonner";
+
 export function FolderSystem() {
   const {
     folders,
@@ -12,136 +15,201 @@ export function FolderSystem() {
   const [selectedFolder, setSelectedFolder] = useState<FolderType | null>(null);
   const [folderName, setFolderName] = useState("");
   const [folderColor, setFolderColor] = useState("#3b82f6");
+
   const handleAddFolder = () => {
     if (!folderName.trim()) {
-      console.error("El nombre de la carpeta es obligatorio");
+      toast.error("El nombre de la carpeta es obligatorio");
       return;
     }
     addFolder(folderName, folderColor);
-    console.log("Carpeta creada");
+    toast.success("Carpeta creada");
     setFolderName("");
     setShowAddFolderDialog(false);
   };
+
   const handleEditFolder = () => {
     if (!selectedFolder) return;
     if (!folderName.trim()) {
-      console.error("El nombre de la carpeta es obligatorio");
+      toast.error("El nombre de la carpeta es obligatorio");
       return;
     }
     updateFolder(selectedFolder.id, {
       name: folderName,
       color: folderColor
     });
-    console.log("Carpeta actualizada");
+    toast.success("Carpeta actualizada");
     setSelectedFolder(null);
     setShowEditFolderDialog(false);
   };
+
   const handleDeleteFolder = (folder: FolderType) => {
     // Don't allow deleting the default folder
     if (folder.id === "default") {
-      console.error("No puedes eliminar la carpeta predeterminada");
+      toast.error("No puedes eliminar la carpeta predeterminada");
       return;
     }
     deleteFolder(folder.id);
-    console.log("Carpeta eliminada");
+    toast.success("Carpeta eliminada");
   };
+
   const openEditDialog = (folder: FolderType) => {
     setSelectedFolder(folder);
     setFolderName(folder.name);
     setFolderColor(folder.color);
     setShowEditFolderDialog(true);
   };
-  return <div className="p-4 flex-1">
+
+  return (
+    <div className="p-4 flex-1">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold text-emerald-800">Carpetas</h2>
-        <button onClick={() => {
-        setFolderName("");
-        setFolderColor("#3b82f6");
-        setShowAddFolderDialog(true);
-      }} className="bg-gray-100 py-2 px-4 rounded border border-gray-300 text-black">
+        <h2 className="text-xl font-bold text-emerald-800 dark:text-emerald-400">Carpetas</h2>
+        <button 
+          onClick={() => {
+            setFolderName("");
+            setFolderColor("#3b82f6");
+            setShowAddFolderDialog(true);
+          }} 
+          className="bg-gray-100 dark:bg-gray-800 py-2 px-4 rounded border border-gray-300 dark:border-gray-600 text-black dark:text-white">
           Nueva carpeta
         </button>
       </div>
       
       <div className="flex flex-wrap">
-        {folders.map(folder => <div key={folder.id} className="w-full p-4 rounded border border-gray-300 mb-4" style={{
-        backgroundColor: `${folder.color}20`
-      }}>
+        {folders.map(folder => (
+          <div 
+            key={folder.id} 
+            className="w-full p-4 rounded border border-gray-300 dark:border-gray-600 mb-4" 
+            style={{
+              backgroundColor: `${folder.color}20`
+            }}
+          >
             <div className="flex justify-between items-center">
               <div className="flex items-center">
-                <div className="h-10 w-10 rounded flex justify-center items-center" style={{
-              backgroundColor: folder.color
-            }} />
+                <div 
+                  className="h-10 w-10 rounded flex justify-center items-center" 
+                  style={{
+                    backgroundColor: folder.color
+                  }}
+                />
                 <span className="ml-3 font-medium text-black dark:text-white">{folder.name}</span>
               </div>
               
               <div className="flex">
-                <button className="p-2 ml-1" onClick={() => openEditDialog(folder)} disabled={folder.id === "default"}>
+                <button 
+                  className="p-2 ml-1 text-blue-500 dark:text-blue-400 disabled:opacity-50" 
+                  onClick={() => openEditDialog(folder)} 
+                  disabled={folder.id === "default"}
+                >
                   Edit
                 </button>
                 
-                <button className="p-2 ml-1" onClick={() => handleDeleteFolder(folder)} disabled={folder.id === "default"}>
+                <button 
+                  className="p-2 ml-1 text-red-500 dark:text-red-400 disabled:opacity-50" 
+                  onClick={() => handleDeleteFolder(folder)} 
+                  disabled={folder.id === "default"}
+                >
                   Delete
                 </button>
               </div>
             </div>
-          </div>)}
+          </div>
+        ))}
       </div>
       
       {/* Add folder dialog */}
-      {showAddFolderDialog && <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
-          <div className="w-4/5 rounded p-4 bg-slate-900">
-            <h3 className="text-lg font-bold mb-4">Nueva carpeta</h3>
+      {showAddFolderDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="w-4/5 rounded p-4 bg-white dark:bg-slate-900">
+            <h3 className="text-lg font-bold mb-4 text-black dark:text-white">Nueva carpeta</h3>
             <div className="mb-4">
-              <label className="block mb-2">Nombre</label>
-              <input value={folderName} onChange={e => setFolderName(e.target.value)} className="border border-gray-300 p-2 rounded w-full bg-slate-800" />
+              <label className="block mb-2 text-black dark:text-white">Nombre</label>
+              <input 
+                value={folderName} 
+                onChange={e => setFolderName(e.target.value)} 
+                className="border border-gray-300 dark:border-gray-700 p-2 rounded w-full bg-white dark:bg-slate-800 text-black dark:text-white" 
+              />
             </div>
             <div className="mb-4">
-              <label className="block mb-2">Color</label>
+              <label className="block mb-2 text-black dark:text-white">Color</label>
               <div className="flex items-center">
-                <input className="border border-gray-300 p-2 rounded w-16 h-10" style={{
-              backgroundColor: folderColor
-            }} value={folderColor} onChange={e => setFolderColor(e.target.value)} />
-                <div className="w-10 h-10 ml-2 rounded" style={{
-              backgroundColor: folderColor
-            }} />
+                <input 
+                  type="color"
+                  className="border border-gray-300 dark:border-gray-700 p-2 rounded w-16 h-10" 
+                  value={folderColor} 
+                  onChange={e => setFolderColor(e.target.value)} 
+                />
+                <div 
+                  className="w-10 h-10 ml-2 rounded" 
+                  style={{
+                    backgroundColor: folderColor
+                  }} 
+                />
               </div>
             </div>
-            <button className="bg-blue-500 text-white p-3 rounded w-full mb-2" onClick={handleAddFolder}>
+            <button 
+              className="bg-blue-500 text-white p-3 rounded w-full mb-2" 
+              onClick={handleAddFolder}
+            >
               Crear carpeta
             </button>
-            <button className="p-3 rounded w-full text-blue-500" onClick={() => setShowAddFolderDialog(false)}>
+            <button 
+              className="p-3 rounded w-full text-blue-500 dark:text-blue-400" 
+              onClick={() => setShowAddFolderDialog(false)}
+            >
               Cancelar
             </button>
           </div>
-        </div>}
+        </div>
+      )}
       
       {/* Edit folder dialog */}
-      {showEditFolderDialog && <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
-          <div className="bg-white w-4/5 rounded p-4">
-            <h3 className="text-lg font-bold mb-4">Editar carpeta</h3>
+      {showEditFolderDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white dark:bg-slate-900 w-4/5 rounded p-4">
+            <h3 className="text-lg font-bold mb-4 text-black dark:text-white">Editar carpeta</h3>
             <div className="mb-4">
-              <label className="block mb-2">Nombre</label>
-              <input className="border border-gray-300 p-2 rounded w-full" value={folderName} onChange={e => setFolderName(e.target.value)} />
+              <label className="block mb-2 text-black dark:text-white">Nombre</label>
+              <input 
+                className="border border-gray-300 dark:border-gray-700 p-2 rounded w-full bg-white dark:bg-slate-800 text-black dark:text-white" 
+                value={folderName} 
+                onChange={e => setFolderName(e.target.value)} 
+              />
             </div>
             <div className="mb-4">
-              <label className="block mb-2">Color</label>
+              <label className="block mb-2 text-black dark:text-white">Color</label>
               <div className="flex items-center">
-                <input className="border border-gray-300 p-2 rounded w-16 h-10" style={{
-              backgroundColor: folderColor
-            }} value={folderColor} onChange={e => setFolderColor(e.target.value)} />
-                <div className="w-10 h-10 ml-2 rounded" style={{
-              backgroundColor: folderColor
-            }} />
+                <input 
+                  type="color"
+                  className="border border-gray-300 dark:border-gray-700 p-2 rounded w-16 h-10" 
+                  style={{
+                    backgroundColor: folderColor
+                  }} 
+                  value={folderColor} 
+                  onChange={e => setFolderColor(e.target.value)} 
+                />
+                <div 
+                  className="w-10 h-10 ml-2 rounded" 
+                  style={{
+                    backgroundColor: folderColor
+                  }} 
+                />
               </div>
             </div>
-            <button className="bg-blue-500 text-white p-3 rounded w-full mb-2" onClick={handleEditFolder}>
+            <button 
+              className="bg-blue-500 text-white p-3 rounded w-full mb-2" 
+              onClick={handleEditFolder}
+            >
               Guardar cambios
             </button>
-            <button className="p-3 rounded w-full text-blue-500" onClick={() => setShowEditFolderDialog(false)}>
+            <button 
+              className="p-3 rounded w-full text-blue-500 dark:text-blue-400" 
+              onClick={() => setShowEditFolderDialog(false)}
+            >
               Cancelar
             </button>
           </div>
-        </div>}
-    </div>;
+        </div>
+      )}
+    </div>
+  );
 }

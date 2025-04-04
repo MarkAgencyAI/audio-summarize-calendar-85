@@ -9,6 +9,7 @@ import { AudioRecorder } from "@/components/AudioRecorder";
 import { RecordingItem } from "@/components/RecordingItem";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Folder } from "lucide-react";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -35,6 +36,10 @@ export default function Dashboard() {
   const handleAddToCalendar = (recording) => {
     // Navigate to calendar with the recording data
     navigate("/calendar", { state: { recording } });
+  };
+  
+  const handleFolderClick = (folderId: string) => {
+    setSelectedFolder(folderId);
   };
 
   return (
@@ -75,16 +80,28 @@ export default function Dashboard() {
                 {folders.map(folder => (
                   <Button
                     key={folder.id}
-                    className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
+                    className={`px-3 py-1.5 rounded-md text-sm transition-colors flex items-center gap-1.5 ${
                       selectedFolder === folder.id 
                         ? 'bg-blue-500 text-white' 
                         : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
                     }`}
-                    onClick={() => setSelectedFolder(folder.id)}
+                    onClick={() => handleFolderClick(folder.id)}
                   >
+                    <div 
+                      className="w-2 h-2 rounded-full" 
+                      style={{ backgroundColor: folder.color }}
+                    />
                     {folder.name}
                   </Button>
                 ))}
+                
+                <Button
+                  variant="outline"
+                  className="px-3 py-1.5 rounded-md text-sm border-dashed"
+                  onClick={() => navigate("/folders")}
+                >
+                  <Folder className="h-3 w-3 mr-1" /> Gestionar carpetas
+                </Button>
               </div>
             </div>
             
