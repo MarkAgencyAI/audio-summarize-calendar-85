@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, Modal, TextInput, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, Modal, TextInput, StyleSheet } from "react-native-web";
 import { Folder as FolderType, useRecordings } from "@/context/RecordingsContext";
 
 export function FolderSystem() {
@@ -19,7 +19,6 @@ export function FolderSystem() {
 
   const handleAddFolder = () => {
     if (!folderName.trim()) {
-      // Toast message would be shown here in React Native
       console.error("El nombre de la carpeta es obligatorio");
       return;
     }
@@ -88,9 +87,7 @@ export function FolderSystem() {
           >
             <View style={styles.folderItemHeader}>
               <View style={styles.folderInfo}>
-                <View style={[styles.folderIcon, { backgroundColor: folder.color }]}>
-                  {/* Folder icon would be here */}
-                </View>
+                <View style={[styles.folderIcon, { backgroundColor: folder.color }]} />
                 <Text style={styles.folderName}>{folder.name}</Text>
               </View>
               
@@ -100,7 +97,7 @@ export function FolderSystem() {
                   onPress={() => openEditDialog(folder)}
                   disabled={folder.id === "default"}
                 >
-                  <Text>Edit</Text> {/* Would be an icon in real app */}
+                  <Text>Edit</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
@@ -108,7 +105,7 @@ export function FolderSystem() {
                   onPress={() => handleDeleteFolder(folder)}
                   disabled={folder.id === "default"}
                 >
-                  <Text>Delete</Text> {/* Would be an icon in real app */}
+                  <Text>Delete</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -131,17 +128,16 @@ export function FolderSystem() {
               <TextInput
                 style={styles.input}
                 value={folderName}
-                onChangeText={setFolderName}
+                onChange={(e) => setFolderName(e.target.value)}
               />
             </View>
             <View style={styles.formGroup}>
               <Text style={styles.label}>Color</Text>
               <View style={styles.colorPickerContainer}>
-                {/* Color picker would be here - simplified for now */}
                 <TextInput
                   style={[styles.colorInput, { backgroundColor: folderColor }]}
                   value={folderColor}
-                  onChangeText={setFolderColor}
+                  onChange={(e) => setFolderColor(e.target.value)}
                 />
                 <View style={[styles.colorPreview, { backgroundColor: folderColor }]} />
               </View>
@@ -171,17 +167,16 @@ export function FolderSystem() {
               <TextInput
                 style={styles.input}
                 value={folderName}
-                onChangeText={setFolderName}
+                onChange={(e) => setFolderName(e.target.value)}
               />
             </View>
             <View style={styles.formGroup}>
               <Text style={styles.label}>Color</Text>
               <View style={styles.colorPickerContainer}>
-                {/* Color picker would be here - simplified for now */}
                 <TextInput
                   style={[styles.colorInput, { backgroundColor: folderColor }]}
                   value={folderColor}
-                  onChangeText={setFolderColor}
+                  onChange={(e) => setFolderColor(e.target.value)}
                 />
                 <View style={[styles.colorPreview, { backgroundColor: folderColor }]} />
               </View>

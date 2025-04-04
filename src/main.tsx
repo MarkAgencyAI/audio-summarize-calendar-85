@@ -1,7 +1,5 @@
 
-// This file is kept for compatibility with the web version
-// In React Native, index.js is the main entry point
-import { AppRegistry } from 'react-native';
+import { AppRegistry } from 'react-native-web';
 import App from './App';
 
 // Register the app for web

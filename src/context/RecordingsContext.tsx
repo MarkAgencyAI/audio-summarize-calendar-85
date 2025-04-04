@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@/lib/storage';
 
 export interface Recording {
   id: string;
@@ -76,20 +76,20 @@ export function RecordingsProvider({ children }: { children: ReactNode }) {
           })));
         }
       } catch (error) {
-        console.error("Error loading data from AsyncStorage:", error);
+        console.error("Error loading data from storage:", error);
       }
     };
 
     loadData();
   }, []);
 
-  // Save to AsyncStorage when state changes
+  // Save to storage when state changes
   useEffect(() => {
     const saveRecordings = async () => {
       try {
         await AsyncStorage.setItem("recordings", JSON.stringify(recordings));
       } catch (error) {
-        console.error("Error saving recordings to AsyncStorage:", error);
+        console.error("Error saving recordings to storage:", error);
       }
     };
     
@@ -101,7 +101,7 @@ export function RecordingsProvider({ children }: { children: ReactNode }) {
       try {
         await AsyncStorage.setItem("folders", JSON.stringify(folders));
       } catch (error) {
-        console.error("Error saving folders to AsyncStorage:", error);
+        console.error("Error saving folders to storage:", error);
       }
     };
     

@@ -1,11 +1,12 @@
 
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity } from "react-native";
-import { useNavigation } from '@react-navigation/native';
+import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity } from "react-native-web";
+import { useNavigate } from "react-router-dom";
 import { Recording, useRecordings } from "@/context/RecordingsContext";
+import { Layout } from "@/components/Layout";
 
 export default function Dashboard() {
-  const navigation = useNavigation();
+  const navigate = useNavigate();
   const { recordings, folders } = useRecordings();
   
   const [searchTerm, setSearchTerm] = useState("");
@@ -27,74 +28,80 @@ export default function Dashboard() {
   });
   
   const handleAddToCalendar = (recording: Recording) => {
-    // In React Native, we would navigate to the Calendar screen
-    // This is a placeholder until we create the Calendar screen
-    console.log("Navigate to calendar with recording:", recording.id);
+    // Navigate to calendar with the recording data
+    navigate("/calendar", { state: { recording } });
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Transcripciones</Text>
-      </View>
-      
-      <View style={styles.searchContainer}>
-        <Text style={styles.label}>Buscar</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Buscar transcripciones..."
-          value={searchTerm}
-          onChangeText={setSearchTerm}
-        />
+    <Layout>
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">Transcripciones</h1>
         
-        <Text style={styles.label}>Carpeta</Text>
-        {/* In a real app, this would be a proper picker/dropdown */}
-        <View style={styles.folderSelector}>
-          {folders.map(folder => (
-            <TouchableOpacity
-              key={folder.id}
-              style={[
-                styles.folderOption,
-                selectedFolder === folder.id && styles.selectedFolder
-              ]}
-              onPress={() => setSelectedFolder(folder.id)}
-            >
-              <Text style={styles.folderText}>{folder.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-      
-      <View style={styles.recordingsSection}>
-        <Text style={styles.sectionTitle}>Tus Transcripciones</Text>
-        
-        {filteredRecordings.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No hay transcripciones</Text>
-            <Text style={styles.emptySubtext}>
-              Graba tu primer audio para comenzar
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.recordingsList}>
-            {filteredRecordings.map(recording => (
-              <View key={recording.id} style={styles.recordingItem}>
-                <Text style={styles.recordingTitle}>{recording.name}</Text>
-                {recording.summary && (
-                  <Text style={styles.recordingSummary}>{recording.summary}</Text>
-                )}
-                <TouchableOpacity
-                  style={styles.calendarButton}
-                  onPress={() => handleAddToCalendar(recording)}
-                >
-                  <Text style={styles.calendarButtonText}>Agregar al calendario</Text>
-                </TouchableOpacity>
+        <div className="glassmorphism rounded-xl p-4 md:p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40">
+          <ScrollView style={styles.container}>
+            <View style={styles.header}>
+              <Text style={styles.title}>Transcripciones</Text>
+            </View>
+            
+            <View style={styles.searchContainer}>
+              <Text style={styles.label}>Buscar</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Buscar transcripciones..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              
+              <Text style={styles.label}>Carpeta</Text>
+              <View style={styles.folderSelector}>
+                {folders.map(folder => (
+                  <TouchableOpacity
+                    key={folder.id}
+                    style={[
+                      styles.folderOption,
+                      selectedFolder === folder.id && styles.selectedFolder
+                    ]}
+                    onPress={() => setSelectedFolder(folder.id)}
+                  >
+                    <Text style={styles.folderText}>{folder.name}</Text>
+                  </TouchableOpacity>
+                ))}
               </View>
-            ))}
-          </View>
-        )}
-      </View>
-    </ScrollView>
+            </View>
+            
+            <View style={styles.recordingsSection}>
+              <Text style={styles.sectionTitle}>Tus Transcripciones</Text>
+              
+              {filteredRecordings.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyText}>No hay transcripciones</Text>
+                  <Text style={styles.emptySubtext}>
+                    Graba tu primer audio para comenzar
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.recordingsList}>
+                  {filteredRecordings.map(recording => (
+                    <View key={recording.id} style={styles.recordingItem}>
+                      <Text style={styles.recordingTitle}>{recording.name}</Text>
+                      {recording.summary && (
+                        <Text style={styles.recordingSummary}>{recording.summary}</Text>
+                      )}
+                      <TouchableOpacity
+                        style={styles.calendarButton}
+                        onPress={() => handleAddToCalendar(recording)}
+                      >
+                        <Text style={styles.calendarButtonText}>Agregar al calendario</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        </div>
+      </div>
+    </Layout>
   );
 }
 
