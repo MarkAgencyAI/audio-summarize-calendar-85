@@ -61,7 +61,7 @@ export function FolderSystem() {
   };
   return <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h3 className="text-xl font-medium">Carpetas</h3>
+        <h3 className="text-xl font-medium text-[#005c5f] dark:text-white">Carpetas</h3>
         <Button variant="outline" onClick={() => {
         setFolderName("");
         setFolderColor("#3b82f6");
