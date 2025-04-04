@@ -29,12 +29,10 @@ export function Layout({ children }: LayoutProps) {
     setSidebarOpen(!sidebarOpen);
   };
 
-  // Usar diferentes iconos para el dashboard según el rol del usuario
   const getDashboardIcon = () => {
     return user?.role === "teacher" ? <FileText className="h-5 w-5" /> : <Mic className="h-5 w-5" />;
   };
 
-  // Usar diferentes etiquetas para el dashboard según el rol del usuario
   const getDashboardLabel = () => {
     return user?.role === "teacher" ? "Transcripciones" : "Grabaciones";
   };
@@ -48,7 +46,7 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="flex min-h-screen bg-background text-foreground antialiased">
-      {/* Sidebar para escritorio */}
+      {/* Desktop Sidebar */}
       {!isMobile && (
         <div className={`fixed h-full z-40 bg-sidebar-background dark:bg-sidebar-background border-r border-sidebar-border dark:border-sidebar-border flex flex-col transition-all duration-300 ease-in-out shadow-sm ${
           sidebarOpen ? 'left-0 w-16 md:w-64' : 'left-[-64px] md:left-[-256px] w-16 md:w-64'
@@ -70,7 +68,7 @@ export function Layout({ children }: LayoutProps) {
                     onClick={() => navigate(item.path)}
                     className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
                       isActive(item.path) 
-                        ? "bg-sidebar-primary text-sidebar-primary-foreground dark:bg-sidebar-primary dark:text-sidebar-primary-foreground" 
+                        ? "bg-green-600 text-white dark:bg-green-700 dark:text-white" 
                         : "hover:bg-sidebar-accent/50 dark:hover:bg-sidebar-accent/50 text-sidebar-foreground dark:text-sidebar-foreground"
                     }`}
                   >
@@ -95,7 +93,7 @@ export function Layout({ children }: LayoutProps) {
         </div>
       )}
       
-      {/* Botón de alternar barra lateral */}
+      {/* Sidebar Toggle Button */}
       {!isMobile && (
         <button 
           onClick={toggleSidebar}
@@ -105,37 +103,37 @@ export function Layout({ children }: LayoutProps) {
         </button>
       )}
       
-      {/* Contenido principal */}
+      {/* Mobile Navigation */}
+      {isMobile && (
+        <div className="fixed bottom-0 left-0 right-0 bg-card dark:bg-card border-t border-border dark:border-border z-40 h-16">
+          <div className="grid grid-cols-4 h-full">
+            {navItems.map((item) => (
+              <button
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className={`flex flex-col items-center justify-center h-full px-1 ${
+                  isActive(item.path)
+                    ? "bg-green-600 text-white dark:bg-green-700 dark:text-white"
+                    : "text-muted-foreground dark:text-muted-foreground"
+                }`}
+              >
+                {item.icon}
+                <span className="text-xs mt-1">{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Main Content */}
       <div className={`flex-1 flex flex-col transition-all duration-300 ${
         isMobile 
-          ? "pb-16" // Añadir padding inferior para móvil para acomodar la barra de navegación
+          ? "pb-16" 
           : sidebarOpen ? "pl-16 md:pl-64" : "pl-0"
       }`}>
         <main className="flex-1 p-4 md:p-6 animate-fade-in">
           {children}
         </main>
-        
-        {/* Navegación inferior para móvil */}
-        {isMobile && (
-          <div className="fixed bottom-0 left-0 right-0 bg-card dark:bg-card border-t border-border dark:border-border z-40 h-16">
-            <div className="grid grid-cols-4 h-full">
-              {navItems.map((item) => (
-                <button
-                  key={item.path}
-                  onClick={() => navigate(item.path)}
-                  className={`flex flex-col items-center justify-center h-full px-1 ${
-                    isActive(item.path)
-                      ? "text-primary dark:text-primary"
-                      : "text-muted-foreground dark:text-muted-foreground"
-                  }`}
-                >
-                  {item.icon}
-                  <span className="text-xs mt-1">{item.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
