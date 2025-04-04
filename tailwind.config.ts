@@ -54,11 +54,12 @@ const config: Config = {
         },
         // Custom colors kept as fallback
         custom: {
-          background: "#f1f2f6",
-          text: "#005c5f",
-          primary: "#005c5f",
+          // Update primary color to match the recording button's color
+          primary: "#008C85", // Teal-like color from the original design
           secondary: "#001011",
           accent: "#008C85",
+          background: "#f1f2f6",
+          text: "#005c5f",
           muted: "#8aa6a7",
           success: "#1B998B",
           warning: "#FF9F1C",
