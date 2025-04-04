@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
@@ -24,14 +23,12 @@ export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFolder, setSelectedFolder] = useState("default");
   
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (!user) {
       navigate("/login");
     }
   }, [user, navigate]);
   
-  // Load events from localStorage
   useEffect(() => {
     const storedEvents = localStorage.getItem("events");
     if (storedEvents) {
@@ -39,16 +36,13 @@ export default function Dashboard() {
     }
   }, []);
   
-  // Save events to localStorage when they change
   useEffect(() => {
     localStorage.setItem("events", JSON.stringify(events));
   }, [events]);
   
   const filteredRecordings = recordings.filter(recording => {
-    // Filter by folder
     const folderMatch = selectedFolder === "default" ? true : recording.folderId === selectedFolder;
     
-    // Filter by search term
     const searchMatch = searchTerm
       ? recording.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         recording.transcript.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -74,10 +68,8 @@ export default function Dashboard() {
     navigate("/calendar", { state: { recording } });
   };
   
-  // Determine if user is a teacher or student
   const isTeacher = user?.role === "teacher";
   
-  // Get the page title based on user role
   const pageTitle = isTeacher ? "Transcripciones" : "Grabaciones";
   
   return (
@@ -86,7 +78,6 @@ export default function Dashboard() {
         <div className="space-y-6">
           <h1 className="text-3xl font-bold text-custom-primary dark:text-custom-accent">{pageTitle}</h1>
           
-          {/* Show AudioRecorder to students, PdfUploader to teachers */}
           {!isTeacher ? (
             <AudioRecorder />
           ) : (
@@ -131,9 +122,12 @@ export default function Dashboard() {
           <h2 className="text-2xl font-semibold text-custom-primary dark:text-custom-accent">{`Tus ${pageTitle}`}</h2>
           
           {filteredRecordings.length === 0 ? (
-            <div className="text-center py-10 border border-dashed border-border rounded-lg bg-muted/30 dark:bg-custom-secondary/20 dark:border-custom-secondary/40 dark:text-white">
-              <p className="text-muted-foreground dark:text-white/60">No hay {pageTitle.toLowerCase()}</p>
-              <p className="text-sm text-muted-foreground dark:text-white/60 mt-2">
+            <div className="text-center py-10 border border-dashed border-border rounded-lg 
+              bg-[#f1f2f6] dark:bg-[#f1f2f6] 
+              text-custom-text dark:text-custom-secondary 
+              dark:border-custom-primary/30">
+              <p className="text-custom-secondary dark:text-custom-secondary">{`No hay ${pageTitle.toLowerCase()}`}</p>
+              <p className="text-sm text-custom-muted dark:text-custom-secondary mt-2">
                 {isTeacher 
                   ? "Sube material en PDF para obtener resúmenes" 
                   : "Graba tu primer audio para comenzar"}
