@@ -82,7 +82,7 @@ export default function Dashboard() {
           <h1 className="text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">{pageTitle}</h1>
           
           {/* Show AudioRecorder to students, PdfUploader to teachers */}
-          {!isTeacher ? <AudioRecorder className="background bg-[005c5f] bg-custom-text" /> : <div className="glassmorphism rounded-xl p-4 md:p-6 shadow-lg mb-8 dark:bg-custom-secondary/20 dark:border-custom-secondary/40">
+          {!isTeacher ? <AudioRecorder className="background bg-[005c5f] bg-[#001b1b]" /> : <div className="glassmorphism rounded-xl p-4 md:p-6 shadow-lg mb-8 dark:bg-custom-secondary/20 dark:border-custom-secondary/40">
               <PdfUploader />
             </div>}
           
