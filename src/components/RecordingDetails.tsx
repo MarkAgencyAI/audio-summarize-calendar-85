@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Recording, useRecordings } from "@/context/RecordingsContext";
 import { Button } from "@/components/ui/button";
@@ -67,12 +68,12 @@ export function RecordingDetails({ recording }: RecordingDetailsProps) {
         <Button 
           variant="outline" 
           size="sm"
-          className="w-full text-[#001011] hover:bg-[#001011]/10 border-[#001011]/20"
+          className="w-full text-[#001011] hover:bg-[#001011]/10 border-[#001011]/20 dark:border-custom-primary/30 dark:text-custom-accent dark:hover:bg-custom-primary/20"
         >
           <FileText className="h-4 w-4 mr-2" /> Ver transcripción
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col dark:bg-[#001A29] dark:border-custom-secondary">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <div className="flex-1">
@@ -119,15 +120,15 @@ export function RecordingDetails({ recording }: RecordingDetailsProps) {
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent className="dark:bg-[#001A29] dark:border-custom-secondary">
                 <AlertDialogHeader>
                   <AlertDialogTitle>¿Eliminar esta grabación?</AlertDialogTitle>
-                  <AlertDialogDescription>
+                  <AlertDialogDescription className="dark:text-gray-300">
                     Esta acción no se puede deshacer. Se eliminará permanentemente esta grabación.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogCancel className="dark:bg-custom-secondary/40 dark:text-white dark:hover:bg-custom-secondary/60">Cancelar</AlertDialogCancel>
                   <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
                     Eliminar
                   </AlertDialogAction>
@@ -147,10 +148,10 @@ export function RecordingDetails({ recording }: RecordingDetailsProps) {
             </div>
             
             <Select value={selectedFolder} onValueChange={handleFolderChange}>
-              <SelectTrigger className="h-7 w-auto min-w-32">
+              <SelectTrigger className="h-7 w-auto min-w-32 dark:bg-custom-secondary/40 dark:border-custom-secondary">
                 <SelectValue placeholder="Seleccionar carpeta" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="dark:bg-[#001A29] dark:border-custom-secondary">
                 {folders.map((f) => (
                   <SelectItem key={f.id} value={f.id}>
                     <div className="flex items-center gap-2">
@@ -167,30 +168,30 @@ export function RecordingDetails({ recording }: RecordingDetailsProps) {
           </div>
           
           {recording.language && (
-            <div className="flex items-center gap-1 ml-auto text-xs bg-muted px-2 py-1 rounded-full">
+            <div className="flex items-center gap-1 ml-auto text-xs bg-muted px-2 py-1 rounded-full dark:bg-custom-secondary/40 dark:text-white">
               <Globe className="h-3 w-3" />
               <span>{getLanguageDisplay(recording.language)}</span>
             </div>
           )}
         </div>
         
-        <Separator className="my-2" />
+        <Separator className="my-2 dark:bg-custom-secondary/40" />
         
         <div className="flex-1 overflow-hidden pt-2">
           <ScrollArea className="h-[60vh]">
             {recording.summary && (
               <div className="mb-4">
-                <h3 className="font-medium mb-2">Resumen</h3>
+                <h3 className="font-medium mb-2 dark:text-custom-accent">Resumen</h3>
                 <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <pre className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md">{recording.summary}</pre>
+                  <pre className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90">{recording.summary}</pre>
                 </div>
               </div>
             )}
             
             {recording.keyPoints && recording.keyPoints.length > 0 && (
               <div className="mb-4">
-                <h3 className="font-medium mb-2">Puntos clave</h3>
-                <ul className="space-y-1 ml-5 list-disc">
+                <h3 className="font-medium mb-2 dark:text-custom-accent">Puntos clave</h3>
+                <ul className="space-y-1 ml-5 list-disc dark:text-white/90">
                   {recording.keyPoints.map((point, index) => (
                     <li key={index}>{point}</li>
                   ))}
@@ -198,15 +199,16 @@ export function RecordingDetails({ recording }: RecordingDetailsProps) {
               </div>
             )}
             
-            <h3 className="font-medium mb-2">Transcripción completa</h3>
-            <pre className="whitespace-pre-wrap text-sm font-sans bg-muted/30 p-4 rounded-md">
+            <h3 className="font-medium mb-2 dark:text-custom-accent">Transcripción completa</h3>
+            <pre className="whitespace-pre-wrap text-sm font-sans bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90">
               {recording.transcript}
             </pre>
           </ScrollArea>
         </div>
         
         <DialogFooter>
-          <Button onClick={() => setIsOpen(false)}>Cerrar</Button>
+          <Button onClick={() => setIsOpen(false)} 
+            className="dark:bg-custom-primary dark:text-white dark:hover:bg-custom-primary/90">Cerrar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

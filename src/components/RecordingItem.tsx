@@ -88,20 +88,20 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
             <div className="p-2 rounded-full" style={{ backgroundColor: folder.color }}>
               <Folder className="h-4 w-4 text-white" />
             </div>
-            <span className="text-sm text-custom-text opacity-80">{folder.name}</span>
+            <span className="text-sm text-custom-text opacity-80 dark:text-white/80">{folder.name}</span>
           </div>
           
           {recording.language && (
-            <div className="flex items-center gap-1 text-xs bg-custom-primary/10 dark:bg-custom-primary/20 text-custom-primary px-2 py-1 rounded-full">
+            <div className="flex items-center gap-1 text-xs bg-custom-primary/10 dark:bg-custom-primary/20 text-custom-primary dark:text-white px-2 py-1 rounded-full">
               <Globe className="h-3 w-3" />
               <span>{getLanguageDisplay(recording.language)}</span>
             </div>
           )}
         </div>
         
-        <h3 className="font-semibold truncate text-custom-primary">{recording.name}</h3>
+        <h3 className="font-semibold truncate text-custom-primary dark:text-custom-accent">{recording.name}</h3>
         
-        <div className="flex flex-wrap gap-2 text-xs text-custom-text opacity-80">
+        <div className="flex flex-wrap gap-2 text-xs text-custom-text opacity-80 dark:text-white/80">
           {recording.duration > 0 && (
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
@@ -115,7 +115,7 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
         </div>
         
         {recording.summary && (
-          <p className="text-sm line-clamp-2 text-custom-text">
+          <p className="text-sm line-clamp-2 text-custom-text dark:text-white/90">
             {typeof recording.summary === 'string' && recording.summary.includes('#') 
               ? recording.summary.split('\n').find(line => !line.startsWith('#') && line.trim() !== '') || "Sin resumen" 
               : recording.summary}
@@ -128,7 +128,7 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="w-full border-custom-primary/20 hover:bg-custom-primary/10 text-custom-primary"
+                className="w-full border-custom-primary/20 hover:bg-custom-primary/10 text-custom-primary dark:border-custom-primary/30 dark:hover:bg-custom-primary/20 dark:text-custom-accent"
                 onClick={togglePlayback}
               >
                 {isPlaying ? 
@@ -144,7 +144,7 @@ export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps
           <Button 
             variant="secondary" 
             size="sm"
-            className="bg-custom-secondary/10 hover:bg-custom-secondary/20 text-custom-secondary dark:bg-custom-secondary/20 dark:text-custom-muted"
+            className="bg-custom-secondary/10 hover:bg-custom-secondary/20 text-custom-secondary dark:bg-custom-secondary/20 dark:hover:bg-custom-secondary/40 dark:text-white"
             onClick={() => onAddToCalendar(recording)}
           >
             <Calendar className="h-4 w-4 mr-2" />

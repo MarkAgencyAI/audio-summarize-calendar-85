@@ -84,7 +84,7 @@ export default function Dashboard() {
     <Layout>
       <div className="space-y-10">
         <div className="space-y-6">
-          <h1 className="text-3xl font-bold">{pageTitle}</h1>
+          <h1 className="text-3xl font-bold text-custom-primary dark:text-custom-accent">{pageTitle}</h1>
           
           {/* Show AudioRecorder to students, PdfUploader to teachers */}
           {!isTeacher ? (
@@ -98,20 +98,21 @@ export default function Dashboard() {
           <div className="space-y-4">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1">
-                <Label htmlFor="search">Buscar</Label>
+                <Label htmlFor="search" className="dark:text-white">Buscar</Label>
                 <Input
                   id="search"
                   placeholder={`Buscar ${pageTitle.toLowerCase()}...`}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  className="dark:bg-custom-secondary/30 dark:border-custom-secondary/60 dark:placeholder:text-white/50 dark:text-white"
                 />
               </div>
               
               <div className="w-full md:w-64">
-                <Label htmlFor="folder">Carpeta</Label>
+                <Label htmlFor="folder" className="dark:text-white">Carpeta</Label>
                 <select
                   id="folder"
-                  className="w-full h-10 px-3 py-2 bg-background border border-input rounded-md"
+                  className="w-full h-10 px-3 py-2 bg-background border border-input rounded-md dark:bg-custom-secondary/30 dark:border-custom-secondary/60 dark:text-white"
                   value={selectedFolder}
                   onChange={(e) => setSelectedFolder(e.target.value)}
                 >
@@ -127,12 +128,12 @@ export default function Dashboard() {
         </div>
         
         <div className="space-y-6">
-          <h2 className="text-2xl font-semibold">{`Tus ${pageTitle}`}</h2>
+          <h2 className="text-2xl font-semibold text-custom-primary dark:text-custom-accent">{`Tus ${pageTitle}`}</h2>
           
           {filteredRecordings.length === 0 ? (
-            <div className="text-center py-10 border border-dashed border-border rounded-lg bg-muted/30">
-              <p className="text-muted-foreground">No hay {pageTitle.toLowerCase()}</p>
-              <p className="text-sm text-muted-foreground mt-2">
+            <div className="text-center py-10 border border-dashed border-border rounded-lg bg-muted/30 dark:bg-custom-secondary/10 dark:border-custom-secondary/40">
+              <p className="text-muted-foreground dark:text-white/60">No hay {pageTitle.toLowerCase()}</p>
+              <p className="text-sm text-muted-foreground dark:text-white/60 mt-2">
                 {isTeacher 
                   ? "Sube material en PDF para obtener resúmenes" 
                   : "Graba tu primer audio para comenzar"}

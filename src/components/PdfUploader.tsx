@@ -102,7 +102,7 @@ export function PdfUploader() {
   
   // Interfaz de usuario
   return (
-    <div className="space-y-4 bg-custom-primary rounded-xl p-4 md:p-6 shadow-lg mb-8">
+    <div className="space-y-4 bg-custom-primary dark:bg-[#001A29] rounded-xl p-4 md:p-6 shadow-lg mb-8">
       <h2 className="text-xl font-semibold text-white">Subir material para clase</h2>
       
       <div className="space-y-4">
@@ -113,7 +113,7 @@ export function PdfUploader() {
             type="file"
             accept="application/pdf"
             onChange={handleFileChange}
-            className="cursor-pointer bg-white/10 border-white/20 text-white"
+            className="cursor-pointer bg-white/10 border-white/20 text-white dark:bg-custom-secondary/30 dark:border-custom-secondary/60"
             ref={fileInputRef}
           />
         </div>
@@ -127,7 +127,7 @@ export function PdfUploader() {
                 value={lessonName}
                 onChange={(e) => setLessonName(e.target.value)}
                 placeholder="Nombre de la lección"
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/70"
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/70 dark:bg-custom-secondary/30 dark:border-custom-secondary/60"
               />
             </div>
             
@@ -135,7 +135,7 @@ export function PdfUploader() {
               <Label htmlFor="folder" className="text-white">Carpeta</Label>
               <select
                 id="folder"
-                className="w-full h-10 px-3 py-2 bg-white/10 border border-white/20 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-white/50"
+                className="w-full h-10 px-3 py-2 bg-white/10 border border-white/20 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-white/50 dark:bg-custom-secondary/30 dark:border-custom-secondary/60 dark:focus:ring-custom-accent/50"
                 value={selectedFolder}
                 onChange={(e) => setSelectedFolder(e.target.value)}
               >
@@ -150,7 +150,7 @@ export function PdfUploader() {
             <Button 
               onClick={handleProcessPdf} 
               disabled={loading}
-              className="w-full bg-custom-secondary text-white hover:bg-custom-secondary/90"
+              className="w-full bg-custom-secondary text-white hover:bg-custom-secondary/90 dark:bg-custom-accent dark:hover:bg-custom-accent/90"
             >
               {loading ? (
                 <>
@@ -167,7 +167,7 @@ export function PdfUploader() {
             
             {loading && (
               <div className="space-y-1">
-                <Progress value={progress} className="h-2 bg-white/20" />
+                <Progress value={progress} className="h-2 bg-white/20 dark:bg-custom-secondary/40" />
                 <p className="text-xs text-white/80 text-center">
                   {progress < 50 ? 'Extrayendo texto...' : 'Analizando contenido...'}
                 </p>
@@ -179,7 +179,7 @@ export function PdfUploader() {
       
       {showAnalysis && (
         <div className="mt-6 space-y-4">
-          <Card className="bg-white/10 border-white/20 text-white">
+          <Card className="bg-white/10 border-white/20 text-white dark:bg-custom-secondary/20 dark:border-custom-secondary/40">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center text-white">
                 <FileText className="mr-2 h-5 w-5" />
@@ -196,7 +196,7 @@ export function PdfUploader() {
                   <ul className="space-y-2 pl-2">
                     {keyPoints.map((point, index) => (
                       <li key={index} className="flex items-start">
-                        <span className="inline-flex items-center justify-center rounded-full bg-white/20 text-white h-5 w-5 text-xs mr-2 mt-0.5">
+                        <span className="inline-flex items-center justify-center rounded-full bg-white/20 text-white h-5 w-5 text-xs mr-2 mt-0.5 dark:bg-custom-secondary/40">
                           {index + 1}
                         </span>
                         <span className="text-white/90">{point}</span>
