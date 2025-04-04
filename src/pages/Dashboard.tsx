@@ -1,8 +1,7 @@
 
-import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity } from "react-native-web";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Recording, useRecordings } from "@/context/RecordingsContext";
+import { useRecordings } from "@/context/RecordingsContext";
 import { Layout } from "@/components/Layout";
 
 export default function Dashboard() {
@@ -16,7 +15,6 @@ export default function Dashboard() {
   const filteredRecordings = recordings.filter(recording => {
     // Filter by folder
     const folderMatch = selectedFolder === "default" ? true : recording.folderId === selectedFolder;
-
     // Filter by search term
     const searchMatch = searchTerm 
       ? recording.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -27,7 +25,7 @@ export default function Dashboard() {
     return folderMatch && searchMatch;
   });
   
-  const handleAddToCalendar = (recording: Recording) => {
+  const handleAddToCalendar = (recording) => {
     // Navigate to calendar with the recording data
     navigate("/calendar", { state: { recording } });
   };
@@ -38,179 +36,77 @@ export default function Dashboard() {
         <h1 className="text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">Transcripciones</h1>
         
         <div className="glassmorphism rounded-xl p-4 md:p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40">
-          <ScrollView style={styles.container}>
-            <View style={styles.header}>
-              <Text style={styles.title}>Transcripciones</Text>
-            </View>
+          <div className="flex flex-col space-y-6">
+            <div className="px-4 py-3">
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Transcripciones</h2>
+            </div>
             
-            <View style={styles.searchContainer}>
-              <Text style={styles.label}>Buscar</Text>
-              <TextInput
-                style={styles.input}
+            <div className="bg-gray-50 dark:bg-gray-800/30 p-4 rounded-lg m-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Buscar
+              </label>
+              <input
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md mb-4 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
                 placeholder="Buscar transcripciones..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
               
-              <Text style={styles.label}>Carpeta</Text>
-              <View style={styles.folderSelector}>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Carpeta
+              </label>
+              <div className="flex flex-wrap gap-2 mb-4">
                 {folders.map(folder => (
-                  <TouchableOpacity
+                  <button
                     key={folder.id}
-                    style={[
-                      styles.folderOption,
-                      selectedFolder === folder.id && styles.selectedFolder
-                    ]}
-                    onPress={() => setSelectedFolder(folder.id)}
+                    className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
+                      selectedFolder === folder.id 
+                        ? 'bg-blue-500 text-white' 
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
+                    }`}
+                    onClick={() => setSelectedFolder(folder.id)}
                   >
-                    <Text style={styles.folderText}>{folder.name}</Text>
-                  </TouchableOpacity>
+                    {folder.name}
+                  </button>
                 ))}
-              </View>
-            </View>
+              </div>
+            </div>
             
-            <View style={styles.recordingsSection}>
-              <Text style={styles.sectionTitle}>Tus Transcripciones</Text>
+            <div className="p-4">
+              <h3 className="text-lg font-medium text-gray-800 dark:text-gray-300 mb-4">Tus Transcripciones</h3>
               
               {filteredRecordings.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyText}>No hay transcripciones</Text>
-                  <Text style={styles.emptySubtext}>
-                    Graba tu primer audio para comenzar
-                  </Text>
-                </View>
+                <div className="p-8 text-center bg-gray-50 dark:bg-gray-800/30 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
+                  <p className="text-gray-600 dark:text-gray-400 font-medium">No hay transcripciones</p>
+                  <p className="text-gray-500 dark:text-gray-500 text-sm mt-2">Graba tu primer audio para comenzar</p>
+                </div>
               ) : (
-                <View style={styles.recordingsList}>
+                <div className="space-y-4">
                   {filteredRecordings.map(recording => (
-                    <View key={recording.id} style={styles.recordingItem}>
-                      <Text style={styles.recordingTitle}>{recording.name}</Text>
+                    <div 
+                      key={recording.id}
+                      className="p-4 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700"
+                    >
+                      <h4 className="text-base font-medium text-gray-800 dark:text-gray-200 mb-2">{recording.name}</h4>
+                      
                       {recording.summary && (
-                        <Text style={styles.recordingSummary}>{recording.summary}</Text>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{recording.summary}</p>
                       )}
-                      <TouchableOpacity
-                        style={styles.calendarButton}
-                        onPress={() => handleAddToCalendar(recording)}
+                      
+                      <button
+                        className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm font-medium"
+                        onClick={() => handleAddToCalendar(recording)}
                       >
-                        <Text style={styles.calendarButtonText}>Agregar al calendario</Text>
-                      </TouchableOpacity>
-                    </View>
+                        Agregar al calendario
+                      </button>
+                    </div>
                   ))}
-                </View>
+                </div>
               )}
-            </View>
-          </ScrollView>
+            </div>
+          </div>
         </div>
       </div>
     </Layout>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  header: {
-    padding: 16,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#005c5f',
-  },
-  searchContainer: {
-    padding: 16,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    margin: 16,
-  },
-  label: {
-    fontSize: 16,
-    marginBottom: 8,
-    color: '#333333',
-  },
-  input: {
-    backgroundColor: '#ffffff',
-    padding: 8,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#dddddd',
-    marginBottom: 16,
-  },
-  folderSelector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  folderOption: {
-    padding: 8,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 4,
-    margin: 4,
-  },
-  selectedFolder: {
-    backgroundColor: '#3b82f6',
-  },
-  folderText: {
-    color: '#333333',
-  },
-  recordingsSection: {
-    padding: 16,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 16,
-    color: '#005c5f',
-  },
-  emptyState: {
-    padding: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#dddddd',
-    borderStyle: 'dashed',
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#666666',
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#999999',
-    marginTop: 8,
-  },
-  recordingsList: {
-    gap: 16,
-  },
-  recordingItem: {
-    padding: 16,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  recordingTitle: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: '#333333',
-    marginBottom: 8,
-  },
-  recordingSummary: {
-    fontSize: 14,
-    color: '#666666',
-    marginBottom: 16,
-  },
-  calendarButton: {
-    backgroundColor: '#3b82f6',
-    padding: 8,
-    borderRadius: 4,
-    alignItems: 'center',
-  },
-  calendarButtonText: {
-    color: '#ffffff',
-    fontWeight: '500',
-  },
-});

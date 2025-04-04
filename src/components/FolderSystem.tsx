@@ -1,5 +1,5 @@
+
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, Modal, TextInput, StyleSheet } from "react-native-web";
 import { Folder as FolderType, useRecordings } from "@/context/RecordingsContext";
 
 export function FolderSystem() {
@@ -84,7 +84,7 @@ export function FolderSystem() {
           >
             <div className="flex justify-between items-center">
               <div className="flex items-center">
-                <div className="h-10 w-10 rounded justify-center items-center" style={{ backgroundColor: folder.color }} />
+                <div className="h-10 w-10 rounded flex justify-center items-center" style={{ backgroundColor: folder.color }} />
                 <span className="ml-3 font-medium text-black">{folder.name}</span>
               </div>
               
