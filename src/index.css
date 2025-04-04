@@ -7,7 +7,7 @@
     /* Light mode colors - using the new custom primary color */
     --background: 182 16% 96%;
     --foreground: 182 100% 18%;
-    --primary: 176 50% 32%; // Adjusted to match custom primary
+    --primary: 176 50% 32%; /* Adjusted to match custom primary */
     
     --card: 0 0% 100%;
     --card-foreground: 180 90% 19%;
@@ -47,7 +47,7 @@
     /* Dark mode colors - inverting with the new primary */
     --background: 195 100% 7%;
     --foreground: 180 16% 96%;
-    --primary: 176 50% 42%; // Slightly lighter in dark mode
+    --primary: 176 50% 42%; /* Slightly lighter in dark mode */
     
     --card: 195 100% 6%;
     --card-foreground: 180 16% 96%;
