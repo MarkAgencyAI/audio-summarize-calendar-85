@@ -89,47 +89,47 @@ export function RecordingItem({
         backgroundColor: `${folder.color}10`
       }}
     >
-      <div className="p-4 space-y-3">
+      <div className="p-3 md:p-4 space-y-2 md:space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div 
-              className="p-2 rounded-full" 
+              className="p-1.5 md:p-2 rounded-full" 
               style={{
                 backgroundColor: folder.color
               }}
             >
-              <Folder className="h-4 w-4 text-white" />
+              <Folder className="h-3 w-3 md:h-4 md:w-4 text-white" />
             </div>
-            <span className="text-sm text-custom-text opacity-80 dark:text-white/80">{folder.name}</span>
+            <span className="text-xs md:text-sm text-custom-text opacity-80 dark:text-white/80 truncate max-w-[120px]">{folder.name}</span>
           </div>
           
           {recording.language && (
-            <div className="flex items-center gap-1 text-xs bg-custom-primary/10 dark:bg-custom-primary/20 text-custom-primary dark:text-white px-2 py-1 rounded-full">
-              <Globe className="h-3 w-3" />
-              <span>{getLanguageDisplay(recording.language)}</span>
+            <div className="flex items-center gap-1 text-xs bg-custom-primary/10 dark:bg-custom-primary/20 text-custom-primary dark:text-white px-1.5 md:px-2 py-0.5 md:py-1 rounded-full">
+              <Globe className="h-2.5 w-2.5 md:h-3 md:w-3" />
+              <span className="text-[10px] md:text-xs">{getLanguageDisplay(recording.language)}</span>
             </div>
           )}
         </div>
         
-        <h3 className="font-semibold truncate text-custom-primary dark:text-custom-accent dark:text-white">
+        <h3 className="font-semibold truncate text-sm md:text-base text-custom-primary dark:text-custom-accent dark:text-white">
           {recording.name}
         </h3>
         
-        <div className="flex flex-wrap gap-2 text-xs text-custom-text opacity-80 dark:text-white/80">
+        <div className="flex flex-wrap gap-2 text-[10px] md:text-xs text-custom-text opacity-80 dark:text-white/80">
           {recording.duration > 0 && (
             <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
+              <Clock className="h-2.5 w-2.5 md:h-3 md:w-3" />
               {formatDuration(recording.duration)}
             </span>
           )}
           <span className="flex items-center gap-1">
-            <Calendar className="h-3 w-3" />
+            <Calendar className="h-2.5 w-2.5 md:h-3 md:w-3" />
             {formattedDate}
           </span>
         </div>
         
         {recording.summary && (
-          <p className="text-sm line-clamp-2 text-custom-text dark:text-white/90">
+          <p className="text-xs md:text-sm line-clamp-2 text-custom-text dark:text-white/90">
             {typeof recording.summary === 'string' && recording.summary.includes('#') 
               ? recording.summary.split('\n').find(line => !line.startsWith('#') && line.trim() !== '') || "Sin resumen" 
               : recording.summary}
@@ -142,12 +142,12 @@ export function RecordingItem({
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="w-full border-custom-primary/20 hover:bg-custom-primary/10 text-custom-primary dark:border-custom-primary/30 dark:hover:bg-custom-primary/20 dark:text-custom-accent" 
+                className="w-full border-custom-primary/20 hover:bg-custom-primary/10 text-custom-primary dark:border-custom-primary/30 dark:hover:bg-custom-primary/20 dark:text-custom-accent text-xs md:text-sm py-1 h-8" 
                 onClick={togglePlayback}
               >
                 {isPlaying 
-                  ? <><Pause className="h-4 w-4 mr-2" /> Pausar</> 
-                  : <><Play className="h-4 w-4 mr-2" /> Reproducir</>
+                  ? <><Pause className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" /> Pausar</> 
+                  : <><Play className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" /> Reproducir</>
                 }
               </Button>
             ) : (
@@ -158,10 +158,10 @@ export function RecordingItem({
           <Button 
             variant="secondary" 
             size="sm" 
-            className="bg-custom-secondary/10 hover:bg-custom-secondary/20 text-custom-secondary dark:bg-custom-secondary/20 dark:hover:bg-custom-secondary/40 dark:text-white" 
+            className="bg-custom-secondary/10 hover:bg-custom-secondary/20 text-custom-secondary dark:bg-custom-secondary/20 dark:hover:bg-custom-secondary/40 dark:text-white text-xs md:text-sm py-1 h-8" 
             onClick={() => onAddToCalendar(recording)}
           >
-            <Calendar className="h-4 w-4 mr-2" />
+            <Calendar className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
             Añadir al calendario
           </Button>
         </div>

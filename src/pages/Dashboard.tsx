@@ -44,8 +44,8 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">Mi Dashboard</h1>
+      <div className="space-y-4 max-w-full">
+        <h1 className="text-2xl md:text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">Mi Dashboard</h1>
         
         {/* Mostrar componentes según el rol del usuario */}
         {user?.role === "teacher" ? (
@@ -56,18 +56,18 @@ export default function Dashboard() {
           <AudioRecorder />
         )}
         
-        <div className="glassmorphism rounded-xl p-4 md:p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40">
-          <div className="flex flex-col space-y-6">
-            <div className="px-4 py-3">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Transcripciones</h2>
+        <div className="glassmorphism rounded-xl p-3 md:p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40 overflow-hidden">
+          <div className="flex flex-col space-y-4">
+            <div className="px-2 md:px-4 py-2 md:py-3">
+              <h2 className="text-lg md:text-xl font-semibold text-gray-800 dark:text-gray-200">Transcripciones</h2>
             </div>
             
-            <div className="bg-gray-50 dark:bg-gray-800/30 p-4 rounded-lg m-2">
+            <div className="bg-gray-50 dark:bg-gray-800/30 p-3 md:p-4 rounded-lg mx-1 md:m-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Buscar
               </label>
               <Input
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md mb-4 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md mb-4 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
                 placeholder="Buscar transcripciones..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -76,11 +76,11 @@ export default function Dashboard() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Carpeta
               </label>
-              <div className="flex flex-wrap gap-2 mb-4">
+              <div className="flex flex-wrap gap-2 mb-4 overflow-x-auto max-w-full pb-2">
                 {folders.map(folder => (
                   <Button
                     key={folder.id}
-                    className={`px-3 py-1.5 rounded-md text-sm transition-colors flex items-center gap-1.5 ${
+                    className={`px-2 md:px-3 py-1 md:py-1.5 rounded-md text-xs md:text-sm transition-colors flex items-center gap-1 whitespace-nowrap ${
                       selectedFolder === folder.id 
                         ? 'bg-blue-500 text-white' 
                         : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
@@ -88,16 +88,16 @@ export default function Dashboard() {
                     onClick={() => handleFolderClick(folder.id)}
                   >
                     <div 
-                      className="w-2 h-2 rounded-full" 
+                      className="w-2 h-2 rounded-full flex-shrink-0" 
                       style={{ backgroundColor: folder.color }}
                     />
-                    {folder.name}
+                    <span className="truncate max-w-[150px]">{folder.name}</span>
                   </Button>
                 ))}
                 
                 <Button
                   variant="outline"
-                  className="px-3 py-1.5 rounded-md text-sm border-dashed"
+                  className="px-2 md:px-3 py-1 md:py-1.5 rounded-md text-xs md:text-sm border-dashed whitespace-nowrap"
                   onClick={() => navigate("/folders")}
                 >
                   <Folder className="h-3 w-3 mr-1" /> Gestionar carpetas
@@ -105,11 +105,11 @@ export default function Dashboard() {
               </div>
             </div>
             
-            <div className="p-4">
-              <h3 className="text-lg font-medium text-gray-800 dark:text-gray-300 mb-4">Tus Transcripciones</h3>
+            <div className="p-2 md:p-4">
+              <h3 className="text-base md:text-lg font-medium text-gray-800 dark:text-gray-300 mb-4">Tus Transcripciones</h3>
               
               {filteredRecordings.length === 0 ? (
-                <div className="p-8 text-center bg-gray-50 dark:bg-gray-800/30 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
+                <div className="p-4 md:p-8 text-center bg-gray-50 dark:bg-gray-800/30 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
                   <p className="text-gray-600 dark:text-gray-400 font-medium">No hay transcripciones</p>
                   <p className="text-gray-500 dark:text-gray-500 text-sm mt-2">
                     {user?.role === "teacher" 
