@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 220 20% 96%;
+    --background: 240 4.8% 95.9%;
     --foreground: 182 100% 18%;
     --primary: 198 100% 4%;
     
@@ -86,7 +86,7 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased font-sans;
+    @apply bg-custom-background text-custom-text antialiased font-sans;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -135,9 +135,9 @@
   }
 
   .btn-primary {
-    @apply bg-primary text-primary-foreground rounded-lg px-4 py-2 
-    hover:bg-primary/90 transition-colors
-    focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+    @apply bg-custom-primary text-white rounded-lg px-4 py-2 
+    hover:bg-opacity-90 transition-colors
+    focus:outline-none focus:ring-2 focus:ring-custom-primary focus:ring-offset-2;
   }
 
   .btn-secondary {
@@ -153,13 +153,10 @@
 }
 
 @layer utilities {
-  .text-custom-primary {
-    color: #001011;
+  .text-primary {
+    @apply text-custom-primary;
   }
-  .text-custom-text {
-    color: #005c5f;
-  }
-  .bg-custom-background {
-    background-color: #f1f2f6;
+  .bg-primary {
+    @apply bg-custom-primary;
   }
 }
