@@ -163,12 +163,11 @@
 }
 
 @layer utilities {
-  /* Remove circular dependency by explicitly defining color */
   .text-primary {
-    color: hsl(var(--primary));
+    @apply text-primary;
   }
   .bg-primary {
-    background-color: hsl(var(--primary));
+    @apply bg-primary;
   }
   .text-custom-gradient {
     @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
@@ -177,4 +176,3 @@
     @apply bg-gradient-to-r from-primary to-accent;
   }
 }
-
