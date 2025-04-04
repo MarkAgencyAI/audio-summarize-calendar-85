@@ -71,7 +71,7 @@ export default function ProfilePage() {
               <Button variant="outline" onClick={handleLogout}>
                 Cerrar sesión
               </Button>
-              <Button onClick={handleSaveProfile}>
+              <Button onClick={handleSaveProfile} className="text-slate-50 ">
                 Guardar cambios
               </Button>
             </div>
