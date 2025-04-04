@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -19,10 +20,11 @@ export default {
     },
     extend: {
       colors: {
+        // Principales colores personalizados
         custom: {
-          primary: "#001011",
-          text: "#005c5f",
-          background: "#f1f2f6",
+          primary: "#001011",  // Para botones e interacciones
+          text: "#005c5f",     // Para textos
+          background: "#f1f2f6", // Para fondos
         },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
