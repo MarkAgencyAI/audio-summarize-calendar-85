@@ -186,15 +186,15 @@ export function AudioRecorder() {
   };
   
   return (
-    <div className="glassmorphism rounded-xl p-4 md:p-6 shadow-lg">
-      <h2 className="text-xl font-semibold mb-4">Nueva grabación</h2>
+    <div className="glassmorphism rounded-xl p-4 md:p-6 shadow-lg bg-white/5 dark:bg-black/20 backdrop-blur-xl border border-white/10 dark:border-white/5">
+      <h2 className="text-xl font-semibold mb-4 text-custom-primary">Nueva grabación</h2>
       
       <div className="space-y-4">
         {/* Recording Controls */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             {recordingState === "idle" && (
-              <Button onClick={startRecording} disabled={isProcessing}>
+              <Button onClick={startRecording} disabled={isProcessing} className="bg-custom-primary hover:bg-custom-primary/90 text-white">
                 <Mic className="h-4 w-4 mr-2" />
                 Grabar
               </Button>
@@ -202,7 +202,7 @@ export function AudioRecorder() {
             
             {recordingState === "recording" && (
               <>
-                <Button onClick={pauseRecording} disabled={isProcessing}>
+                <Button onClick={pauseRecording} disabled={isProcessing} className="bg-custom-accent hover:bg-custom-accent/90 text-white">
                   <Pause className="h-4 w-4 mr-2" />
                   Pausar
                 </Button>
@@ -215,7 +215,7 @@ export function AudioRecorder() {
             
             {recordingState === "paused" && (
               <>
-                <Button onClick={resumeRecording} disabled={isProcessing}>
+                <Button onClick={resumeRecording} disabled={isProcessing} className="bg-custom-accent hover:bg-custom-accent/90 text-white">
                   <Play className="h-4 w-4 mr-2" />
                   Reanudar
                 </Button>
@@ -227,27 +227,28 @@ export function AudioRecorder() {
             )}
           </div>
           
-          <span>{formatTime(recordingDuration)}</span>
+          <span className="text-custom-text">{formatTime(recordingDuration)}</span>
         </div>
         
         {/* Recording Name Input */}
         {audioBlob === null ? null : (
           <>
             <div className="space-y-2">
-              <Label htmlFor="recording-name">Nombre de la grabación</Label>
+              <Label htmlFor="recording-name" className="text-custom-text">Nombre de la grabación</Label>
               <Input
                 id="recording-name"
                 placeholder="Nombre de la grabación"
                 value={recordingName}
                 onChange={(e) => setRecordingName(e.target.value)}
+                className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="folder">Carpeta</Label>
+              <Label htmlFor="folder" className="text-custom-text">Carpeta</Label>
               <select
                 id="folder"
-                className="w-full h-10 px-3 py-2 bg-background border border-input rounded-md"
+                className="w-full h-10 px-3 py-2 bg-background text-custom-text border border-custom-primary/20 rounded-md focus:outline-none focus:ring-2 focus:ring-custom-primary focus:border-custom-primary"
                 value={selectedFolder}
                 onChange={(e) => setSelectedFolder(e.target.value)}
               >
@@ -264,7 +265,7 @@ export function AudioRecorder() {
         {/* Actions */}
         {audioBlob && (
           <div className="flex justify-between gap-4">
-            <Button variant="ghost" onClick={clearRecording}>
+            <Button variant="ghost" onClick={clearRecording} className="text-custom-primary hover:bg-custom-primary/10">
               <X className="h-4 w-4 mr-2" />
               Borrar
             </Button>
@@ -272,6 +273,7 @@ export function AudioRecorder() {
             <Button
               onClick={() => saveRecording(audioBlob)}
               disabled={isProcessing}
+              className="bg-custom-primary hover:bg-custom-primary/90 text-white"
             >
               {isProcessing ? (
                 <>

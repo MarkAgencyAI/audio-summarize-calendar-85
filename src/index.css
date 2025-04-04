@@ -5,79 +5,79 @@
 
 @layer base {
   :root {
-    --background: 240 4.8% 95.9%;
+    --background: 180 16% 96%;
     --foreground: 182 100% 18%;
-    --primary: 198 100% 4%;
+    --primary: 182 100% 18%;
     
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 180 90% 19%;
     
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
+    --popover-foreground: 180 90% 19%;
     
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
+    --secondary: 195 100% 4%;
+    --secondary-foreground: 180 16% 96%;
     
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
+    --muted: 180 16% 96%;
+    --muted-foreground: 180 20% 45%;
     
-    --accent: 211 100% 50%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 177 100% 27%;
+    --accent-foreground: 180 16% 96%;
     
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 84% 51%;
+    --destructive-foreground: 180 16% 96%;
     
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 211 100% 50%;
+    --border: 180 10% 86%;
+    --input: 180 10% 86%;
+    --ring: 182 100% 18%;
     
     --radius: 0.75rem;
     
     --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-foreground: 182 100% 18%;
+    --sidebar-primary: 182 100% 18%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 180 16% 96%;
+    --sidebar-accent-foreground: 180 90% 19%;
+    --sidebar-border: 180 16% 92%;
+    --sidebar-ring: 182 100% 18%;
   }
 
   .dark {
-    --background: 198 100% 4%;
-    --foreground: 220 20% 96%;
-    --primary: 182 100% 18%;
+    --background: 197 100% 4%;
+    --foreground: 180 16% 96%;
+    --primary: 177 100% 27%;
     
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
+    --card: 195 100% 7%;
+    --card-foreground: 180 16% 96%;
     
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 195 100% 7%;
+    --popover-foreground: 180 16% 96%;
     
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 180 10% 20%;
+    --secondary-foreground: 180 16% 96%;
     
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 180 10% 20%;
+    --muted-foreground: 180 10% 70%;
     
-    --accent: 211 100% 50%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 177 100% 27%;
+    --accent-foreground: 180 16% 96%;
     
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 180 16% 96%;
     
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+    --border: 180 10% 20%;
+    --input: 180 10% 20%;
+    --ring: 177 100% 27%;
     
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 195 100% 7%;
+    --sidebar-foreground: 180 16% 96%;
+    --sidebar-primary: 177 100% 27%;
+    --sidebar-primary-foreground: 180 16% 96%;
+    --sidebar-accent: 180 10% 20%;
+    --sidebar-accent-foreground: 180 16% 96%;
+    --sidebar-border: 180 10% 20%;
+    --sidebar-ring: 177 100% 27%;
   }
 }
 
@@ -111,7 +111,7 @@
   }
 
   .glassmorphism {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10 dark:bg-black/20;
+    @apply bg-white/10 backdrop-blur-xl border border-white/10 dark:bg-black/20;
   }
 
   .calendar-grid {
@@ -159,5 +159,11 @@
   }
   .bg-primary {
     @apply bg-custom-primary;
+  }
+  .text-custom-gradient {
+    @apply bg-gradient-to-r from-custom-primary to-custom-accent bg-clip-text text-transparent;
+  }
+  .bg-custom-gradient {
+    @apply bg-gradient-to-r from-custom-primary to-custom-accent;
   }
 }

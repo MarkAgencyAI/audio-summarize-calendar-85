@@ -1,3 +1,4 @@
+
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,18 +102,18 @@ export function PdfUploader() {
   
   // Interfaz de usuario
   return (
-    <div className="space-y-4 bg-[#005c5f] text-[#f1f2f6] rounded-xl p-4 md:p-6 shadow-lg mb-8">
-      <h2 className="text-xl font-semibold text-[#f1f2f6]">Subir material para clase</h2>
+    <div className="space-y-4 bg-custom-primary rounded-xl p-4 md:p-6 shadow-lg mb-8">
+      <h2 className="text-xl font-semibold text-white">Subir material para clase</h2>
       
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="pdf-file">Archivo PDF</Label>
+          <Label htmlFor="pdf-file" className="text-white">Archivo PDF</Label>
           <Input
             id="pdf-file"
             type="file"
             accept="application/pdf"
             onChange={handleFileChange}
-            className="cursor-pointer"
+            className="cursor-pointer bg-white/10 border-white/20 text-white"
             ref={fileInputRef}
           />
         </div>
@@ -120,20 +121,21 @@ export function PdfUploader() {
         {file && (
           <>
             <div className="space-y-2">
-              <Label htmlFor="lesson-name">Nombre de la lección</Label>
+              <Label htmlFor="lesson-name" className="text-white">Nombre de la lección</Label>
               <Input
                 id="lesson-name"
                 value={lessonName}
                 onChange={(e) => setLessonName(e.target.value)}
                 placeholder="Nombre de la lección"
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/70"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="folder">Carpeta</Label>
+              <Label htmlFor="folder" className="text-white">Carpeta</Label>
               <select
                 id="folder"
-                className="w-full h-10 px-3 py-2 bg-background border border-input rounded-md"
+                className="w-full h-10 px-3 py-2 bg-white/10 border border-white/20 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-white/50"
                 value={selectedFolder}
                 onChange={(e) => setSelectedFolder(e.target.value)}
               >
@@ -148,7 +150,7 @@ export function PdfUploader() {
             <Button 
               onClick={handleProcessPdf} 
               disabled={loading}
-              className="w-full bg-[#001011] text-[#f1f2f6] hover:bg-[#001011]/90"
+              className="w-full bg-custom-secondary text-white hover:bg-custom-secondary/90"
             >
               {loading ? (
                 <>
@@ -165,8 +167,8 @@ export function PdfUploader() {
             
             {loading && (
               <div className="space-y-1">
-                <Progress value={progress} className="h-2" />
-                <p className="text-xs text-muted-foreground text-center">
+                <Progress value={progress} className="h-2 bg-white/20" />
+                <p className="text-xs text-white/80 text-center">
                   {progress < 50 ? 'Extrayendo texto...' : 'Analizando contenido...'}
                 </p>
               </div>
@@ -177,9 +179,9 @@ export function PdfUploader() {
       
       {showAnalysis && (
         <div className="mt-6 space-y-4">
-          <Card>
+          <Card className="bg-white/10 border-white/20 text-white">
             <CardHeader className="pb-2">
-              <CardTitle className="flex items-center">
+              <CardTitle className="flex items-center text-white">
                 <FileText className="mr-2 h-5 w-5" />
                 Análisis del Material
               </CardTitle>
@@ -187,17 +189,17 @@ export function PdfUploader() {
             <CardContent>
               {keyPoints && keyPoints.length > 0 && (
                 <div className="mb-4">
-                  <h3 className="text-md font-medium flex items-center mb-2">
+                  <h3 className="text-md font-medium flex items-center mb-2 text-white">
                     <ListChecks className="mr-2 h-4 w-4" />
                     Puntos Fuertes
                   </h3>
                   <ul className="space-y-2 pl-2">
                     {keyPoints.map((point, index) => (
                       <li key={index} className="flex items-start">
-                        <span className="inline-flex items-center justify-center rounded-full bg-primary/10 text-primary h-5 w-5 text-xs mr-2 mt-0.5">
+                        <span className="inline-flex items-center justify-center rounded-full bg-white/20 text-white h-5 w-5 text-xs mr-2 mt-0.5">
                           {index + 1}
                         </span>
-                        <span>{point}</span>
+                        <span className="text-white/90">{point}</span>
                       </li>
                     ))}
                   </ul>
@@ -206,12 +208,12 @@ export function PdfUploader() {
               
               {summary && (
                 <div>
-                  <h3 className="text-md font-medium flex items-center mb-2">
+                  <h3 className="text-md font-medium flex items-center mb-2 text-white">
                     <BookOpenText className="mr-2 h-4 w-4" />
                     Resumen Completo
                   </h3>
                   <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <pre className="whitespace-pre-wrap text-sm">{summary}</pre>
+                    <pre className="whitespace-pre-wrap text-sm text-white/90">{summary}</pre>
                   </div>
                 </div>
               )}

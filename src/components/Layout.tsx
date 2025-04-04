@@ -47,13 +47,13 @@ export function Layout({ children }: LayoutProps) {
   ];
 
   return (
-    <div className="flex min-h-screen bg-custom-background antialiased">
+    <div className="flex min-h-screen bg-custom-background text-custom-text antialiased">
       {/* Sidebar for desktop */}
       {!isMobile && (
-        <div className={`fixed h-full z-40 bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out shadow-sm ${
+        <div className={`fixed h-full z-40 bg-white dark:bg-custom-secondary border-r border-gray-200 dark:border-custom-secondary flex flex-col transition-all duration-300 ease-in-out shadow-sm ${
           sidebarOpen ? 'left-0 w-16 md:w-64' : 'left-[-64px] md:left-[-256px] w-16 md:w-64'
         }`}>
-          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+          <div className="p-4 border-b border-gray-200 dark:border-custom-secondary/60 flex items-center justify-between">
             <h2 className={`text-xl font-bold italic text-custom-primary ${sidebarOpen ? 'hidden md:block' : 'hidden'}`}>
               Cali
             </h2>
@@ -70,8 +70,8 @@ export function Layout({ children }: LayoutProps) {
                     onClick={() => navigate(item.path)}
                     className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
                       isActive(item.path) 
-                        ? "bg-custom-primary text-white" 
-                        : "hover:bg-gray-100 text-custom-text"
+                        ? "bg-custom-primary text-white dark:bg-custom-primary dark:text-white" 
+                        : "hover:bg-gray-100 dark:hover:bg-custom-secondary/70 text-custom-text"
                     }`}
                   >
                     {item.icon}
@@ -82,7 +82,7 @@ export function Layout({ children }: LayoutProps) {
             </ul>
           </nav>
           
-          <div className="p-4 border-t border-gray-200 flex items-center justify-between">
+          <div className="p-4 border-t border-gray-200 dark:border-custom-secondary/60 flex items-center justify-between">
             <button 
               onClick={handleLogout}
               className="flex items-center space-x-2 text-custom-text hover:text-custom-primary transition-colors"
@@ -99,7 +99,7 @@ export function Layout({ children }: LayoutProps) {
       {!isMobile && (
         <button 
           onClick={toggleSidebar}
-          className={`fixed z-50 top-4 ${sidebarOpen ? 'left-[260px] md:left-[252px]' : 'left-4'} bg-white rounded-full h-8 w-8 flex items-center justify-center shadow-md border border-gray-200 transition-all duration-300 text-custom-primary`}
+          className={`fixed z-50 top-4 ${sidebarOpen ? 'left-[260px] md:left-[252px]' : 'left-4'} bg-white dark:bg-custom-secondary rounded-full h-8 w-8 flex items-center justify-center shadow-md border border-gray-200 dark:border-custom-secondary/60 transition-all duration-300 text-custom-primary`}
         >
           {sidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         </button>
@@ -117,7 +117,7 @@ export function Layout({ children }: LayoutProps) {
         
         {/* Bottom navigation for mobile */}
         {isMobile && (
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 h-16">
+          <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-custom-secondary border-t border-gray-200 dark:border-custom-secondary/60 z-40 h-16">
             <div className="grid grid-cols-4 h-full">
               {navItems.map((item) => (
                 <button
@@ -126,7 +126,7 @@ export function Layout({ children }: LayoutProps) {
                   className={`flex flex-col items-center justify-center h-full px-1 ${
                     isActive(item.path)
                       ? "text-custom-primary"
-                      : "text-gray-400"
+                      : "text-gray-400 dark:text-custom-muted"
                   }`}
                 >
                   {item.icon}
