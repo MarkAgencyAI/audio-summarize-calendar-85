@@ -44,18 +44,18 @@ export default function CalendarPage() {
         const dialog = document.createElement("dialog");
         dialog.className = "fixed inset-0 flex items-center justify-center bg-black/50 z-50";
         dialog.innerHTML = `
-          <div class="bg-background rounded-lg p-6 max-w-md w-full">
-            <h2 class="text-xl font-bold mb-4">Eventos sugeridos</h2>
-            <p class="text-sm text-muted-foreground mb-4">
+          <div class="bg-background dark:bg-custom-secondary/20 dark:border-custom-secondary/40 dark:text-white rounded-lg p-6 max-w-md w-full">
+            <h2 class="text-xl font-bold mb-4 dark:text-white">Eventos sugeridos</h2>
+            <p class="text-sm text-muted-foreground dark:text-white/60 mb-4">
               Se encontraron los siguientes eventos en la grabación. 
               ¿Deseas agregarlos al calendario?
             </p>
             <div class="space-y-2 max-h-60 overflow-y-auto" id="suggested-events"></div>
             <div class="flex justify-end space-x-2 mt-6">
-              <button class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg" id="cancel-button">
+              <button class="px-4 py-2 bg-secondary text-secondary-foreground dark:bg-custom-secondary/40 dark:text-white rounded-lg" id="cancel-button">
                 Cancelar
               </button>
-              <button class="px-4 py-2 bg-primary text-primary-foreground rounded-lg" id="add-button">
+              <button class="px-4 py-2 bg-primary text-primary-foreground dark:bg-custom-accent dark:text-white rounded-lg" id="add-button">
                 Agregar seleccionados
               </button>
             </div>
@@ -77,9 +77,9 @@ export default function CalendarPage() {
             eventEl.className = "flex items-center space-x-2";
             eventEl.innerHTML = `
               <input type="checkbox" id="event-${index}" class="h-4 w-4" checked />
-              <label for="event-${index}" class="flex-1">
+              <label for="event-${index}" class="flex-1 dark:text-white">
                 <div class="font-medium">${point}</div>
-                <div class="text-xs text-muted-foreground">
+                <div class="text-xs text-muted-foreground dark:text-white/60">
                   ${format(eventDate, "PPP")}
                 </div>
               </label>
@@ -146,9 +146,9 @@ export default function CalendarPage() {
   return (
     <Layout>
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Calendario</h1>
+        <h1 className="text-3xl font-bold text-custom-primary dark:text-custom-accent">Calendario</h1>
         
-        <div className="glassmorphism rounded-xl p-6 shadow-lg">
+        <div className="glassmorphism rounded-xl p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40">
           <Calendar 
             events={events} 
             onAddEvent={handleAddEvent} 

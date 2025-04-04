@@ -95,7 +95,7 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-medium tracking-tight text-custom-primary;
+    @apply font-medium tracking-tight text-custom-primary dark:text-custom-accent;
   }
 
   h1 {
@@ -115,7 +115,7 @@
   }
 
   .glassmorphism {
-    @apply bg-white/10 backdrop-blur-xl border border-white/10 dark:bg-black/20;
+    @apply bg-white/10 backdrop-blur-xl border border-white/10 dark:bg-black/20 dark:border-white/5;
   }
 
   .calendar-grid {
@@ -142,7 +142,8 @@
   .btn-primary {
     @apply bg-custom-primary text-white rounded-lg px-4 py-2 
     hover:bg-opacity-90 transition-colors
-    focus:outline-none focus:ring-2 focus:ring-custom-primary focus:ring-offset-2;
+    focus:outline-none focus:ring-2 focus:ring-custom-primary focus:ring-offset-2
+    dark:bg-custom-accent dark:hover:bg-custom-accent/90;
   }
 
   .btn-secondary {
@@ -153,16 +154,17 @@
 
   .input-field {
     @apply bg-background border border-input rounded-lg px-4 py-2 
-    focus:outline-none focus:ring-2 focus:ring-ring;
+    focus:outline-none focus:ring-2 focus:ring-ring
+    dark:bg-custom-secondary/30 dark:border-custom-secondary/60 dark:text-white;
   }
 }
 
 @layer utilities {
   .text-primary {
-    @apply text-custom-primary;
+    @apply text-custom-primary dark:text-custom-accent;
   }
   .bg-primary {
-    @apply bg-custom-primary;
+    @apply bg-custom-primary dark:bg-custom-accent;
   }
   .text-custom-gradient {
     @apply bg-gradient-to-r from-custom-primary to-custom-accent bg-clip-text text-transparent;

@@ -90,7 +90,7 @@ export default function Dashboard() {
           {!isTeacher ? (
             <AudioRecorder />
           ) : (
-            <div className="glassmorphism rounded-xl p-4 md:p-6 shadow-lg mb-8">
+            <div className="glassmorphism rounded-xl p-4 md:p-6 shadow-lg mb-8 dark:bg-custom-secondary/20 dark:border-custom-secondary/40">
               <PdfUploader />
             </div>
           )}
@@ -131,7 +131,7 @@ export default function Dashboard() {
           <h2 className="text-2xl font-semibold text-custom-primary dark:text-custom-accent">{`Tus ${pageTitle}`}</h2>
           
           {filteredRecordings.length === 0 ? (
-            <div className="text-center py-10 border border-dashed border-border rounded-lg bg-muted/30 dark:bg-custom-secondary/10 dark:border-custom-secondary/40">
+            <div className="text-center py-10 border border-dashed border-border rounded-lg bg-muted/30 dark:bg-custom-secondary/20 dark:border-custom-secondary/40 dark:text-white">
               <p className="text-muted-foreground dark:text-white/60">No hay {pageTitle.toLowerCase()}</p>
               <p className="text-sm text-muted-foreground dark:text-white/60 mt-2">
                 {isTeacher 
