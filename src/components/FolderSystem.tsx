@@ -90,7 +90,7 @@ export function FolderSystem() {
       
       {/* Add folder dialog */}
       {showAddFolderDialog && <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
-          <div className="bg-white w-4/5 rounded p-4">
+          <div className="w-4/5 rounded p-4 bg-slate-900">
             <h3 className="text-lg font-bold mb-4">Nueva carpeta</h3>
             <div className="mb-4">
               <label className="block mb-2">Nombre</label>
