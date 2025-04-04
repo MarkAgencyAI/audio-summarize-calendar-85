@@ -94,7 +94,7 @@ export function FolderSystem() {
             <h3 className="text-lg font-bold mb-4">Nueva carpeta</h3>
             <div className="mb-4">
               <label className="block mb-2">Nombre</label>
-              <input className="border border-gray-300 p-2 rounded w-full" value={folderName} onChange={e => setFolderName(e.target.value)} />
+              <input value={folderName} onChange={e => setFolderName(e.target.value)} className="border border-gray-300 p-2 rounded w-full bg-slate-800" />
             </div>
             <div className="mb-4">
               <label className="block mb-2">Color</label>
