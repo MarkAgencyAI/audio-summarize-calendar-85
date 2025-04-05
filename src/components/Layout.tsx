@@ -48,11 +48,11 @@ export function Layout({ children }: LayoutProps) {
       {/* Mobile Top Navbar */}
       {isMobile && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-card dark:bg-card border-b border-border dark:border-border h-14 flex items-center justify-between px-4">
-          <div onClick={() => navigate("/dashboard")} className="cursor-pointer">
+          <div onClick={() => navigate("/dashboard")} className="cursor-pointer flex items-center justify-center h-full">
             <img 
               src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" 
               alt="Cali Logo" 
-              className="h-14 w-14 object-contain" 
+              className="max-h-10 max-w-10 object-contain" 
             />
           </div>
           <ThemeToggle />
@@ -65,18 +65,18 @@ export function Layout({ children }: LayoutProps) {
           sidebarOpen ? 'left-0 w-16 md:w-64' : 'left-[-64px] md:left-[-256px] w-16 md:w-64'
         }`}>
           <div className="p-4 border-b border-sidebar-border dark:border-sidebar-border flex items-center justify-between">
-            <div className={`${sidebarOpen ? 'hidden md:block' : 'hidden'}`}>
+            <div className={`${sidebarOpen ? 'hidden md:block' : 'hidden'} flex items-center justify-center`}>
               <img 
                 src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" 
                 alt="Cali Logo" 
-                className="h-14 w-14 object-contain" 
+                className="max-h-10 max-w-10 object-contain" 
               />
             </div>
-            <div className={`${sidebarOpen ? 'block md:hidden' : 'hidden'}`}>
+            <div className={`${sidebarOpen ? 'block md:hidden' : 'hidden'} flex items-center justify-center`}>
               <img 
                 src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" 
                 alt="Cali Logo" 
-                className="h-12 w-12 object-contain" 
+                className="max-h-8 max-w-8 object-contain" 
               />
             </div>
           </div>
