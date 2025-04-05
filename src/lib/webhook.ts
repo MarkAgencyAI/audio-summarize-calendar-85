@@ -14,6 +14,10 @@ export async function sendToWebhook(url: string, data: any): Promise<void> {
       body: JSON.stringify(data),
     });
     
+    if (!response.ok) {
+      throw new Error(`Error en la respuesta del webhook: ${response.status}`);
+    }
+    
     try {
       // Intentar obtener la respuesta del webhook
       const responseText = await response.text();
@@ -25,14 +29,22 @@ export async function sendToWebhook(url: string, data: any): Promise<void> {
           const responseData = JSON.parse(responseText);
           console.log("Respuesta del webhook (parseada):", responseData);
           
-          if (responseData && responseData.output) {
-            console.log("Se encontró variable output en la respuesta:", responseData.output);
+          // Verificar si la respuesta es un array y extraer el primer elemento
+          let processedData = responseData;
+          if (Array.isArray(responseData) && responseData.length > 0) {
+            processedData = responseData[0];
+            console.log("Procesando primer elemento del array:", processedData);
+          }
+          
+          // Verificar si hay un campo output en la respuesta
+          if (processedData && processedData.output) {
+            console.log("Se encontró variable output en la respuesta:", processedData.output);
             
             // Disparar evento personalizado con los datos de output
             const webhookData = {
-              transcript: responseData.output.transcript || null,
-              summary: responseData.output.summary || null,
-              keyPoints: responseData.output.keyPoints || []
+              transcript: processedData.output.transcript || null,
+              summary: processedData.output.summary || null,
+              keyPoints: processedData.output.keyPoints || []
             };
             
             const analysisEvent = new CustomEvent('webhookMessage', {
@@ -46,8 +58,59 @@ export async function sendToWebhook(url: string, data: any): Promise<void> {
             console.log("Evento webhook_analysis disparado con datos de output:", webhookData);
             return; // Terminar la función después de disparar el evento
           }
+          
+          // Si no hay output pero hay datos directamente en la respuesta
+          if (processedData) {
+            const webhookData = {
+              transcript: processedData.transcript || null,
+              summary: processedData.summary || null,
+              keyPoints: processedData.keyPoints || []
+            };
+            
+            const analysisEvent = new CustomEvent('webhookMessage', {
+              detail: {
+                type: 'webhook_analysis',
+                data: webhookData
+              }
+            });
+            
+            window.dispatchEvent(analysisEvent);
+            console.log("Evento webhook_analysis disparado con datos directos:", webhookData);
+            return;
+          }
         } catch (jsonError) {
           console.log("Error al parsear respuesta como JSON:", jsonError);
+          
+          // Intentar buscar si hay un campo output en el texto directamente
+          if (responseText.includes('"output"')) {
+            try {
+              // Intentar extraer la parte JSON que contiene output
+              const outputMatch = responseText.match(/"output"\s*:\s*({[^}]+})/);
+              if (outputMatch && outputMatch[1]) {
+                const outputData = JSON.parse(`{${outputMatch[1]}}`);
+                console.log("Se encontró output en texto:", outputData);
+                
+                const webhookData = {
+                  transcript: outputData.transcript || null,
+                  summary: outputData.summary || null,
+                  keyPoints: outputData.keyPoints || []
+                };
+                
+                const analysisEvent = new CustomEvent('webhookMessage', {
+                  detail: {
+                    type: 'webhook_analysis',
+                    data: webhookData
+                  }
+                });
+                
+                window.dispatchEvent(analysisEvent);
+                console.log("Evento webhook_analysis disparado con datos extraídos de texto:", webhookData);
+                return;
+              }
+            } catch (extractError) {
+              console.error("Error al extraer datos de output del texto:", extractError);
+            }
+          }
         }
       }
       
@@ -69,6 +132,17 @@ export async function sendToWebhook(url: string, data: any): Promise<void> {
         
         window.dispatchEvent(analysisEvent);
         console.log("Evento webhook_analysis disparado con datos originales:", webhookData);
+      } else {
+        // Notificar que no se obtuvo una respuesta válida
+        const errorEvent = new CustomEvent('webhookMessage', {
+          detail: {
+            type: 'webhook_analysis',
+            data: null,
+            error: "No se pudo procesar la respuesta del webhook"
+          }
+        });
+        window.dispatchEvent(errorEvent);
+        toast.warning("Respuesta del webhook no válida");
       }
     } catch (responseError) {
       console.error("Error al procesar respuesta del webhook:", responseError);
@@ -90,6 +164,17 @@ export async function sendToWebhook(url: string, data: any): Promise<void> {
         
         window.dispatchEvent(analysisEvent);
         console.log("Evento webhook_analysis disparado con datos originales (después de error):", webhookData);
+      } else {
+        // Notificar error si no hay datos para usar
+        const errorEvent = new CustomEvent('webhookMessage', {
+          detail: {
+            type: 'webhook_analysis',
+            data: null,
+            error: true
+          }
+        });
+        window.dispatchEvent(errorEvent);
+        toast.error("Error al procesar la respuesta del webhook");
       }
     }
     
