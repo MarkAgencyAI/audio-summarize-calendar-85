@@ -6,13 +6,12 @@ import { Calendar, CalendarEvent } from "@/components/Calendar";
 import { useAuth } from "@/context/AuthContext";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { loadFromStorage, saveToStorage } from "@/lib/storage";
 
 export default function CalendarPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const {
-    user
-  } = useAuth();
+  const { user } = useAuth();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
 
   useEffect(() => {
@@ -22,14 +21,12 @@ export default function CalendarPage() {
   }, [user, navigate]);
 
   useEffect(() => {
-    const storedEvents = localStorage.getItem("events");
-    if (storedEvents) {
-      setEvents(JSON.parse(storedEvents));
-    }
+    const loadedEvents = loadFromStorage<CalendarEvent[]>("events") || [];
+    setEvents(loadedEvents);
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("events", JSON.stringify(events));
+    saveToStorage("events", events);
   }, [events]);
 
   useEffect(() => {

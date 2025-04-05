@@ -10,9 +10,21 @@ import { RecordingItem } from "@/components/RecordingItem";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Folder, Mic, FileText, Search } from "lucide-react";
+import { Folder, Mic, FileText, Search, Calendar } from "lucide-react";
 import { LiveTranscriptionSheet } from "@/components/LiveTranscriptionSheet";
 import { toast } from "sonner";
+import { parseISO, format, isWithinInterval, addDays } from "date-fns";
+import { es } from "date-fns/locale";
+import { loadFromStorage, saveToStorage } from "@/lib/storage";
+
+// Interface for calendar events
+interface CalendarEvent {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  color?: string;
+}
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -25,6 +37,8 @@ export default function Dashboard() {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [webhookOutput, setWebhookOutput] = useState("");
   
+  const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
+  
   const filteredRecordings = recordings.filter(recording => {
     const folderMatch = selectedFolder === "default" ? true : recording.folderId === selectedFolder;
     const searchMatch = searchTerm 
@@ -34,6 +48,31 @@ export default function Dashboard() {
       
     return folderMatch && searchMatch;
   });
+  
+  // Load upcoming calendar events that are within the next 14 days
+  useEffect(() => {
+    const loadEvents = () => {
+      const storedEvents = loadFromStorage<CalendarEvent[]>("events") || [];
+      const now = new Date();
+      const twoWeeksLater = addDays(now, 14);
+      
+      const filtered = storedEvents.filter(event => {
+        const eventDate = parseISO(event.date);
+        return isWithinInterval(eventDate, { start: now, end: twoWeeksLater });
+      });
+      
+      // Sort by most recent first
+      filtered.sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
+      
+      setUpcomingEvents(filtered);
+    };
+    
+    loadEvents();
+    
+    // Set up a timer to refresh the events every minute
+    const interval = setInterval(loadEvents, 60000);
+    return () => clearInterval(interval);
+  }, []);
   
   const handleAddToCalendar = (recording) => {
     navigate("/calendar", { state: { recording } });
@@ -105,7 +144,7 @@ export default function Dashboard() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">
-              Mi Dashboard
+              Dashboard
             </h1>
             <p className="text-muted-foreground mt-1">
               {user?.role === "teacher" ? "Gestiona tus transcripciones" : "Gestiona tus grabaciones"}
@@ -132,7 +171,8 @@ export default function Dashboard() {
         {/* Main Content Area */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Left Column - Second F scan */}
-          <div className="md:col-span-1">
+          <div className="md:col-span-1 space-y-6">
+            {/* Tools Card */}
             <Card className="h-full">
               <CardHeader>
                 <CardTitle className="text-lg">Herramientas</CardTitle>
@@ -176,6 +216,48 @@ export default function Dashboard() {
                     </Button>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+            
+            {/* Upcoming Events Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Próximos eventos
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {upcomingEvents.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4">
+                    No hay eventos próximos
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {upcomingEvents.slice(0, 5).map(event => (
+                      <div 
+                        key={event.id} 
+                        className="p-3 bg-secondary/50 rounded-lg hover:bg-secondary transition-colors cursor-pointer"
+                        onClick={() => navigate("/calendar")}
+                      >
+                        <div className="font-medium text-sm">{event.title}</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {format(parseISO(event.date), "PPPp", { locale: es })}
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {upcomingEvents.length > 5 && (
+                      <Button 
+                        variant="link" 
+                        className="w-full text-sm" 
+                        onClick={() => navigate("/calendar")}
+                      >
+                        Ver todos los eventos ({upcomingEvents.length})
+                      </Button>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
