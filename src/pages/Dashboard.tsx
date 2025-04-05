@@ -9,7 +9,8 @@ import { AudioRecorder } from "@/components/AudioRecorder";
 import { RecordingItem } from "@/components/RecordingItem";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Folder } from "lucide-react";
+import { Folder, Mic, FileText } from "lucide-react";
+import { LiveTranscriptionSheet } from "@/components/LiveTranscriptionSheet";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -18,6 +19,16 @@ export default function Dashboard() {
   
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFolder, setSelectedFolder] = useState("default");
+  
+  // Estado para la transcripción en tiempo real
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [liveTranscription, setLiveTranscription] = useState({
+    transcript: "",
+    translation: "",
+    keyPoints: [],
+    language: "es",
+    summary: ""
+  });
   
   // Filter recordings based on search term and selected folder
   const filteredRecordings = recordings.filter(recording => {
@@ -42,18 +53,68 @@ export default function Dashboard() {
     setSelectedFolder(folderId);
   };
 
+  // Handle transcription updates from AudioRecorder
+  const handleTranscriptionUpdate = (transcriptionData: any) => {
+    setIsTranscribing(true);
+    setLiveTranscription({
+      transcript: transcriptionData.transcript || "",
+      translation: transcriptionData.translation || "",
+      keyPoints: transcriptionData.keyPoints || [],
+      language: transcriptionData.language || "es",
+      summary: transcriptionData.summary || ""
+    });
+  };
+
+  // Handle transcription complete
+  const handleTranscriptionComplete = () => {
+    setIsTranscribing(false);
+  };
+
   return (
     <Layout>
       <div className="space-y-4 max-w-full">
-        <h1 className="text-2xl md:text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">Mi Dashboard</h1>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h1 className="text-2xl md:text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">Mi Dashboard</h1>
+          
+          {/* Panel de transcripción en tiempo real */}
+          <LiveTranscriptionSheet
+            isTranscribing={isTranscribing}
+            transcript={liveTranscription.transcript}
+            translation={liveTranscription.translation}
+            keyPoints={liveTranscription.keyPoints}
+            language={liveTranscription.language}
+            summary={liveTranscription.summary}
+          >
+            <Button 
+              variant={isTranscribing ? "default" : "outline"} 
+              className="flex items-center gap-2"
+              size="sm"
+            >
+              {isTranscribing ? (
+                <>
+                  <Mic className="h-4 w-4 text-white animate-pulse" />
+                  <span>Transcribiendo...</span>
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4" />
+                  <span>Transcripciones</span>
+                </>
+              )}
+            </Button>
+          </LiveTranscriptionSheet>
+        </div>
         
         {/* Mostrar componentes según el rol del usuario */}
         {user?.role === "teacher" ? (
           /* Teacher section: PDF Uploader */
           <PdfUploader />
         ) : (
-          /* Student section: Audio Recorder */
-          <AudioRecorder />
+          /* Student section: Audio Recorder with transcription callbacks */
+          <AudioRecorder 
+            onTranscriptionUpdate={handleTranscriptionUpdate}
+            onTranscriptionComplete={handleTranscriptionComplete}
+          />
         )}
         
         <div className="glassmorphism rounded-xl p-3 md:p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40 overflow-hidden">
