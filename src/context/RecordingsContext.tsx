@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import AsyncStorage from '@/lib/storage';
 
@@ -13,6 +14,7 @@ export interface Recording {
   createdAt: Date;
   duration: number;
   language?: string;
+  subject?: string;
   suggestedEvents?: {
     title: string;
     description: string;
