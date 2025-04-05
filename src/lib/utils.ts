@@ -1,4 +1,7 @@
 
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
 // Add a new function for formatting time from seconds
 export function formatTimeFromSeconds(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -16,9 +19,6 @@ export function formatDate(date: Date): string {
 }
 
 // Add the cn utility function used by UI components
-import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
-
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
