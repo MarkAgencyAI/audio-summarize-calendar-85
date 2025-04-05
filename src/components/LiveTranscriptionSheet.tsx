@@ -95,15 +95,17 @@ export function LiveTranscriptionSheet({
               Visualiza la información recibida del webhook
             </SheetDescription>
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-8 w-8 p-0" 
-            onClick={handleClose}
-          >
-            <X className="h-4 w-4" />
-            <span className="sr-only">Cerrar</span>
-          </Button>
+          <SheetClose asChild>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-0" 
+              onClick={handleClose}
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Cerrar</span>
+            </Button>
+          </SheetClose>
         </SheetHeader>
         
         <div className="flex-1 overflow-hidden">
