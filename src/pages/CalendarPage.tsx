@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Layout } from "@/components/Layout";
@@ -125,11 +126,11 @@ export default function CalendarPage() {
 
   return (
     <Layout>
-      <div className="space-y-6 max-w-full overflow-hidden">
+      <div className="space-y-6 max-w-full">
         <h1 className="text-2xl md:text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">Calendario</h1>
         
-        <div className="glassmorphism rounded-xl p-3 md:p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40 overflow-hidden w-full">
-          <div className="w-full overflow-x-auto">
+        <div className="glassmorphism rounded-xl p-3 md:p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40 w-full">
+          <div className="w-full overflow-hidden">
             <Calendar events={events} onAddEvent={handleAddEvent} onDeleteEvent={handleDeleteEvent} />
           </div>
         </div>

@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from "react";
 import { addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, format, isSameMonth, isSameDay, addDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -117,12 +118,13 @@ export function Calendar({
     }
   };
 
-  return <div className="w-full">
+  return (
+    <div className="w-full">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl md:text-2xl font-semibold text-[#005c5f] dark:text-white truncate">
           {format(currentDate, "MMMM yyyy", {
-          locale: es
-        })}
+            locale: es
+          })}
         </h2>
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
@@ -134,84 +136,118 @@ export function Calendar({
         </div>
       </div>
       
-      <ScrollArea className="w-full overflow-auto pb-2">
-        <div className="min-w-[640px]">
+      <div className="w-full overflow-auto pb-2">
+        <div className="min-w-[640px] max-w-full">
           <div className="calendar-grid mb-1">
-            {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map(day => <div key={day} className="py-2 text-center font-medium text-sm">
+            {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map(day => 
+              <div key={day} className="py-2 text-center font-medium text-sm">
                 {day}
-              </div>)}
+              </div>
+            )}
           </div>
           
           <div className="calendar-grid border border-border rounded-lg overflow-hidden">
             {days.map((day, i) => {
-            const dateKey = format(day, "yyyy-MM-dd");
-            const dayEvents = eventsByDate[dateKey] || [];
-            const isToday = isSameDay(day, new Date());
-            const isCurrentMonth = isSameMonth(day, currentDate);
-            return <div key={i} className={`
+              const dateKey = format(day, "yyyy-MM-dd");
+              const dayEvents = eventsByDate[dateKey] || [];
+              const isToday = isSameDay(day, new Date());
+              const isCurrentMonth = isSameMonth(day, currentDate);
+              return (
+                <div 
+                  key={i} 
+                  className={`
                     calendar-date border border-border p-1
                     ${isCurrentMonth ? "bg-background" : "bg-muted/30 text-muted-foreground"}
                     hover:bg-secondary/50 transition-colors cursor-pointer
-                  `} onClick={() => handleDateClick(day)}>
+                  `} 
+                  onClick={() => handleDateClick(day)}
+                >
                   <div className={`
                     flex items-center justify-center h-7 w-7 mb-1 text-sm
                     ${isToday ? "bg-primary text-primary-foreground rounded-full" : ""}
                   `}>
                     {format(day, "d")}
-                    {dayEvents.length > 0 && <span className="ml-1 bg-primary/20 text-primary text-xs px-1 rounded-full">
+                    {dayEvents.length > 0 && 
+                      <span className="ml-1 bg-primary/20 text-primary text-xs px-1 rounded-full">
                         {dayEvents.length}
-                      </span>}
+                      </span>
+                    }
                   </div>
                   
                   <div className="space-y-1 max-h-[80px] overflow-y-auto">
-                    {dayEvents.map(event => <div key={event.id} className="calendar-event bg-primary/10 text-primary hover:bg-primary/20" onClick={e => {
-                  e.stopPropagation();
-                  handleEventClick(event);
-                }}>
+                    {dayEvents.map(event => 
+                      <div 
+                        key={event.id} 
+                        className="calendar-event bg-primary/10 text-primary hover:bg-primary/20" 
+                        onClick={e => {
+                          e.stopPropagation();
+                          handleEventClick(event);
+                        }}
+                      >
                         {event.title}
-                      </div>)}
+                      </div>
+                    )}
                   </div>
                   
                   <div className="absolute bottom-1 right-1">
-                    <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 hover:opacity-100 bg-muted/50 hover:bg-muted" onClick={e => {
-                  e.stopPropagation();
-                  handleDateClick(day);
-                }}>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-5 w-5 opacity-0 hover:opacity-100 bg-muted/50 hover:bg-muted" 
+                      onClick={e => {
+                        e.stopPropagation();
+                        handleDateClick(day);
+                      }}
+                    >
                       <Plus className="h-3 w-3" />
                     </Button>
                   </div>
-                </div>;
-          })}
+                </div>
+              );
+            })}
           </div>
         </div>
-      </ScrollArea>
+      </div>
       
       <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
-        <DialogContent className="max-w-[95vw] w-[400px]">
+        <DialogContent className="max-w-[95vw] sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle>Agregar evento</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="title">Título</Label>
-              <Input id="title" value={newEvent.title} onChange={e => setNewEvent({
-              ...newEvent,
-              title: e.target.value
-            })} />
+              <Input 
+                id="title" 
+                value={newEvent.title} 
+                onChange={e => setNewEvent({
+                  ...newEvent,
+                  title: e.target.value
+                })} 
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="description">Descripción</Label>
-              <Textarea id="description" value={newEvent.description} onChange={e => setNewEvent({
-              ...newEvent,
-              description: e.target.value
-            })} />
+              <Textarea 
+                id="description" 
+                value={newEvent.description} 
+                onChange={e => setNewEvent({
+                  ...newEvent,
+                  description: e.target.value
+                })} 
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="date">Fecha y hora</Label>
-              <Input id="date" type="datetime-local" value={newEvent.date} onChange={e => setNewEvent({
-              ...newEvent,
-              date: e.target.value
-            })} />
+              <Input 
+                id="date" 
+                type="datetime-local" 
+                value={newEvent.date} 
+                onChange={e => setNewEvent({
+                  ...newEvent,
+                  date: e.target.value
+                })} 
+              />
             </div>
           </div>
           <DialogFooter>
@@ -221,15 +257,16 @@ export function Calendar({
       </Dialog>
       
       <Dialog open={!!selectedEvent} onOpenChange={open => !open && setSelectedEvent(null)}>
-        {selectedEvent && <DialogContent className="max-w-[95vw] w-[400px]">
+        {selectedEvent && 
+          <DialogContent className="max-w-[95vw] sm:max-w-[400px]">
             <DialogHeader>
               <DialogTitle>{selectedEvent.title}</DialogTitle>
             </DialogHeader>
             <div className="py-4">
               <p className="text-sm text-muted-foreground mb-4">
                 {format(parseISO(selectedEvent.date), "PPPp", {
-              locale: es
-            })}
+                  locale: es
+                })}
               </p>
               <p className="whitespace-pre-line">
                 {selectedEvent.description}
@@ -240,7 +277,9 @@ export function Calendar({
                 Eliminar evento
               </Button>
             </DialogFooter>
-          </DialogContent>}
+          </DialogContent>
+        }
       </Dialog>
-    </div>;
+    </div>
+  );
 }
