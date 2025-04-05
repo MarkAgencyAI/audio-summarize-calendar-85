@@ -27,7 +27,6 @@ export function AudioRecorder() {
   const [selectedFolder, setSelectedFolder] = useState("default");
   const [subject, setSubject] = useState("");
   const [hasPermission, setHasPermission] = useState(false);
-  const [waitingForWebhook, setWaitingForWebhook] = useState(false);
   const [webhookOutput, setWebhookOutput] = useState("");
   
   const subjectRef = useRef(subject);
@@ -57,7 +56,6 @@ export function AudioRecorder() {
       
       if (customEvent.detail?.type === 'webhook_analysis') {
         console.log("AudioRecorder received webhook message:", customEvent.detail);
-        setWaitingForWebhook(false);
         
         if (customEvent.detail?.data?.output) {
           setWebhookOutput(customEvent.detail.data.output);
@@ -187,7 +185,6 @@ export function AudioRecorder() {
   const saveRecording = async (audioBlob: Blob) => {
     try {
       setIsProcessing(true);
-      setWaitingForWebhook(true);
       toast.info("Procesando grabación...");
       
       const audioUrl = URL.createObjectURL(audioBlob);
@@ -205,10 +202,10 @@ export function AudioRecorder() {
           (progressData) => dispatchTranscriptionUpdate(progressData)
         );
         
-        toast.success("Audio transcrito correctamente, esperando respuesta del webhook...");
+        toast.success("Audio transcrito correctamente");
         
-        dispatchTranscriptionUpdate({ output: "Esperando respuesta del webhook..." });
-        dispatchTranscriptionComplete({ output: webhookOutput });
+        dispatchTranscriptionUpdate({ output: transcriptionResult?.output || "" });
+        dispatchTranscriptionComplete({ output: transcriptionResult?.output || "" });
         
         const webhookHandler = (event: Event) => {
           const customEvent = event as CustomEvent;
@@ -232,7 +229,6 @@ export function AudioRecorder() {
             });
             
             setIsProcessing(false);
-            setWaitingForWebhook(false);
             setRecordingState('idle');
             setRecordingName('');
             setSubject('');
@@ -263,7 +259,6 @@ export function AudioRecorder() {
             });
             
             setIsProcessing(false);
-            setWaitingForWebhook(false);
             setRecordingState('idle');
             setRecordingName('');
             setSubject('');
@@ -278,14 +273,12 @@ export function AudioRecorder() {
       } catch (error) {
         console.error("Error transcribing audio:", error);
         toast.error("Error al transcribir el audio. No se pudo procesar.");
-        setWaitingForWebhook(false);
         throw error;
       }
       
     } catch (error) {
       console.error('Error saving recording:', error);
       setIsProcessing(false);
-      setWaitingForWebhook(false);
       toast.error('Error al guardar la grabación');
     }
   };
@@ -395,13 +388,13 @@ export function AudioRecorder() {
             
             <Button
               onClick={() => saveRecording(audioBlob)}
-              disabled={isProcessing || waitingForWebhook}
+              disabled={isProcessing}
               className="bg-custom-primary hover:bg-custom-primary/90 text-white"
             >
-              {isProcessing || waitingForWebhook ? (
+              {isProcessing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {waitingForWebhook ? "Esperando webhook..." : "Procesando..."}
+                  Procesando...
                 </>
               ) : (
                 "Guardar grabación"

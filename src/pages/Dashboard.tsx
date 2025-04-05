@@ -22,7 +22,6 @@ export default function Dashboard() {
   
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [webhookOutput, setWebhookOutput] = useState("");
-  const [waitingForWebhook, setWaitingForWebhook] = useState(false);
   
   const filteredRecordings = recordings.filter(recording => {
     const folderMatch = selectedFolder === "default" ? true : recording.folderId === selectedFolder;
@@ -52,9 +51,7 @@ export default function Dashboard() {
       }
     } else if (type === 'transcriptionComplete') {
       setIsTranscribing(false);
-      setWaitingForWebhook(true);
-      
-      toast.success("Transcripción completada, esperando análisis del webhook...");
+      toast.success("Transcripción completada");
     }
   };
 
@@ -63,17 +60,14 @@ export default function Dashboard() {
     
     if (type === 'webhook_analysis') {
       console.log("Recibido análisis de webhook:", data);
-      setWaitingForWebhook(false);
       
       if (data && data.output) {
         setWebhookOutput(data.output);
         toast.success("Información del webhook recibida correctamente");
       } else if (error) {
         toast.error("Error en la respuesta del webhook");
-        setWebhookOutput("");
       } else {
         toast.warning("No se recibieron datos del webhook");
-        setWebhookOutput("");
       }
     }
   };
@@ -108,10 +102,9 @@ export default function Dashboard() {
           <LiveTranscriptionSheet
             isTranscribing={isTranscribing}
             output={webhookOutput}
-            waitingForWebhook={waitingForWebhook}
           >
             <Button 
-              variant={isTranscribing || waitingForWebhook ? "default" : "outline"} 
+              variant={isTranscribing ? "default" : "outline"} 
               className="flex items-center gap-2"
               size="sm"
             >
@@ -119,11 +112,6 @@ export default function Dashboard() {
                 <>
                   <Mic className="h-4 w-4 text-white animate-pulse" />
                   <span>Transcribiendo...</span>
-                </>
-              ) : waitingForWebhook ? (
-                <>
-                  <FileText className="h-4 w-4 text-white animate-pulse" />
-                  <span>Esperando análisis...</span>
                 </>
               ) : (
                 <>

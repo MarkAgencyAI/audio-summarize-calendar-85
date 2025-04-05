@@ -14,14 +14,12 @@ import { Mic, MicOff } from "lucide-react";
 interface LiveTranscriptionSheetProps {
   isTranscribing: boolean;
   output: string;
-  waitingForWebhook?: boolean;
   children?: React.ReactNode;
 }
 
 export function LiveTranscriptionSheet({
   isTranscribing,
   output,
-  waitingForWebhook = false,
   children
 }: LiveTranscriptionSheetProps) {
   const [open, setOpen] = useState(false);
@@ -95,7 +93,6 @@ export function LiveTranscriptionSheet({
           <TranscriptionPanel
             output={output}
             isLoading={isTranscribing && !output}
-            waitingForWebhook={waitingForWebhook}
           />
         </div>
       </SheetContent>
