@@ -46,18 +46,28 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="flex min-h-screen bg-background text-foreground antialiased">
+      {/* Mobile Top Navbar */}
+      {isMobile && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-card dark:bg-card border-b border-border dark:border-border h-14 flex items-center justify-between px-4">
+          <div onClick={() => navigate("/dashboard")} className="cursor-pointer">
+            <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="h-8" />
+          </div>
+          <ThemeToggle />
+        </div>
+      )}
+      
       {/* Desktop Sidebar */}
       {!isMobile && (
         <div className={`fixed h-full z-40 bg-sidebar-background dark:bg-sidebar-background border-r border-sidebar-border dark:border-sidebar-border flex flex-col transition-all duration-300 ease-in-out shadow-sm ${
           sidebarOpen ? 'left-0 w-16 md:w-64' : 'left-[-64px] md:left-[-256px] w-16 md:w-64'
         }`}>
           <div className="p-4 border-b border-sidebar-border dark:border-sidebar-border flex items-center justify-between">
-            <h2 className={`text-xl font-bold italic text-sidebar-primary dark:text-sidebar-primary ${sidebarOpen ? 'hidden md:block' : 'hidden'}`}>
-              Cali
-            </h2>
-            <span className={`text-xl font-bold italic text-sidebar-primary dark:text-sidebar-primary ${sidebarOpen ? 'block md:hidden' : 'hidden'}`}>
-              C
-            </span>
+            <div className={`${sidebarOpen ? 'hidden md:block' : 'hidden'}`}>
+              <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="h-8" />
+            </div>
+            <div className={`${sidebarOpen ? 'block md:hidden' : 'hidden'}`}>
+              <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="h-8 w-8 object-contain" />
+            </div>
           </div>
           
           <nav className="flex-1 p-2">
@@ -128,7 +138,7 @@ export function Layout({ children }: LayoutProps) {
       {/* Main Content */}
       <div className={`flex-1 flex flex-col transition-all duration-300 ${
         isMobile 
-          ? "pb-16" 
+          ? "pt-14 pb-16" /* Add top padding for mobile navbar */
           : sidebarOpen ? "pl-16 md:pl-64" : "pl-0"
       }`}>
         <main className="flex-1 p-3 md:p-6 animate-fade-in overflow-x-hidden">

@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,7 +22,7 @@ const queryClient = new QueryClient();
 // Use function declaration instead of arrow function to avoid issues
 function App() {
   // Set the app name in the document title
-  document.title = "Cali - Asistente de clases";
+  document.title = "CALI - Asistente de clases";
   
   return (
     <QueryClientProvider client={queryClient}>
