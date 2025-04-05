@@ -4,11 +4,9 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Mic, Calendar, Folder, User, LogOut, Menu, X, ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/AuthContext";
-
 interface LayoutProps {
   children: ReactNode;
 }
-
 export function Layout({
   children
 }: LayoutProps) {
@@ -55,19 +53,19 @@ export function Layout({
       {/* Mobile Top Navbar */}
       {isMobile && <div className="fixed top-0 left-0 right-0 z-50 bg-card dark:bg-card border-b border-border dark:border-border h-14 flex items-center justify-between px-4">
           <div onClick={() => navigate("/dashboard")} className="cursor-pointer flex items-center justify-center h-full">
-            <img src="/lovable-uploads/310f1b44-4b27-4687-b903-855e09feae18.png" alt="Cali Logo" className="max-h-12 max-w-12 object-contain" />
+            <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="max-h-24 max-w-24 object-contain" />
           </div>
-          <ThemeToggle />
+          <ThemeToggle className="w-36 h-36 object-contain scale-[1.7] ml-2 dark:invert" />
         </div>}
       
       {/* Desktop Sidebar */}
       {!isMobile && <div className={`fixed h-full z-40 bg-sidebar-background dark:bg-sidebar-background border-r border-sidebar-border dark:border-sidebar-border flex flex-col transition-all duration-300 ease-in-out shadow-sm ${sidebarOpen ? 'left-0 w-16 md:w-64' : 'left-[-64px] md:left-[-256px] w-16 md:w-64'}`}>
           <div className=" border-b border-sidebar-border dark:border-sidebar-border flex items-center justify-between">
             <div className={`${sidebarOpen ? 'hidden md:block' : 'hidden'} flex items-center justify-center`}>
-              <img src="/lovable-uploads/310f1b44-4b27-4687-b903-855e09feae18.png" alt="Cali Logo" className="max-h-24 max-w-24 object-contain" />
+              <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="max-h-24 max-w-24 object-contain" />
             </div>
             <div className={`${sidebarOpen ? 'block md:hidden' : 'hidden'} flex items-center justify-center`}>
-              <img src="/lovable-uploads/310f1b44-4b27-4687-b903-855e09feae18.png" alt="Cali Logo" className="max-h-12 max-w-12 object-contain" />
+              <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="max-h-8 max-w-8 object-contain" />
             </div>
           </div>
           
