@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Sheet, 
@@ -6,8 +5,7 @@ import {
   SheetHeader, 
   SheetTitle, 
   SheetDescription,
-  SheetTrigger,
-  SheetClose
+  SheetTrigger
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { TranscriptionPanel } from "./TranscriptionPanel";
@@ -25,18 +23,24 @@ export function LiveTranscriptionSheet({
   children
 }: LiveTranscriptionSheetProps) {
   const [open, setOpen] = useState(false);
+  const [userClosed, setUserClosed] = useState(false);
   
-  // Auto-open the sheet when transcription begins
+  // Auto-open the sheet when transcription begins, but only if user hasn't explicitly closed it
   useEffect(() => {
-    if (isTranscribing && !open) {
+    if (isTranscribing && !open && !userClosed) {
       setOpen(true);
     }
-  }, [isTranscribing, open]);
+    
+    // Reset userClosed flag when transcription stops
+    if (!isTranscribing) {
+      setUserClosed(false);
+    }
+  }, [isTranscribing, open, userClosed]);
 
   // Listen for complete transcription events to ensure panel shows final transcription
   useEffect(() => {
     const handleTranscriptionComplete = (event: CustomEvent) => {
-      if (event.detail?.data) {
+      if (event.detail?.data && !userClosed) {
         // Keep the sheet open to show the final results
         setOpen(true);
       }
@@ -53,14 +57,20 @@ export function LiveTranscriptionSheet({
     return () => {
       window.removeEventListener('audioRecorderMessage', handleEvent);
     };
-  }, []);
+  }, [userClosed]);
 
   const handleClose = () => {
     setOpen(false);
+    setUserClosed(true);
   };
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet open={open} onOpenChange={(isOpen) => {
+      setOpen(isOpen);
+      if (!isOpen) {
+        setUserClosed(true);
+      }
+    }}>
       {children ? (
         <SheetTrigger asChild>
           {children}
@@ -95,17 +105,15 @@ export function LiveTranscriptionSheet({
               Visualiza la información recibida del webhook
             </SheetDescription>
           </div>
-          <SheetClose asChild>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 w-8 p-0" 
-              onClick={handleClose}
-            >
-              <X className="h-4 w-4" />
-              <span className="sr-only">Cerrar</span>
-            </Button>
-          </SheetClose>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 w-8 p-0" 
+            onClick={handleClose}
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Cerrar</span>
+          </Button>
         </SheetHeader>
         
         <div className="flex-1 overflow-hidden">
