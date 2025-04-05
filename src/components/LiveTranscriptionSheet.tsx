@@ -16,34 +16,53 @@ interface LiveTranscriptionSheetProps {
   isTranscribing: boolean;
   output: string;
   children?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function LiveTranscriptionSheet({
   isTranscribing,
   output,
-  children
+  children,
+  open,
+  onOpenChange
 }: LiveTranscriptionSheetProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [userClosed, setUserClosed] = useState(false);
+  
+  const isControlled = open !== undefined && onOpenChange !== undefined;
+  const isOpen = isControlled ? open : internalOpen;
+  
+  const handleOpenChange = (newOpen: boolean) => {
+    if (isControlled) {
+      onOpenChange(newOpen);
+    } else {
+      setInternalOpen(newOpen);
+    }
+    
+    if (!newOpen) {
+      setUserClosed(true);
+    }
+  };
   
   // Auto-open the sheet when transcription begins, but only if user hasn't explicitly closed it
   useEffect(() => {
-    if (isTranscribing && !open && !userClosed) {
-      setOpen(true);
+    if (isTranscribing && !isOpen && !userClosed) {
+      handleOpenChange(true);
     }
     
     // Reset userClosed flag when transcription stops
     if (!isTranscribing) {
       setUserClosed(false);
     }
-  }, [isTranscribing, open, userClosed]);
+  }, [isTranscribing, isOpen, userClosed]);
 
   // Listen for complete transcription events to ensure panel shows final transcription
   useEffect(() => {
     const handleTranscriptionComplete = (event: CustomEvent) => {
       if (event.detail?.data && !userClosed) {
         // Keep the sheet open to show the final results
-        setOpen(true);
+        handleOpenChange(true);
       }
     };
 
@@ -61,17 +80,12 @@ export function LiveTranscriptionSheet({
   }, [userClosed]);
 
   const handleClose = () => {
-    setOpen(false);
+    handleOpenChange(false);
     setUserClosed(true);
   };
 
   return (
-    <Sheet open={open} onOpenChange={(isOpen) => {
-      setOpen(isOpen);
-      if (!isOpen) {
-        setUserClosed(true);
-      }
-    }}>
+    <Sheet open={isOpen} onOpenChange={handleOpenChange}>
       {children ? (
         <SheetTrigger asChild>
           {children}
