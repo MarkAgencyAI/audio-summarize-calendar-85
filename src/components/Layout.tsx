@@ -1,12 +1,15 @@
+
 import { ReactNode, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Mic, Calendar, Folder, User, LogOut, Menu, X, ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/AuthContext";
+
 interface LayoutProps {
   children: ReactNode;
 }
+
 export function Layout({
   children
 }: LayoutProps) {
@@ -18,20 +21,26 @@ export function Layout({
     logout
   } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  
   const isActive = (path: string) => location.pathname === path;
+  
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
+  
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
+  
   const getDashboardIcon = () => {
     return user?.role === "teacher" ? <FileText className="h-5 w-5" /> : <Mic className="h-5 w-5" />;
   };
+  
   const getDashboardLabel = () => {
     return user?.role === "teacher" ? "Transcripciones" : "Grabaciones";
   };
+  
   const navItems = [{
     path: "/dashboard",
     icon: getDashboardIcon(),
@@ -49,13 +58,14 @@ export function Layout({
     icon: <User className="h-5 w-5" />,
     label: "Perfil"
   }];
+  
   return <div className="flex min-h-screen bg-background text-foreground antialiased">
       {/* Mobile Top Navbar */}
       {isMobile && <div className="fixed top-0 left-0 right-0 z-50 bg-card dark:bg-card border-b border-border dark:border-border h-14 flex items-center justify-between px-4">
           <div onClick={() => navigate("/dashboard")} className="cursor-pointer flex items-center justify-center h-full">
             <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="max-h-24 max-w-24 object-contain" />
           </div>
-          <ThemeToggle className="w-36 h-36 object-contain scale-[1.7] ml-2 dark:invert" />
+          <ThemeToggle />
         </div>}
       
       {/* Desktop Sidebar */}
