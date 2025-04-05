@@ -87,6 +87,7 @@ export default function Dashboard() {
       if (data) {
         setLiveTranscription(prevState => ({
           ...prevState,
+          transcript: data.transcript !== undefined ? data.transcript : prevState.transcript,
           summary: data.summary || null,
           keyPoints: data.keyPoints || []
         }));
