@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 import axios from "axios";
@@ -16,9 +15,9 @@ interface AnalysisResult {
 }
 
 // Define the webhook URL as a constant
-const WEBHOOK_URL = "https://ssn8nss.maettiai.tech/webhook-test/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
+const WEBHOOK_URL = "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 // Define the Groq API key
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY || "";
+const GROQ_API_KEY = "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";
 
 export function usePdfProcessor() {
   const [loading, setLoading] = useState(false);

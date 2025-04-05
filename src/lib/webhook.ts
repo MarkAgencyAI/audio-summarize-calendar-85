@@ -1,12 +1,6 @@
 
 import { toast } from "sonner";
 
-/**
- * Envía datos a un webhook
- * @param url URL del webhook
- * @param data Datos a enviar
- * @returns Promise con la respuesta
- */
 export async function sendToWebhook(url: string, data: any): Promise<void> {
   try {
     console.log("Enviando datos al webhook:", url);

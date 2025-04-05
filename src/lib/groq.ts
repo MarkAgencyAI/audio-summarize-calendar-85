@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { sendToWebhook } from "./webhook";
 
@@ -46,10 +45,10 @@ interface TranscriptionResult {
 const LLAMA3_MODEL = "llama3-70b-8192";
 
 // Use environment variables if available
-const API_KEY = import.meta.env.VITE_GROQ_API_KEY || "";
+const API_KEY = "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";
 
 // Define the webhook URL as a constant
-const WEBHOOK_URL = "https://ssn8nss.maettiai.tech/webhook-test/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
+const WEBHOOK_URL = "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 
 /**
  * Transcribe audio using GROQ API
