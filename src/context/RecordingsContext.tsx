@@ -83,9 +83,9 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, [folders]);
 
   // Add a new recording
-  const addRecording = (recording: Omit<Recording, "id" | "createdAt">) => {
+  const addRecording = (recordingData: Omit<Recording, "id" | "createdAt">) => {
     const newRecording: Recording = {
-      ...recording,
+      ...recordingData,
       id: uuidv4(),
       createdAt: Date.now(),
     };
