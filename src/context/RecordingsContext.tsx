@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import { loadFromStorage, saveToStorage } from "@/lib/storage";
 
 // Recording type
-interface Recording {
+export interface Recording {
   id: string;
   name: string;
   audioUrl: string;
@@ -22,11 +22,12 @@ interface Recording {
 }
 
 // Folder type
-interface Folder {
+export interface Folder {
   id: string;
   name: string;
   color: string;
   createdAt: number;
+  icon?: string; // Add icon field to match usage in FolderSystem
 }
 
 // Context type
@@ -36,7 +37,7 @@ interface RecordingsContextType {
   updateRecording: (id: string, data: Partial<Recording>) => void;
   deleteRecording: (id: string) => void;
   folders: Folder[];
-  addFolder: (folder: Omit<Folder, "id" | "createdAt">) => void;
+  addFolder: (name: string, color: string, icon?: string) => void;
   updateFolder: (id: string, data: Partial<Folder>) => void;
   deleteFolder: (id: string) => void;
 }
@@ -53,7 +54,7 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   useEffect(() => {
     const savedRecordings = loadFromStorage<Recording[]>("recordings") || [];
     const savedFolders = loadFromStorage<Folder[]>("folders") || [
-      { id: "default", name: "General", color: "#6366f1", createdAt: Date.now() }
+      { id: "default", name: "General", color: "#6366f1", createdAt: Date.now(), icon: "folder" }
     ];
     
     // Update old recordings to use output field
@@ -105,9 +106,11 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   // Add a new folder
-  const addFolder = (folder: Omit<Folder, "id" | "createdAt">) => {
+  const addFolder = (name: string, color: string, icon?: string) => {
     const newFolder: Folder = {
-      ...folder,
+      name,
+      color,
+      icon,
       id: uuidv4(),
       createdAt: Date.now(),
     };

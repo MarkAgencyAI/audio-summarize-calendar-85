@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { Folder as FolderType, useRecordings } from "@/context/RecordingsContext";
+import { useRecordings, Folder } from "@/context/RecordingsContext";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
@@ -19,7 +19,7 @@ import {
   Music, 
   Film,
   Languages,
-  Folder,
+  Folder as FolderIcon,
   Edit,
   Trash
 } from "lucide-react";
@@ -43,7 +43,7 @@ interface IconOption {
 }
 
 const academicIcons: IconOption[] = [
-  { name: "folder", component: <Folder />, label: "General", area: "General" },
+  { name: "folder", component: <FolderIcon />, label: "General", area: "General" },
   { name: "book", component: <Book />, label: "Libro", area: "General académico" },
   { name: "flask-conical", component: <FlaskConical />, label: "Matraz", area: "Química, Biología" },
   { name: "atom", component: <Atom />, label: "Átomo", area: "Física, Química" },
@@ -64,7 +64,7 @@ const academicIcons: IconOption[] = [
 // Renderizado de iconos por nombre
 const renderIcon = (iconName: string, color: string): JSX.Element => {
   const icon = academicIcons.find(i => i.name === iconName);
-  if (!icon) return <Folder color={color} />;
+  if (!icon) return <FolderIcon color={color} />;
   
   const IconComponent = React.cloneElement(icon.component as React.ReactElement, {
     color: color,
@@ -83,7 +83,7 @@ export function FolderSystem() {
   } = useRecordings();
   const [showAddFolderDialog, setShowAddFolderDialog] = useState(false);
   const [showEditFolderDialog, setShowEditFolderDialog] = useState(false);
-  const [selectedFolder, setSelectedFolder] = useState<FolderType | null>(null);
+  const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
   const [folderName, setFolderName] = useState("");
   const [folderColor, setFolderColor] = useState("#3b82f6");
   const [folderIcon, setFolderIcon] = useState("folder");
@@ -116,7 +116,7 @@ export function FolderSystem() {
     setShowEditFolderDialog(false);
   };
 
-  const handleDeleteFolder = (folder: FolderType) => {
+  const handleDeleteFolder = (folder: Folder) => {
     // Don't allow deleting the default folder
     if (folder.id === "default") {
       toast.error("No puedes eliminar la carpeta predeterminada");
@@ -126,7 +126,7 @@ export function FolderSystem() {
     toast.success("Carpeta eliminada");
   };
 
-  const openEditDialog = (folder: FolderType) => {
+  const openEditDialog = (folder: Folder) => {
     setSelectedFolder(folder);
     setFolderName(folder.name);
     setFolderColor(folder.color);

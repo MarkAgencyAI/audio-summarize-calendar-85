@@ -44,4 +44,27 @@ const AsyncStorage = {
   }
 };
 
+// Add the loadFromStorage and saveToStorage functions
+export const loadFromStorage = <T>(key: string): T | null => {
+  try {
+    const value = localStorage.getItem(key);
+    if (value) {
+      return JSON.parse(value) as T;
+    }
+    return null;
+  } catch (error) {
+    console.error(`Error loading from storage (key: ${key}):`, error);
+    return null;
+  }
+};
+
+export const saveToStorage = <T>(key: string, value: T): void => {
+  try {
+    const stringValue = JSON.stringify(value);
+    localStorage.setItem(key, stringValue);
+  } catch (error) {
+    console.error(`Error saving to storage (key: ${key}):`, error);
+  }
+};
+
 export default AsyncStorage;
