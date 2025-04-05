@@ -17,7 +17,14 @@ import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 
 // Create a client outside the component
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // Use function declaration instead of arrow function to avoid issues
 function App() {
