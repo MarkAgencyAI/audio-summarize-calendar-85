@@ -86,11 +86,15 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Save recordings and folders to storage on change
   useEffect(() => {
-    saveToStorage("recordings", recordings);
+    if (recordings.length > 0) {
+      saveToStorage("recordings", recordings);
+    }
   }, [recordings]);
 
   useEffect(() => {
-    saveToStorage("folders", folders);
+    if (folders.length > 0) {
+      saveToStorage("folders", folders);
+    }
   }, [folders]);
 
   // Add a new recording
@@ -107,21 +111,35 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       subject: recordingData.subject,
       suggestedEvents: recordingData.suggestedEvents
     };
-    setRecordings(prev => [newRecording, ...prev]);
+    
+    setRecordings(prev => {
+      const updatedRecordings = [newRecording, ...prev];
+      // Save to localStorage immediately to ensure persistence
+      saveToStorage("recordings", updatedRecordings);
+      return updatedRecordings;
+    });
   };
 
   // Update a recording
   const updateRecording = (id: string, data: Partial<Recording>) => {
-    setRecordings(prev => 
-      prev.map(recording => 
+    setRecordings(prev => {
+      const updatedRecordings = prev.map(recording => 
         recording.id === id ? { ...recording, ...data } : recording
-      )
-    );
+      );
+      // Save to localStorage immediately
+      saveToStorage("recordings", updatedRecordings);
+      return updatedRecordings;
+    });
   };
 
   // Delete a recording
   const deleteRecording = (id: string) => {
-    setRecordings(prev => prev.filter(recording => recording.id !== id));
+    setRecordings(prev => {
+      const updatedRecordings = prev.filter(recording => recording.id !== id);
+      // Save to localStorage immediately
+      saveToStorage("recordings", updatedRecordings);
+      return updatedRecordings;
+    });
   };
 
   // Add a new folder
@@ -133,16 +151,25 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       id: uuidv4(),
       createdAt: Date.now(),
     };
-    setFolders(prev => [...prev, newFolder]);
+    
+    setFolders(prev => {
+      const updatedFolders = [...prev, newFolder];
+      // Save to localStorage immediately
+      saveToStorage("folders", updatedFolders);
+      return updatedFolders;
+    });
   };
 
   // Update a folder
   const updateFolder = (id: string, data: Partial<Folder>) => {
-    setFolders(prev => 
-      prev.map(folder => 
+    setFolders(prev => {
+      const updatedFolders = prev.map(folder => 
         folder.id === id ? { ...folder, ...data } : folder
-      )
-    );
+      );
+      // Save to localStorage immediately
+      saveToStorage("folders", updatedFolders);
+      return updatedFolders;
+    });
   };
 
   // Delete a folder (and move recordings to default)
@@ -150,16 +177,24 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (id === "default") return; // Prevent deleting default folder
     
     // Move recordings to default folder
-    setRecordings(prev => 
-      prev.map(recording => 
+    setRecordings(prev => {
+      const updatedRecordings = prev.map(recording => 
         recording.folderId === id 
           ? { ...recording, folderId: "default" } 
           : recording
-      )
-    );
+      );
+      // Save to localStorage immediately
+      saveToStorage("recordings", updatedRecordings);
+      return updatedRecordings;
+    });
     
     // Delete the folder
-    setFolders(prev => prev.filter(folder => folder.id !== id));
+    setFolders(prev => {
+      const updatedFolders = prev.filter(folder => folder.id !== id);
+      // Save to localStorage immediately
+      saveToStorage("folders", updatedFolders);
+      return updatedFolders;
+    });
   };
 
   return (

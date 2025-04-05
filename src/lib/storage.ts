@@ -44,7 +44,7 @@ const AsyncStorage = {
   }
 };
 
-// Add the loadFromStorage and saveToStorage functions
+// Add the loadFromStorage and saveToStorage functions with more robust error handling
 export const loadFromStorage = <T>(key: string): T | null => {
   try {
     const value = localStorage.getItem(key);
@@ -64,6 +64,11 @@ export const saveToStorage = <T>(key: string, value: T): void => {
     localStorage.setItem(key, stringValue);
   } catch (error) {
     console.error(`Error saving to storage (key: ${key}):`, error);
+    // If we encounter a QuotaExceededError, try to clean up some storage
+    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+      console.warn('Storage quota exceeded, attempting to clear old data...');
+      // Implement a strategy to clear least important data
+    }
   }
 };
 

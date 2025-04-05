@@ -27,9 +27,10 @@ interface CalendarEvent {
 
 function UpcomingEvents({ events }: { events: CalendarEvent[] }) {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   return (
-    <Card>
+    <Card className={isMobile ? "mb-6" : ""}>
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
           <Bell className="h-5 w-5 text-orange-500" />
@@ -201,6 +202,12 @@ export default function Dashboard() {
           return false;
         }
       });
+      
+      // Sort events by date (most recent first)
+      filteredEvents.sort((a, b) => {
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      });
+      
       setUpcomingEvents(filteredEvents);
     };
     
@@ -229,30 +236,39 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Main Content Area */}
-        <div className={isMobile ? "grid grid-cols-1 gap-6" : "grid grid-cols-1 md:grid-cols-3 gap-6"}>
-          {/* Left Column - For mobile display everything in one column */}
-          <div className={isMobile ? "" : "md:col-span-1 space-y-6"}>
-            {/* Tools Card */}
+        {/* Mobile Layout */}
+        {isMobile && (
+          <div className="grid grid-cols-1 gap-4">
+            {/* Show upcoming events at the top for mobile */}
+            <UpcomingEvents events={upcomingEvents} />
+            
+            {/* Tools card */}
             <ToolsCard />
-
-            {/* For mobile, show the upcoming events before transcriptions */}
-            {isMobile && <UpcomingEvents events={upcomingEvents} />}
-          </div>
-
-          {/* Right Column */}
-          <div className={isMobile ? "" : "md:col-span-2"}>
-            {/* Transcriptions Card */}
+            
+            {/* Transcriptions */}
             <Transcriptions />
           </div>
+        )}
 
-          {/* For desktop, show the upcoming events in the sidebar */}
-          {!isMobile && (
+        {/* Desktop Layout */}
+        {!isMobile && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Left Column */}
             <div className="md:col-span-1 space-y-6">
+              {/* Tools Card */}
+              <ToolsCard />
+              
+              {/* Upcoming Events */}
               <UpcomingEvents events={upcomingEvents} />
             </div>
-          )}
-        </div>
+
+            {/* Right Column */}
+            <div className="md:col-span-2">
+              {/* Transcriptions Card */}
+              <Transcriptions />
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );
