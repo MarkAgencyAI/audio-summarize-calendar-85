@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { sendToWebhook } from "./webhook";
 
@@ -56,14 +57,34 @@ const WEBHOOK_URL = "https://ssn8nss.maettiai.tech/webhook-test/8e34aca2-3111-48
  * @returns A promise with the transcription results
  */
 export async function transcribeAudio(audioBlob: Blob): Promise<TranscriptionResult> {
-  if (!API_KEY) {
-    console.warn("GROQ API key is not set. Please set VITE_GROQ_API_KEY environment variable.");
-    throw new Error("GROQ API key is not set");
-  }
-
   try {
     // Convert audio blob to base64
     const base64Audio = await blobToBase64(audioBlob);
+    
+    // First, send the raw audio data to the webhook
+    await sendToWebhook(WEBHOOK_URL, {
+      type: "raw_audio_transcription",
+      content: base64Audio.substring(0, 200) + "...", // Send a preview of the audio data
+      timestamp: new Date().toISOString()
+    });
+    
+    // Check if API key is available
+    if (!API_KEY) {
+      console.warn("GROQ API key is not set. Please set VITE_GROQ_API_KEY environment variable.");
+      
+      // Generate a mock response instead of failing
+      const mockResult = generateMockTranscription();
+      
+      // Send the mock transcript to the webhook BEFORE returning the result
+      await sendToWebhook(WEBHOOK_URL, {
+        type: "audio_transcription",
+        content: mockResult.transcript,
+        timestamp: new Date().toISOString(),
+        isMock: true
+      });
+      
+      return mockResult;
+    }
     
     // For now, we're using a text-based approach with GROQ
     // In a real implementation, you might want to use a specialized audio transcription API
@@ -121,7 +142,21 @@ export async function transcribeAudio(audioBlob: Blob): Promise<TranscriptionRes
 
     if (!response.ok) {
       const errorData = await response.text();
-      throw new Error(`GROQ API error: ${response.status} ${errorData}`);
+      console.error(`GROQ API error: ${response.status} ${errorData}`);
+      
+      // Generate a mock response on API error
+      const mockResult = generateMockTranscription();
+      
+      // Send the mock transcript to the webhook
+      await sendToWebhook(WEBHOOK_URL, {
+        type: "audio_transcription",
+        content: mockResult.transcript,
+        timestamp: new Date().toISOString(),
+        isMock: true,
+        apiError: `${response.status}: ${errorData.substring(0, 200)}`
+      });
+      
+      return mockResult;
     }
 
     const data: GroqResponse = await response.json();
@@ -153,18 +188,53 @@ export async function transcribeAudio(audioBlob: Blob): Promise<TranscriptionRes
       return result;
     } catch (error) {
       console.error("Error parsing GROQ response:", error);
+      
+      // Send the raw response to debug the parsing issue
+      await sendToWebhook(WEBHOOK_URL, {
+        type: "groq_parsing_error",
+        content: content,
+        timestamp: new Date().toISOString(),
+        error: String(error)
+      });
+      
       // Fallback in case JSON parsing fails
-      return {
-        transcript: "Failed to parse transcription",
-        summary: "Failed to generate summary",
-        keyPoints: ["Failed to extract key points"],
-        suggestedEvents: []
-      };
+      const mockResult = generateMockTranscription();
+      return mockResult;
     }
   } catch (error) {
     console.error("Error in transcribeAudio:", error);
-    throw error;
+    
+    // Send error information to webhook
+    await sendToWebhook(WEBHOOK_URL, {
+      type: "audio_transcription_error",
+      error: String(error),
+      timestamp: new Date().toISOString()
+    });
+    
+    // Return a fallback mock result
+    return generateMockTranscription();
   }
+}
+
+/**
+ * Generate a mock transcription when API calls fail
+ */
+function generateMockTranscription(): TranscriptionResult {
+  return {
+    transcript: "Esta es una transcripción simulada porque hubo un problema con la API GROQ. Para resolver este problema, configura la variable de entorno VITE_GROQ_API_KEY con una clave API válida de GROQ.",
+    summary: "Este audio contiene información sobre un error con la API de GROQ y cómo solucionarlo configurando la clave API correctamente.",
+    keyPoints: [
+      "Se necesita configurar VITE_GROQ_API_KEY con una clave API válida",
+      "La transcripción actual es simulada debido a problemas con la API",
+      "Contacta al administrador si necesitas ayuda para obtener una clave API"
+    ],
+    suggestedEvents: [
+      {
+        title: "Configurar clave API de GROQ",
+        description: "Obtener y configurar la clave API de GROQ para habilitar la transcripción de audio real"
+      }
+    ]
+  };
 }
 
 /**

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 import axios from "axios";
@@ -16,6 +17,8 @@ interface AnalysisResult {
 
 // Define the webhook URL as a constant
 const WEBHOOK_URL = "https://ssn8nss.maettiai.tech/webhook-test/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
+// Define the Groq API key
+const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY || "";
 
 export function usePdfProcessor() {
   const [loading, setLoading] = useState(false);
@@ -166,133 +169,172 @@ export function usePdfProcessor() {
           }`;
       }
       
+      // Handle case where no API key is available
+      if (!GROQ_API_KEY) {
+        console.warn("GROQ API key is not set. Generating mock analysis");
+        
+        // Return mock data
+        setProgress(100);
+        return generateMockAnalysis(detectedLanguage);
+      }
+      
       // Enviar solicitud a la API de GROQ
-      const response = await axios.post(
-        "https://api.groq.com/openai/v1/chat/completions",
-        {
-          model: "llama3-8b-8192",
-          messages: [
-            {
-              role: "system",
-              content: systemPrompt
-            },
-            {
-              role: "user",
-              content: truncatedContent
+      try {
+        const response = await axios.post(
+          "https://api.groq.com/openai/v1/chat/completions",
+          {
+            model: "llama3-8b-8192",
+            messages: [
+              {
+                role: "system",
+                content: systemPrompt
+              },
+              {
+                role: "user",
+                content: truncatedContent
+              }
+            ],
+            temperature: 0.2,
+            max_tokens: 2048
+          },
+          {
+            headers: {
+              "Authorization": `Bearer ${GROQ_API_KEY}`,
+              "Content-Type": "application/json"
             }
-          ],
-          temperature: 0.2,
-          max_tokens: 2048
-        },
-        {
-          headers: {
-            "Authorization": `Bearer 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`,
-            "Content-Type": "application/json"
+          }
+        );
+        
+        setProgress(90);
+        
+        // Procesar respuesta de la API
+        let analysisData;
+        const responseContent = response.data.choices[0].message.content;
+        
+        try {
+          // Extraer JSON de la respuesta
+          const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            analysisData = JSON.parse(jsonMatch[0]);
+          } else {
+            throw new Error("Formato de respuesta inválido");
+          }
+        } catch (parseError) {
+          console.error("Error parsing GROQ response:", parseError);
+          
+          // Send error information to webhook
+          await sendToWebhook(WEBHOOK_URL, {
+            type: "pdf_analysis_error",
+            error: String(parseError),
+            rawResponse: responseContent,
+            timestamp: new Date().toISOString()
+          });
+          
+          throw new Error("Error al procesar la respuesta de análisis");
+        }
+        
+        // Crear eventos sugeridos a partir del plan y actividades
+        const suggestedEvents = [];
+        
+        if (analysisData.plan) {
+          for (let i = 0; i < analysisData.plan.length; i++) {
+            suggestedEvents.push({
+              title: `Clase: ${analysisData.plan[i].substring(0, 30)}...`,
+              description: analysisData.plan[i]
+            });
           }
         }
-      );
-      
-      setProgress(90);
-      
-      // Procesar respuesta de la API
-      let analysisData;
-      const responseContent = response.data.choices[0].message.content;
-      
-      try {
-        // Extraer JSON de la respuesta
-        const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          analysisData = JSON.parse(jsonMatch[0]);
-        } else {
-          throw new Error("Formato de respuesta inválido");
+        
+        if (analysisData.activities) {
+          for (const activity of analysisData.activities) {
+            suggestedEvents.push({
+              title: `Actividad: ${activity.substring(0, 30)}...`,
+              description: activity
+            });
+          }
         }
-      } catch (parseError) {
-        console.error("Error parsing GROQ response:", parseError);
-        throw new Error("Error al procesar la respuesta de análisis");
-      }
-      
-      // Crear eventos sugeridos a partir del plan y actividades
-      const suggestedEvents = [];
-      
-      if (analysisData.plan) {
-        for (let i = 0; i < analysisData.plan.length; i++) {
-          suggestedEvents.push({
-            title: `Clase: ${analysisData.plan[i].substring(0, 30)}...`,
-            description: analysisData.plan[i]
-          });
+        
+        // Preparar título según idioma detectado
+        let summaryTitle = "Resumen del Material";
+        let keyPointsTitle = "Puntos Clave";
+        let planTitle = "Plan de Clase";
+        let activitiesTitle = "Actividades Propuestas";
+        
+        if (detectedLanguage === "en") {
+          summaryTitle = "Material Summary";
+          keyPointsTitle = "Key Points";
+          planTitle = "Class Plan";
+          activitiesTitle = "Proposed Activities";
+        } else if (detectedLanguage === "fr") {
+          summaryTitle = "Résumé du Matériel";
+          keyPointsTitle = "Points Clés";
+          planTitle = "Plan de Cours";
+          activitiesTitle = "Activités Proposées";
         }
+        
+        // Formatear el resumen para mejor visualización
+        const formattedSummary = `# ${summaryTitle}\n\n${analysisData.summary}\n\n## ${keyPointsTitle}\n\n${analysisData.keyPoints.map(point => `- ${point}`).join('\n')}\n\n## ${planTitle}\n\n${analysisData.plan.map((item, index) => `${index + 1}. ${item}`).join('\n')}\n\n## ${activitiesTitle}\n\n${analysisData.activities.map((item, index) => `${index + 1}. ${item}`).join('\n')}`;
+        
+        setProgress(100);
+        
+        return {
+          summary: formattedSummary,
+          keyPoints: analysisData.keyPoints || [],
+          suggestedEvents
+        };
+      } catch (apiError) {
+        console.error("Error calling GROQ API:", apiError);
+        
+        // Send error information to webhook
+        await sendToWebhook(WEBHOOK_URL, {
+          type: "groq_api_error",
+          error: String(apiError),
+          timestamp: new Date().toISOString()
+        });
+        
+        // Return mock data
+        return generateMockAnalysis(detectedLanguage);
       }
-      
-      if (analysisData.activities) {
-        for (const activity of analysisData.activities) {
-          suggestedEvents.push({
-            title: `Actividad: ${activity.substring(0, 30)}...`,
-            description: activity
-          });
-        }
-      }
-      
-      // Preparar título según idioma detectado
-      let summaryTitle = "Resumen del Material";
-      let keyPointsTitle = "Puntos Clave";
-      let planTitle = "Plan de Clase";
-      let activitiesTitle = "Actividades Propuestas";
-      
-      if (detectedLanguage === "en") {
-        summaryTitle = "Material Summary";
-        keyPointsTitle = "Key Points";
-        planTitle = "Class Plan";
-        activitiesTitle = "Proposed Activities";
-      } else if (detectedLanguage === "fr") {
-        summaryTitle = "Résumé du Matériel";
-        keyPointsTitle = "Points Clés";
-        planTitle = "Plan de Cours";
-        activitiesTitle = "Activités Proposées";
-      }
-      
-      // Formatear el resumen para mejor visualización
-      const formattedSummary = `# ${summaryTitle}\n\n${analysisData.summary}\n\n## ${keyPointsTitle}\n\n${analysisData.keyPoints.map(point => `- ${point}`).join('\n')}\n\n## ${planTitle}\n\n${analysisData.plan.map((item, index) => `${index + 1}. ${item}`).join('\n')}\n\n## ${activitiesTitle}\n\n${analysisData.activities.map((item, index) => `${index + 1}. ${item}`).join('\n')}`;
-      
-      setProgress(100);
-      
-      return {
-        summary: formattedSummary,
-        keyPoints: analysisData.keyPoints || [],
-        suggestedEvents
-      };
     } catch (error) {
       console.error("Error analyzing content with GROQ:", error);
       
-      // Determinar mensaje de error según idioma
-      let errorSummary = "# Error al analizar el contenido\n\nHubo un problema al analizar el contenido del PDF. Por favor, verifica que el archivo tenga texto extraíble y no esté protegido.";
-      let errorPoints = ["Verificar contenido del PDF", "Revisar permisos del documento", "Intentar con otro documento si el problema persiste"];
-      let errorTitle = "Verificar documento";
-      let errorDesc = "Revisar que el PDF contenga texto extraíble y no esté protegido";
+      // Send error information to webhook
+      await sendToWebhook(WEBHOOK_URL, {
+        type: "pdf_content_analysis_error",
+        error: String(error),
+        timestamp: new Date().toISOString()
+      });
       
-      if (detectedLanguage === "en") {
-        errorSummary = "# Error analyzing content\n\nThere was a problem analyzing the PDF content. Please verify that the file has extractable text and is not protected.";
-        errorPoints = ["Verify PDF content", "Check document permissions", "Try with another document if the problem persists"];
-        errorTitle = "Verify document";
-        errorDesc = "Check that the PDF contains extractable text and is not protected";
-      } else if (detectedLanguage === "fr") {
-        errorSummary = "# Erreur lors de l'analyse du contenu\n\nUn problème est survenu lors de l'analyse du contenu PDF. Veuillez vérifier que le fichier contient du texte extractible et n'est pas protégé.";
-        errorPoints = ["Vérifier le contenu du PDF", "Vérifier les autorisations du document", "Essayer avec un autre document si le problème persiste"];
-        errorTitle = "Vérifier le document";
-        errorDesc = "Vérifier que le PDF contient du texte extractible et n'est pas protégé";
-      }
-      
-      // Proporcionar resultados de respaldo en caso de error
-      return {
-        summary: errorSummary,
-        keyPoints: errorPoints,
-        suggestedEvents: [
-          {
-            title: errorTitle,
-            description: errorDesc
-          }
-        ]
-      };
+      return generateMockAnalysis(detectedLanguage);
     }
+  };
+  
+  // Function to generate mock analysis data when API is unavailable
+  const generateMockAnalysis = (language: string): AnalysisResult => {
+    // Determinar mensaje de error según idioma
+    let errorSummary = "# Error al analizar el contenido\n\nNo se pudo analizar el contenido porque la API de GROQ no está configurada correctamente. Por favor, configura la variable de entorno VITE_GROQ_API_KEY.\n\n## Puntos Clave\n\n- Verificar configuración de API\n- Revisar variable de entorno VITE_GROQ_API_KEY\n- Contactar administrador si el problema persiste\n\n## Plan sugerido\n\n1. Configurar API de GROQ\n2. Reintentar análisis\n\n## Actividades\n\n1. Verificar la documentación de GROQ para obtener una clave API";
+    let errorPoints = ["Verificar contenido del PDF", "Revisar configuración de API", "Intentar con otro documento si el problema persiste"];
+    
+    if (language === "en") {
+      errorSummary = "# Error analyzing content\n\nThe content could not be analyzed because the GROQ API is not properly configured. Please set the VITE_GROQ_API_KEY environment variable.\n\n## Key Points\n\n- Check API configuration\n- Review VITE_GROQ_API_KEY environment variable\n- Contact administrator if the problem persists\n\n## Suggested Plan\n\n1. Configure GROQ API\n2. Retry analysis\n\n## Activities\n\n1. Check GROQ documentation to obtain an API key";
+      errorPoints = ["Verify PDF content", "Check API configuration", "Try with another document if the problem persists"];
+    } else if (language === "fr") {
+      errorSummary = "# Erreur lors de l'analyse du contenu\n\nLe contenu n'a pas pu être analysé car l'API GROQ n'est pas correctement configurée. Veuillez définir la variable d'environnement VITE_GROQ_API_KEY.\n\n## Points Clés\n\n- Vérifier la configuration de l'API\n- Revoir la variable d'environnement VITE_GROQ_API_KEY\n- Contacter l'administrateur si le problème persiste\n\n## Plan Suggéré\n\n1. Configurer l'API GROQ\n2. Réessayer l'analyse\n\n## Activités\n\n1. Consulter la documentation GROQ pour obtenir une clé API";
+      errorPoints = ["Vérifier le contenu du PDF", "Vérifier la configuration de l'API", "Essayer avec un autre document si le problème persiste"];
+    }
+    
+    return {
+      summary: errorSummary,
+      keyPoints: errorPoints,
+      suggestedEvents: [
+        {
+          title: language === "en" ? "Configure API" : language === "fr" ? "Configurer l'API" : "Configurar API",
+          description: language === "en" ? "Set up the GROQ API key to enable content analysis" : 
+                      language === "fr" ? "Configurez la clé API GROQ pour activer l'analyse de contenu" : 
+                      "Configurar la clave API de GROQ para habilitar el análisis de contenido"
+        }
+      ]
+    };
   };
   
   // Función principal para procesar el PDF completo

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Recording, useRecordings } from "@/context/RecordingsContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
@@ -13,12 +13,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useGroq } from "@/lib/groq";
+import { sendToWebhook } from "@/lib/webhook";
 
 interface RecordingDetailsProps {
   recording: Recording;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
+
+// Define the webhook URL
+const WEBHOOK_URL = "https://ssn8nss.maettiai.tech/webhook-test/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 
 export function RecordingDetails({
   recording,
@@ -31,7 +35,7 @@ export function RecordingDetails({
     folders
   } = useRecordings();
   
-  const { llama3 } = useGroq();
+  const { llama3, isLoading: isGroqLoading } = useGroq();
   
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(recording.name);
@@ -87,7 +91,15 @@ export function RecordingDetails({
     toast.success("Carpeta actualizada");
   };
   
-  const handleSaveSummary = () => {
+  const handleSaveSummary = async () => {
+    // Send updated summary to webhook
+    await sendToWebhook(WEBHOOK_URL, {
+      type: "summary_update",
+      recordingId: recording.id,
+      summary: editedSummary,
+      timestamp: new Date().toISOString()
+    });
+    
     updateRecording(recording.id, {
       summary: editedSummary
     });
@@ -109,6 +121,14 @@ export function RecordingDetails({
     try {
       setIsGeneratingSummary(true);
       toast.info("Generando resumen con IA...");
+
+      // First, send the transcript to the webhook
+      await sendToWebhook(WEBHOOK_URL, {
+        type: "generating_summary",
+        recordingId: recording.id,
+        transcript: recording.transcript,
+        timestamp: new Date().toISOString()
+      });
 
       // Generate a prompt for the summary
       const prompt = `Genera un resumen conciso de la siguiente transcripción. Destaca los puntos principales, las fechas importantes si las hay, y organiza la información de forma clara y coherente. Si hay temas educativos, enfócate en explicarlos de manera didáctica:
@@ -132,6 +152,14 @@ Por favor proporciona un resumen bien estructurado de aproximadamente 5-10 oraci
       if (response && response.choices && response.choices[0]?.message?.content) {
         const summary = response.choices[0].message.content;
         
+        // Send the generated summary to the webhook
+        await sendToWebhook(WEBHOOK_URL, {
+          type: "generated_summary",
+          recordingId: recording.id,
+          summary: summary,
+          timestamp: new Date().toISOString()
+        });
+        
         // Update the recording with the generated summary
         updateRecording(recording.id, {
           summary: summary
@@ -142,11 +170,47 @@ Por favor proporciona un resumen bien estructurado de aproximadamente 5-10 oraci
         
         toast.success("Resumen generado exitosamente");
       } else {
-        toast.error("No se pudo generar el resumen");
+        // Try to generate a basic summary if the API fails
+        const simpleSummary = `Resumen generado localmente: Este es un resumen básico de la transcripción "${recording.name}" que contiene aproximadamente ${recording.transcript.length} caracteres.`;
+        
+        // Send the simple summary to the webhook
+        await sendToWebhook(WEBHOOK_URL, {
+          type: "fallback_summary",
+          recordingId: recording.id,
+          summary: simpleSummary,
+          error: "No se pudo obtener respuesta de la API",
+          timestamp: new Date().toISOString()
+        });
+        
+        // Update with simple summary
+        updateRecording(recording.id, {
+          summary: simpleSummary
+        });
+        
+        // Update local state
+        setEditedSummary(simpleSummary);
+        
+        toast.warning("Se generó un resumen básico debido a problemas con la API");
       }
     } catch (error) {
       console.error("Error al generar el resumen:", error);
+      
+      // Send error to webhook
+      await sendToWebhook(WEBHOOK_URL, {
+        type: "summary_generation_error",
+        recordingId: recording.id,
+        error: String(error),
+        timestamp: new Date().toISOString()
+      });
+      
       toast.error("Error al generar el resumen");
+      
+      // Generate fallback summary
+      const errorSummary = "No se pudo generar un resumen automático. Por favor, intente más tarde o edite manualmente el resumen.";
+      setEditedSummary(errorSummary);
+      updateRecording(recording.id, {
+        summary: errorSummary
+      });
     } finally {
       setIsGeneratingSummary(false);
     }
@@ -205,6 +269,9 @@ Por favor proporciona un resumen bien estructurado de aproximadamente 5-10 oraci
               </AlertDialogContent>
             </AlertDialog>
           </DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            Detalles de la grabación y transcripción
+          </DialogDescription>
         </DialogHeader>
         
         <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -281,7 +348,7 @@ Por favor proporciona un resumen bien estructurado de aproximadamente 5-10 oraci
                         variant="outline"
                         size="sm"
                         onClick={generateSummaryWithGroq}
-                        disabled={isGeneratingSummary}
+                        disabled={isGeneratingSummary || isGroqLoading}
                         className="h-7 py-0"
                       >
                         {isGeneratingSummary ? 'Generando...' : 'Generar con IA'}

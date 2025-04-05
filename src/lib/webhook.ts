@@ -10,6 +10,7 @@ import { toast } from "sonner";
 export async function sendToWebhook(url: string, data: any): Promise<void> {
   try {
     console.log("Enviando datos al webhook:", url);
+    console.log("Datos:", JSON.stringify(data).substring(0, 200) + "...");
     
     const response = await fetch(url, {
       method: "POST",
