@@ -8,13 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
-import { transcribeAudio } from "@/lib/groq";
-import { sendToWebhook } from "@/lib/webhook";
+import { transcribeAudio, blobToBase64 } from "@/lib/groq";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 type RecordingState = "idle" | "recording" | "paused";
-
-const WEBHOOK_URL = "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 
 export function AudioRecorder() {
   const { addRecording, folders } = useRecordings();
@@ -130,7 +127,9 @@ export function AudioRecorder() {
   const stopTimer = () => {
     if (timerInterval.current) {
       clearInterval(timerInterval.current);
-      setRecordingDuration(0);
+      setRecordingDuration(prevDuration => {
+        return prevDuration;  // Preserve the final duration
+      });
     }
   };
   
@@ -147,53 +146,53 @@ export function AudioRecorder() {
       
       const audioUrl = URL.createObjectURL(audioBlob);
       
-      const reader = new FileReader();
-      reader.readAsDataURL(audioBlob);
+      // Convert audio to base64 for storage
+      const base64AudioData = await blobToBase64(audioBlob);
       
-      reader.onloadend = async () => {
-        const base64AudioData = reader.result as string;
+      let transcriptionResult;
+      try {
+        // Use the real GROQ API for transcription
+        transcriptionResult = await transcribeAudio(audioBlob, subjectName);
+        toast.success("Audio transcrito correctamente");
+      } catch (error) {
+        console.error("Error transcribing audio:", error);
+        toast.error("Error al transcribir el audio. Se usará un texto genérico.");
         
-        let result;
-        try {
-          result = await transcribeAudio(audioBlob, subjectName);
-          
-          toast.success("Audio transcrito correctamente");
-        } catch (error) {
-          console.error("Error transcribing audio:", error);
-          result = {
-            transcript: "Error en la transcripción",
-            summary: "No se pudo generar un resumen",
-            keyPoints: ["No se pudieron extraer puntos clave"],
-            suggestedEvents: [],
-            language: "es",
-            subject: subjectName || "Sin materia especificada"
-          };
-          toast.error("Error al transcribir el audio");
-        }
-        
-        addRecording({
-          name: recordingName || `Grabación ${formatDate(new Date())}`,
-          audioUrl,
-          audioData: base64AudioData,
-          transcript: result.transcript,
-          summary: result.summary,
-          keyPoints: result.keyPoints,
-          folderId: selectedFolder,
-          duration: recordingDuration,
-          suggestedEvents: result.suggestedEvents || [],
-          language: result.language || "es",
-          subject: subjectName
-        });
-        
-        setIsProcessing(false);
-        setRecordingState('idle');
-        setRecordingName('');
-        setAudioBlob(null);
-        setRecordingDuration(0);
-        setSubjectName('');
-        
-        toast.success('Grabación guardada correctamente');
-      };
+        // Provide default values if transcription fails
+        transcriptionResult = {
+          transcript: "Error en la transcripción. No se pudo procesar el audio.",
+          summary: "No se pudo generar un resumen debido a un error en la transcripción.",
+          keyPoints: ["Error al procesar el audio"],
+          language: "es",
+          subject: subjectName || "Sin materia especificada",
+          suggestedEvents: []
+        };
+      }
+      
+      // Add the recording with all data
+      addRecording({
+        name: recordingName || `Grabación ${formatDate(new Date())}`,
+        audioUrl,
+        audioData: base64AudioData as string,
+        transcript: transcriptionResult.transcript,
+        summary: transcriptionResult.summary,
+        keyPoints: transcriptionResult.keyPoints,
+        folderId: selectedFolder,
+        duration: recordingDuration,
+        language: transcriptionResult.language,
+        subject: subjectName,
+        suggestedEvents: transcriptionResult.suggestedEvents || []
+      });
+      
+      // Reset all states
+      setIsProcessing(false);
+      setRecordingState('idle');
+      setRecordingName('');
+      setAudioBlob(null);
+      setRecordingDuration(0);
+      setSubjectName('');
+      
+      toast.success('Grabación guardada correctamente');
     } catch (error) {
       console.error('Error saving recording:', error);
       setIsProcessing(false);
