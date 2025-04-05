@@ -1,8 +1,7 @@
-
 import { ReactNode, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { Mic, Calendar, Folder, User, LogOut, Menu, X, ChevronLeft, ChevronRight, FileText } from "lucide-react";
+import { Mic, Calendar, Folder, User, LogOut, Menu, X, ChevronLeft, ChevronRight, FileText, LayoutGrid } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/AuthContext";
 
@@ -34,7 +33,7 @@ export function Layout({
   };
   
   const getDashboardIcon = () => {
-    return user?.role === "teacher" ? <FileText className="h-5 w-5" /> : <Mic className="h-5 w-5" />;
+    return <LayoutGrid className="h-5 w-5" />;
   };
   
   const getDashboardLabel = () => {
@@ -44,7 +43,7 @@ export function Layout({
   const navItems = [{
     path: "/dashboard",
     icon: getDashboardIcon(),
-    label: getDashboardLabel()
+    label: "Dashboard"
   }, {
     path: "/calendar",
     icon: <Calendar className="h-5 w-5" />,
