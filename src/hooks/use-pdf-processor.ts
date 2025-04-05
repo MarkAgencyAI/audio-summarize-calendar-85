@@ -1,7 +1,7 @@
-
 import { useState } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 import axios from "axios";
+import { sendToWebhook } from "@/lib/webhook";
 
 // Initialize PDF.js worker if not already initialized
 if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
@@ -13,6 +13,9 @@ interface AnalysisResult {
   keyPoints: string[];
   suggestedEvents: { title: string; description: string; date?: string }[];
 }
+
+// Define the webhook URL as a constant
+const WEBHOOK_URL = "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 
 export function usePdfProcessor() {
   const [loading, setLoading] = useState(false);
@@ -304,6 +307,14 @@ export function usePdfProcessor() {
     try {
       // Extraer texto del PDF
       const pdfText = await extractTextFromPdf(file);
+      
+      // Enviar la transcripción al webhook ANTES de analizar el contenido
+      await sendToWebhook(WEBHOOK_URL, {
+        type: "pdf_transcription",
+        content: pdfText,
+        timestamp: new Date().toISOString(),
+        filename: file.name
+      });
       
       // Analizar el contenido del PDF con GROQ
       const analysisResult = await analyzeContentWithGroq(pdfText);

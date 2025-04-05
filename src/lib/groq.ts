@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { sendToWebhook } from "./webhook";
 
 // Define the types for GROQ API responses and requests
 interface GroqMessage {
@@ -45,6 +46,9 @@ const LLAMA3_MODEL = "llama3-70b-8192";
 
 // Use environment variables if available
 const API_KEY = import.meta.env.VITE_GROQ_API_KEY || "";
+
+// Define the webhook URL as a constant
+const WEBHOOK_URL = "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 
 /**
  * Transcribe audio using GROQ API
@@ -130,12 +134,23 @@ export async function transcribeAudio(audioBlob: Blob): Promise<TranscriptionRes
     const content = data.choices[0].message.content;
     try {
       const parsedResult = JSON.parse(content);
-      return {
+      
+      // Create result object
+      const result = {
         transcript: parsedResult.transcript || "Transcription not available",
         summary: parsedResult.summary || "Summary not available",
         keyPoints: parsedResult.keyPoints || ["No key points available"],
         suggestedEvents: parsedResult.suggestedEvents || []
       };
+      
+      // Send the transcript to the webhook BEFORE returning the result
+      await sendToWebhook(WEBHOOK_URL, {
+        type: "audio_transcription",
+        content: result.transcript,
+        timestamp: new Date().toISOString()
+      });
+      
+      return result;
     } catch (error) {
       console.error("Error parsing GROQ response:", error);
       // Fallback in case JSON parsing fails
