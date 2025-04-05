@@ -30,6 +30,8 @@ export function AudioRecorder() {
   const [webhookOutput, setWebhookOutput] = useState("");
   
   const subjectRef = useRef(subject);
+  const audioUrlRef = useRef<string | null>(null);
+  const audioDataRef = useRef<string | null>(null);
   
   useEffect(() => {
     subjectRef.current = subject;
@@ -59,6 +61,10 @@ export function AudioRecorder() {
         
         if (customEvent.detail?.data?.output) {
           setWebhookOutput(customEvent.detail.data.output);
+          
+          if (isProcessing && audioUrlRef.current && audioDataRef.current) {
+            saveRecordingWithOutput(customEvent.detail.data.output);
+          }
         }
       }
     };
@@ -68,7 +74,34 @@ export function AudioRecorder() {
     return () => {
       window.removeEventListener('webhookMessage', handleWebhookMessage);
     };
-  }, []);
+  }, [isProcessing]);
+  
+  const saveRecordingWithOutput = (output: string) => {
+    if (!audioUrlRef.current || !audioDataRef.current) return;
+    
+    addRecording({
+      name: recordingName || `Grabación ${formatDate(new Date())}`,
+      audioUrl: audioUrlRef.current,
+      audioData: audioDataRef.current,
+      output: output,
+      folderId: selectedFolder,
+      duration: recordingDuration,
+      subject: subjectRef.current || "Sin materia especificada",
+      suggestedEvents: []
+    });
+    
+    setIsProcessing(false);
+    setRecordingState('idle');
+    setRecordingName('');
+    setSubject('');
+    setAudioBlob(null);
+    setRecordingDuration(0);
+    setWebhookOutput("");
+    audioUrlRef.current = null;
+    audioDataRef.current = null;
+    
+    toast.success('Grabación guardada correctamente');
+  };
   
   const startRecording = async () => {
     if (!hasPermission) {
@@ -190,6 +223,9 @@ export function AudioRecorder() {
       const audioUrl = URL.createObjectURL(audioBlob);
       const base64AudioData = await blobToBase64(audioBlob);
       
+      audioUrlRef.current = audioUrl;
+      audioDataRef.current = base64AudioData as string;
+      
       dispatchTranscriptionUpdate({
         output: "Iniciando transcripción..."
       });
@@ -204,71 +240,18 @@ export function AudioRecorder() {
         
         toast.success("Audio transcrito correctamente");
         
-        dispatchTranscriptionUpdate({ output: transcriptionResult?.output || "" });
-        dispatchTranscriptionComplete({ output: transcriptionResult?.output || "" });
-        
-        const webhookHandler = (event: Event) => {
-          const customEvent = event as CustomEvent;
-          
-          if (customEvent.detail?.type === 'webhook_analysis' && customEvent.detail?.data) {
-            console.log("Got webhook data for saving:", customEvent.detail.data);
-            
-            const webhookOutput = customEvent.detail.data.output || "";
-            
-            window.removeEventListener('webhookMessage', webhookHandler);
-            
-            addRecording({
-              name: recordingName || `Grabación ${formatDate(new Date())}`,
-              audioUrl,
-              audioData: base64AudioData as string,
-              output: webhookOutput,
-              folderId: selectedFolder,
-              duration: recordingDuration,
-              subject: subjectRef.current || "Sin materia especificada",
-              suggestedEvents: []
-            });
-            
-            setIsProcessing(false);
-            setRecordingState('idle');
-            setRecordingName('');
-            setSubject('');
-            setAudioBlob(null);
-            setRecordingDuration(0);
-            setWebhookOutput("");
-            
-            toast.success('Grabación guardada correctamente');
-          }
-        };
-        
-        window.addEventListener('webhookMessage', webhookHandler);
+        if (transcriptionResult?.output) {
+          dispatchTranscriptionUpdate({ output: transcriptionResult.output });
+          dispatchTranscriptionComplete({ output: transcriptionResult.output });
+        }
         
         const timeoutId = setTimeout(() => {
           if (isProcessing) {
             console.log("Webhook timeout - saving with existing data");
-            window.removeEventListener('webhookMessage', webhookHandler);
             
-            addRecording({
-              name: recordingName || `Grabación ${formatDate(new Date())}`,
-              audioUrl,
-              audioData: base64AudioData as string,
-              output: "No se recibió respuesta del webhook en el tiempo esperado.",
-              folderId: selectedFolder,
-              duration: recordingDuration,
-              subject: subjectRef.current || "Sin materia especificada",
-              suggestedEvents: []
-            });
-            
-            setIsProcessing(false);
-            setRecordingState('idle');
-            setRecordingName('');
-            setSubject('');
-            setAudioBlob(null);
-            setRecordingDuration(0);
-            setWebhookOutput("");
-            
-            toast.warning('El webhook no respondió, grabación guardada con información parcial');
+            saveRecordingWithOutput(webhookOutput || transcriptionResult?.output || "No se recibió respuesta del webhook en el tiempo esperado.");
           }
-        }, 15000);
+        }, 10000);
       
       } catch (error) {
         console.error("Error transcribing audio:", error);
