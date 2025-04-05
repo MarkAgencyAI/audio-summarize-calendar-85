@@ -21,21 +21,14 @@ export default function Dashboard() {
   const [selectedFolder, setSelectedFolder] = useState("default");
   
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const [liveTranscription, setLiveTranscription] = useState({
-    transcript: "",
-    translation: "",
-    keyPoints: [],
-    language: "es",
-    summary: ""
-  });
+  const [webhookOutput, setWebhookOutput] = useState("");
   const [waitingForWebhook, setWaitingForWebhook] = useState(false);
   
   const filteredRecordings = recordings.filter(recording => {
     const folderMatch = selectedFolder === "default" ? true : recording.folderId === selectedFolder;
     const searchMatch = searchTerm 
       ? recording.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        recording.transcript.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        (recording.summary?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) 
+        recording.output?.toLowerCase().includes(searchTerm.toLowerCase())
       : true;
       
     return folderMatch && searchMatch;
@@ -54,24 +47,12 @@ export default function Dashboard() {
     
     if (type === 'transcriptionUpdate') {
       setIsTranscribing(true);
-      setLiveTranscription(prevState => ({
-        ...prevState,
-        transcript: data.transcript || prevState.transcript,
-        translation: data.translation || prevState.translation,
-        language: data.language || prevState.language
-      }));
+      if (data && data.output) {
+        setWebhookOutput(data.output);
+      }
     } else if (type === 'transcriptionComplete') {
       setIsTranscribing(false);
       setWaitingForWebhook(true);
-      
-      if (data) {
-        setLiveTranscription(prevState => ({
-          ...prevState,
-          transcript: data.transcript || prevState.transcript,
-          translation: data.translation || prevState.translation,
-          language: data.language || prevState.language
-        }));
-      }
       
       toast.success("Transcripción completada, esperando análisis del webhook...");
     }
@@ -84,29 +65,15 @@ export default function Dashboard() {
       console.log("Recibido análisis de webhook:", data);
       setWaitingForWebhook(false);
       
-      if (data) {
-        setLiveTranscription(prevState => ({
-          ...prevState,
-          transcript: data.transcript !== null ? data.transcript : prevState.transcript,
-          summary: data.summary !== null ? data.summary : null,
-          keyPoints: data.keyPoints && data.keyPoints.length > 0 ? data.keyPoints : []
-        }));
-        
-        toast.success("Análisis de webhook recibido correctamente");
+      if (data && data.output) {
+        setWebhookOutput(data.output);
+        toast.success("Información del webhook recibida correctamente");
       } else if (error) {
         toast.error("Error en la respuesta del webhook");
-        setLiveTranscription(prevState => ({
-          ...prevState,
-          summary: null,
-          keyPoints: []
-        }));
+        setWebhookOutput("");
       } else {
         toast.warning("No se recibieron datos del webhook");
-        setLiveTranscription(prevState => ({
-          ...prevState,
-          summary: null,
-          keyPoints: []
-        }));
+        setWebhookOutput("");
       }
     }
   };
@@ -140,11 +107,7 @@ export default function Dashboard() {
           
           <LiveTranscriptionSheet
             isTranscribing={isTranscribing}
-            transcript={liveTranscription.transcript}
-            translation={liveTranscription.translation}
-            keyPoints={liveTranscription.keyPoints}
-            language={liveTranscription.language}
-            summary={liveTranscription.summary}
+            output={webhookOutput}
             waitingForWebhook={waitingForWebhook}
           >
             <Button 
@@ -165,7 +128,7 @@ export default function Dashboard() {
               ) : (
                 <>
                   <FileText className="h-4 w-4" />
-                  <span>Transcripciones</span>
+                  <span>Información del webhook</span>
                 </>
               )}
             </Button>

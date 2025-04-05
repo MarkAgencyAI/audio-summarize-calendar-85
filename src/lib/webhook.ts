@@ -29,24 +29,22 @@ export async function sendToWebhook(url: string, data: any): Promise<void> {
         console.log("Respuesta del webhook (parseada):", responseData);
         
         // Verificar si la respuesta es un array y extraer el primer elemento
-        let processedData = responseData;
+        let rawData = responseData;
         if (Array.isArray(responseData) && responseData.length > 0) {
-          processedData = responseData[0];
-          console.log("Procesando primer elemento del array:", processedData);
+          rawData = responseData[0];
+          console.log("Usando primer elemento del array:", rawData);
         }
         
-        // Verificar si hay un campo output en la respuesta
-        if (processedData && processedData.output) {
-          console.log("Se encontró variable output en la respuesta:", processedData.output);
+        // Buscar el campo output en la respuesta y usarlo tal cual
+        if (rawData && rawData.output) {
+          console.log("Se encontró output en la respuesta:", rawData.output);
           
-          // Disparar evento personalizado con los datos de output
+          // Disparar evento con el output exacto del webhook
           const analysisEvent = new CustomEvent('webhookMessage', {
             detail: {
               type: 'webhook_analysis',
               data: {
-                transcript: processedData.output,
-                summary: processedData.output,
-                keyPoints: []
+                output: rawData.output
               }
             }
           });
@@ -56,25 +54,16 @@ export async function sendToWebhook(url: string, data: any): Promise<void> {
           return;
         }
         
-        // Si no hay output pero hay datos directamente en la respuesta
-        if (processedData) {
-          // Verificar si hay datos en la raíz del objeto
-          const webhookData = {
-            transcript: data.transcript || null,
-            summary: processedData.output || null,
-            keyPoints: []
-          };
-          
-          const analysisEvent = new CustomEvent('webhookMessage', {
-            detail: {
-              type: 'webhook_analysis',
-              data: webhookData
-            }
-          });
-          
-          window.dispatchEvent(analysisEvent);
-          toast.success("Datos recibidos del webhook");
-        }
+        // Si no hay output, mostramos un mensaje
+        toast.warning("La respuesta del webhook no contiene campo 'output'");
+        const errorEvent = new CustomEvent('webhookMessage', {
+          detail: {
+            type: 'webhook_analysis',
+            data: null,
+            error: "La respuesta del webhook no contiene campo 'output'"
+          }
+        });
+        window.dispatchEvent(errorEvent);
       } catch (jsonError) {
         console.error("Error al parsear respuesta como JSON:", jsonError);
         toast.error("Error al procesar la respuesta del webhook");
@@ -92,15 +81,11 @@ export async function sendToWebhook(url: string, data: any): Promise<void> {
     } else {
       toast.warning("Respuesta vacía del webhook");
       
-      // Respuesta vacía, usar datos originales como respaldo
+      // Respuesta vacía
       const errorEvent = new CustomEvent('webhookMessage', {
         detail: {
           type: 'webhook_analysis',
-          data: {
-            transcript: data.transcript || null,
-            summary: null,
-            keyPoints: []
-          },
+          data: null,
           error: "Respuesta vacía del webhook"
         }
       });

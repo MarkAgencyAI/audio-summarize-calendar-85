@@ -1,196 +1,166 @@
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import AsyncStorage from '@/lib/storage';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { v4 as uuidv4 } from "uuid";
+import { loadFromStorage, saveToStorage } from "@/lib/storage";
 
-export interface Recording {
+// Recording type
+interface Recording {
   id: string;
   name: string;
   audioUrl: string;
-  audioData?: string; // Base64 audio data for persistent storage
-  transcript: string;
-  summary: string | null;
-  keyPoints: string[];
+  audioData: string;
+  output: string; // Changed from transcript/summary/keyPoints to a single output field
+  createdAt: number;
   folderId: string;
-  createdAt: Date;
   duration: number;
-  language?: string;
   subject?: string;
-  suggestedEvents?: {
+  suggestedEvents?: Array<{
     title: string;
     description: string;
     date?: string;
-  }[];
+  }>;
 }
 
-export interface Folder {
+// Folder type
+interface Folder {
   id: string;
   name: string;
   color: string;
-  icon?: string; // Nuevo campo para almacenar el nombre del icono
-  createdAt: Date;
+  createdAt: number;
 }
 
+// Context type
 interface RecordingsContextType {
   recordings: Recording[];
-  folders: Folder[];
   addRecording: (recording: Omit<Recording, "id" | "createdAt">) => void;
   updateRecording: (id: string, data: Partial<Recording>) => void;
   deleteRecording: (id: string) => void;
-  addFolder: (name: string, color: string, icon: string) => Folder;
+  folders: Folder[];
+  addFolder: (folder: Omit<Folder, "id" | "createdAt">) => void;
   updateFolder: (id: string, data: Partial<Folder>) => void;
   deleteFolder: (id: string) => void;
-  getAudioUrl: (recording: Recording) => string;
 }
 
-const RecordingsContext = createContext<RecordingsContextType | undefined>(undefined);
+// Create context
+const RecordingsContext = createContext<RecordingsContextType | null>(null);
 
-const DEFAULT_FOLDERS: Folder[] = [
-  {
-    id: "default",
-    name: "Todas las grabaciones",
-    color: "#3b82f6",
-    icon: "folder", // Icono predeterminado
-    createdAt: new Date(),
-  },
-];
-
-export function RecordingsProvider({ children }: { children: ReactNode }) {
+// Provider component
+export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [recordings, setRecordings] = useState<Recording[]>([]);
-  const [folders, setFolders] = useState<Folder[]>(DEFAULT_FOLDERS);
+  const [folders, setFolders] = useState<Folder[]>([]);
 
+  // Load recordings and folders from storage on mount
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const storedRecordings = await AsyncStorage.getItem("recordings");
-        const storedFolders = await AsyncStorage.getItem("folders");
-
-        if (storedRecordings) {
-          setRecordings(JSON.parse(storedRecordings).map((r: any) => ({
-            ...r,
-            createdAt: new Date(r.createdAt),
-          })));
-        }
-
-        if (storedFolders) {
-          setFolders(JSON.parse(storedFolders).map((f: any) => ({
-            ...f,
-            createdAt: new Date(f.createdAt),
-          })));
-        }
-      } catch (error) {
-        console.error("Error loading data from storage:", error);
+    const savedRecordings = loadFromStorage<Recording[]>("recordings") || [];
+    const savedFolders = loadFromStorage<Folder[]>("folders") || [
+      { id: "default", name: "General", color: "#6366f1", createdAt: Date.now() }
+    ];
+    
+    // Update old recordings to use output field
+    const updatedRecordings = savedRecordings.map(recording => {
+      if (!('output' in recording)) {
+        return {
+          ...recording,
+          output: recording.transcript || recording.summary || "No hay información disponible"
+        };
       }
-    };
-
-    loadData();
+      return recording;
+    });
+    
+    setRecordings(updatedRecordings);
+    setFolders(savedFolders);
   }, []);
 
+  // Save recordings and folders to storage on change
   useEffect(() => {
-    const saveRecordings = async () => {
-      try {
-        await AsyncStorage.setItem("recordings", JSON.stringify(recordings));
-      } catch (error) {
-        console.error("Error saving recordings to storage:", error);
-      }
-    };
-    
-    saveRecordings();
+    saveToStorage("recordings", recordings);
   }, [recordings]);
 
   useEffect(() => {
-    const saveFolders = async () => {
-      try {
-        await AsyncStorage.setItem("folders", JSON.stringify(folders));
-      } catch (error) {
-        console.error("Error saving folders to storage:", error);
-      }
-    };
-    
-    saveFolders();
+    saveToStorage("folders", folders);
   }, [folders]);
 
-  const getAudioUrl = (recording: Recording): string => {
-    if (recording.audioData) {
-      return recording.audioData;
-    }
-    
-    return recording.audioUrl;
-  };
-
-  const addRecording = (recordingData: Omit<Recording, "id" | "createdAt">) => {
+  // Add a new recording
+  const addRecording = (recording: Omit<Recording, "id" | "createdAt">) => {
     const newRecording: Recording = {
-      id: Math.random().toString(36).substring(2, 15),
-      createdAt: new Date(),
-      ...recordingData,
+      ...recording,
+      id: uuidv4(),
+      createdAt: Date.now(),
     };
     setRecordings(prev => [newRecording, ...prev]);
   };
 
+  // Update a recording
   const updateRecording = (id: string, data: Partial<Recording>) => {
-    setRecordings(prev =>
-      prev.map(recording =>
+    setRecordings(prev => 
+      prev.map(recording => 
         recording.id === id ? { ...recording, ...data } : recording
       )
     );
   };
 
+  // Delete a recording
   const deleteRecording = (id: string) => {
     setRecordings(prev => prev.filter(recording => recording.id !== id));
   };
 
-  const addFolder = (name: string, color: string, icon: string = "folder"): Folder => {
+  // Add a new folder
+  const addFolder = (folder: Omit<Folder, "id" | "createdAt">) => {
     const newFolder: Folder = {
-      id: Math.random().toString(36).substring(2, 15),
-      name,
-      color,
-      icon,
-      createdAt: new Date(),
+      ...folder,
+      id: uuidv4(),
+      createdAt: Date.now(),
     };
     setFolders(prev => [...prev, newFolder]);
-    return newFolder;
   };
 
+  // Update a folder
   const updateFolder = (id: string, data: Partial<Folder>) => {
-    setFolders(prev =>
-      prev.map(folder => (folder.id === id ? { ...folder, ...data } : folder))
+    setFolders(prev => 
+      prev.map(folder => 
+        folder.id === id ? { ...folder, ...data } : folder
+      )
     );
   };
 
+  // Delete a folder (and move recordings to default)
   const deleteFolder = (id: string) => {
-    if (id === "default") return;
+    if (id === "default") return; // Prevent deleting default folder
     
-    setRecordings(prev =>
-      prev.map(recording =>
-        recording.folderId === id ? { ...recording, folderId: "default" } : recording
+    // Move recordings to default folder
+    setRecordings(prev => 
+      prev.map(recording => 
+        recording.folderId === id 
+          ? { ...recording, folderId: "default" } 
+          : recording
       )
     );
     
+    // Delete the folder
     setFolders(prev => prev.filter(folder => folder.id !== id));
   };
 
   return (
-    <RecordingsContext.Provider
-      value={{
-        recordings,
-        folders,
-        addRecording,
-        updateRecording,
-        deleteRecording,
-        addFolder,
-        updateFolder,
-        deleteFolder,
-        getAudioUrl,
-      }}
-    >
+    <RecordingsContext.Provider value={{
+      recordings,
+      addRecording,
+      updateRecording,
+      deleteRecording,
+      folders,
+      addFolder,
+      updateFolder,
+      deleteFolder
+    }}>
       {children}
     </RecordingsContext.Provider>
   );
-}
+};
 
-export function useRecordings() {
+// Custom hook to use the recordings context
+export const useRecordings = () => {
   const context = useContext(RecordingsContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error("useRecordings must be used within a RecordingsProvider");
   }
   return context;
-}
+};

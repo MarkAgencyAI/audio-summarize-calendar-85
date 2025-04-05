@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Sheet, 
@@ -14,22 +13,14 @@ import { Mic, MicOff } from "lucide-react";
 
 interface LiveTranscriptionSheetProps {
   isTranscribing: boolean;
-  transcript: string;
-  translation?: string;
-  keyPoints: string[];
-  language: string;
-  summary: string;
+  output: string;
   waitingForWebhook?: boolean;
   children?: React.ReactNode;
 }
 
 export function LiveTranscriptionSheet({
   isTranscribing,
-  transcript,
-  translation,
-  keyPoints,
-  language,
-  summary,
+  output,
   waitingForWebhook = false,
   children
 }: LiveTranscriptionSheetProps) {
@@ -94,20 +85,16 @@ export function LiveTranscriptionSheet({
       
       <SheetContent side="right" className="w-full sm:max-w-md md:max-w-xl p-0 flex flex-col overflow-hidden">
         <SheetHeader className="p-4 border-b">
-          <SheetTitle>Transcripción en tiempo real</SheetTitle>
+          <SheetTitle>Información del webhook</SheetTitle>
           <SheetDescription>
-            Visualiza la transcripción y puntos clave
+            Visualiza la información recibida del webhook
           </SheetDescription>
         </SheetHeader>
         
         <div className="flex-1 overflow-hidden">
           <TranscriptionPanel
-            transcript={transcript}
-            translation={translation}
-            keyPoints={keyPoints}
-            language={language}
-            summary={summary}
-            isLoading={isTranscribing && !transcript}
+            output={output}
+            isLoading={isTranscribing && !output}
             waitingForWebhook={waitingForWebhook}
           />
         </div>

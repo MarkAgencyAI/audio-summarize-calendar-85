@@ -1,4 +1,3 @@
-
 import { useState, useRef, useCallback } from "react";
 import { transcribeAudio } from "@/lib/groq";
 import { sendToWebhook } from "@/lib/webhook";
@@ -122,9 +121,7 @@ export function useAudioProcessor() {
             
             if (newProgress > 10 && newProgress % 20 === 0) {
               onTranscriptionProgress({
-                transcript: "Transcribiendo audio...",
-                keyPoints: ["Analizando grabación..."],
-                language: "es"
+                output: "Transcribiendo audio..."
               });
             }
             
@@ -153,9 +150,7 @@ export function useAudioProcessor() {
       // Notify that we're waiting for webhook
       if (onTranscriptionProgress) {
         onTranscriptionProgress({
-          transcript: transcriptionResult.transcript,
-          keyPoints: ["Esperando respuesta del webhook..."],
-          language: transcriptionResult.language || "es"
+          output: "Esperando respuesta del webhook..."
         });
       }
       
@@ -163,8 +158,7 @@ export function useAudioProcessor() {
       const WEBHOOK_URL = "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
       await sendToWebhook(WEBHOOK_URL, webhookData);
       
-      // The webhook.ts file will dispatch an event with the response
-      // All processing of the response is now handled by webhook.ts
+      // The webhook.ts file will dispatch an event with the raw response
       
       setProgress(100);
       

@@ -28,6 +28,7 @@ export function AudioRecorder() {
   const [subject, setSubject] = useState("");
   const [hasPermission, setHasPermission] = useState(false);
   const [waitingForWebhook, setWaitingForWebhook] = useState(false);
+  const [webhookOutput, setWebhookOutput] = useState("");
   
   const subjectRef = useRef(subject);
   
@@ -57,6 +58,10 @@ export function AudioRecorder() {
       if (customEvent.detail?.type === 'webhook_analysis') {
         console.log("AudioRecorder received webhook message:", customEvent.detail);
         setWaitingForWebhook(false);
+        
+        if (customEvent.detail?.data?.output) {
+          setWebhookOutput(customEvent.detail.data.output);
+        }
       }
     };
     
@@ -189,9 +194,7 @@ export function AudioRecorder() {
       const base64AudioData = await blobToBase64(audioBlob);
       
       dispatchTranscriptionUpdate({
-        transcript: "Iniciando transcripción...",
-        keyPoints: ["Procesando audio..."],
-        language: "es"
+        output: "Iniciando transcripción..."
       });
       
       let transcriptionResult;
@@ -202,21 +205,10 @@ export function AudioRecorder() {
           (progressData) => dispatchTranscriptionUpdate(progressData)
         );
         
-        if (!transcriptionResult || !transcriptionResult.transcript) {
-          throw new Error("No se pudo transcribir el audio correctamente");
-        }
-        
         toast.success("Audio transcrito correctamente, esperando respuesta del webhook...");
         
-        dispatchTranscriptionUpdate(transcriptionResult);
-        dispatchTranscriptionComplete(transcriptionResult);
-        
-        let savedTranscriptionData = {
-          transcript: transcriptionResult.transcript,
-          summary: transcriptionResult.summary || "",
-          keyPoints: transcriptionResult.keyPoints || [],
-          language: transcriptionResult.language || "es",
-        };
+        dispatchTranscriptionUpdate({ output: "Esperando respuesta del webhook..." });
+        dispatchTranscriptionComplete({ output: webhookOutput });
         
         const webhookHandler = (event: Event) => {
           const customEvent = event as CustomEvent;
@@ -224,16 +216,31 @@ export function AudioRecorder() {
           if (customEvent.detail?.type === 'webhook_analysis' && customEvent.detail?.data) {
             console.log("Got webhook data for saving:", customEvent.detail.data);
             
-            savedTranscriptionData = {
-              transcript: customEvent.detail.data.transcript || savedTranscriptionData.transcript,
-              summary: customEvent.detail.data.summary || savedTranscriptionData.summary,
-              keyPoints: customEvent.detail.data.keyPoints || savedTranscriptionData.keyPoints,
-              language: savedTranscriptionData.language,
-            };
+            const webhookOutput = customEvent.detail.data.output || "";
             
             window.removeEventListener('webhookMessage', webhookHandler);
             
-            finishSaving();
+            addRecording({
+              name: recordingName || `Grabación ${formatDate(new Date())}`,
+              audioUrl,
+              audioData: base64AudioData as string,
+              output: webhookOutput,
+              folderId: selectedFolder,
+              duration: recordingDuration,
+              subject: subjectRef.current || "Sin materia especificada",
+              suggestedEvents: []
+            });
+            
+            setIsProcessing(false);
+            setWaitingForWebhook(false);
+            setRecordingState('idle');
+            setRecordingName('');
+            setSubject('');
+            setAudioBlob(null);
+            setRecordingDuration(0);
+            setWebhookOutput("");
+            
+            toast.success('Grabación guardada correctamente');
           }
         };
         
@@ -243,37 +250,30 @@ export function AudioRecorder() {
           if (isProcessing) {
             console.log("Webhook timeout - saving with existing data");
             window.removeEventListener('webhookMessage', webhookHandler);
-            finishSaving();
+            
+            addRecording({
+              name: recordingName || `Grabación ${formatDate(new Date())}`,
+              audioUrl,
+              audioData: base64AudioData as string,
+              output: "No se recibió respuesta del webhook en el tiempo esperado.",
+              folderId: selectedFolder,
+              duration: recordingDuration,
+              subject: subjectRef.current || "Sin materia especificada",
+              suggestedEvents: []
+            });
+            
+            setIsProcessing(false);
+            setWaitingForWebhook(false);
+            setRecordingState('idle');
+            setRecordingName('');
+            setSubject('');
+            setAudioBlob(null);
+            setRecordingDuration(0);
+            setWebhookOutput("");
+            
+            toast.warning('El webhook no respondió, grabación guardada con información parcial');
           }
         }, 15000);
-        
-        const finishSaving = () => {
-          clearTimeout(timeoutId);
-          
-          addRecording({
-            name: recordingName || `Grabación ${formatDate(new Date())}`,
-            audioUrl,
-            audioData: base64AudioData as string,
-            transcript: savedTranscriptionData.transcript,
-            summary: savedTranscriptionData.summary,
-            keyPoints: savedTranscriptionData.keyPoints,
-            folderId: selectedFolder,
-            duration: recordingDuration,
-            language: savedTranscriptionData.language,
-            subject: subjectRef.current || "Sin materia especificada",
-            suggestedEvents: []
-          });
-          
-          setIsProcessing(false);
-          setWaitingForWebhook(false);
-          setRecordingState('idle');
-          setRecordingName('');
-          setSubject('');
-          setAudioBlob(null);
-          setRecordingDuration(0);
-          
-          toast.success('Grabación guardada correctamente');
-        };
       
       } catch (error) {
         console.error("Error transcribing audio:", error);
