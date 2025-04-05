@@ -30,6 +30,11 @@ interface GroqApiResponse {
   }>;
 }
 
+// Interface for GROQ Audio API response
+interface GroqAudioResponse {
+  text: string;
+}
+
 /**
  * Process audio for noise reduction and voice isolation
  * Note: This is a client-side preprocessing before sending to GROQ
@@ -177,7 +182,7 @@ export async function transcribeAudio(audioBlob: Blob, subject?: string): Promis
     // Preprocess audio to reduce noise and isolate voice
     const processedAudio = await preprocessAudio(audioBlob);
     
-    // Convert audio blob to mp3 format with Web Audio API
+    // Analyze audio to check if it contains actual content
     const audioBuffer = await processedAudio.arrayBuffer();
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const audioData = await audioContext.decodeAudioData(audioBuffer);
@@ -190,73 +195,44 @@ export async function transcribeAudio(audioBlob: Blob, subject?: string): Promis
       throw new Error("El audio no contiene suficiente contenido para transcribir");
     }
     
-    // Step 1: Create a text prompt for GROQ to generate a transcript
-    const systemPrompt = `
-      You are a professional audio transcription service.
-      You will receive a description of an audio recording.
-      
-      Your task is to generate an EXACT transcript of the audio - transcribe EXACTLY what is said without modifications, interpretations, or additions.
-      
-      Important rules:
-      1. Do NOT add anything that was not actually said in the audio
-      2. Do NOT remove filler words, stutters, or natural speech patterns
-      3. Do NOT correct grammar or improve the speech in any way
-      4. Transcribe exactly what you hear, word for word
-      5. If you cannot understand something clearly, indicate it with [inaudible]
-      6. Do not include any meta commentary or explanations
-      
-      Only return the raw transcript text.
-    `;
-
-    const userPrompt = `
-      Please transcribe this audio recording exactly as spoken.
-      The audio is approximately ${Math.round(audioData.duration)} seconds long.
-      
-      Capture every word exactly as spoken. Do not clean up, summarize, or interpret the speech.
-      Return only the exact transcript of what was said.
-    `;
+    // Step 1: Create form data for the audio transcription API
+    const formData = new FormData();
+    formData.append("file", processedAudio, "audio.wav");
+    formData.append("model", "whisper-1");
+    formData.append("language", "es");
     
-    // Make the request to GROQ API for the transcript
-    const transcriptResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    // Make the request to GROQ Audio API for the transcript
+    const transcriptResponse = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
         "Authorization": `Bearer ${API_KEY}`
       },
-      body: JSON.stringify({
-        model: LLAMA3_MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
-        max_tokens: 1000,
-        temperature: 0.2 // Lower temperature for more precise transcription
-      })
+      body: formData
     });
 
     if (!transcriptResponse.ok) {
       throw new Error(`GROQ API error: ${transcriptResponse.status}`);
     }
 
-    const transcriptData = await transcriptResponse.json();
-    if (!transcriptData.choices || transcriptData.choices.length === 0) {
-      throw new Error("Invalid response from GROQ API");
+    const transcriptData: GroqAudioResponse = await transcriptResponse.json();
+    if (!transcriptData.text) {
+      throw new Error("Invalid response from GROQ Audio API");
     }
     
-    const transcript = transcriptData.choices[0].message.content.trim();
+    const transcript = transcriptData.text.trim();
     
     // Step 2: Detect the language of the transcript
     const language = await detectLanguage(transcript);
     
-    // Step 3: Send the transcript to the webhook with minimal metadata
+    // Step 3: Send the transcript to the webhook with subject metadata
     await sendToWebhook(WEBHOOK_URL, {
       transcript: transcript,
       language: language,
+      subject: subject || "No subject specified",
       processed: true
     });
     
     // Step 4: Generate a minimal summary and key points based on the transcript
-    // We're keeping this but making it optional
     let analysisResult = { summary: "", keyPoints: [], suggestedEvents: [] };
     
     try {
@@ -395,40 +371,30 @@ async function generateAnalysis(transcript: string, language: string): Promise<{
     // Adjust the system prompt based on detected language
     const systemPrompt = language === "en" 
       ? `You are an AI assistant that helps summarize educational content.
-         Your task is to:
-         1. Generate a detailed summary of the transcript (2-3 paragraphs)
-         2. Extract 5-7 key points from the transcript, focusing on the most important educational concepts
-         3. Highlight any definitions, formulas, or critical information with special formatting
-         4. Suggest any possible calendar events or deadlines mentioned
-         
-         Format your response as JSON with the following structure:
+         Analyze the following transcript from an educational audio recording.
+         Return your response as plain JSON with the following schema:
          {
-           "summary": "detailed summary here",
+           "summary": "detailed summary here (2-3 paragraphs)",
            "keyPoints": ["key point 1", "key point 2", "key point 3", "key point 4", "key point 5"],
            "suggestedEvents": [
              {
                "title": "Event Title",
-               "description": "Event Description",
-               "date": "Date if mentioned"
+               "description": "Event Description", 
+               "date": "Date if mentioned (optional)"
              }
            ]
          }`
       : `Eres un asistente de IA que ayuda a resumir contenido educativo.
-         Tu tarea es:
-         1. Generar un resumen detallado de la transcripción (2-3 párrafos)
-         2. Extraer 5-7 puntos clave de la transcripción, enfocándote en los conceptos educativos más importantes
-         3. Resaltar definiciones, fórmulas o información crítica con formato especial
-         4. Sugerir posibles eventos de calendario o fechas límite mencionadas
-         
-         Formatea tu respuesta como JSON con la siguiente estructura:
+         Analiza la siguiente transcripción de una grabación de audio educativa.
+         Devuelve tu respuesta como JSON plano con el siguiente esquema:
          {
-           "summary": "resumen detallado aquí",
+           "summary": "resumen detallado aquí (2-3 párrafos)",
            "keyPoints": ["punto clave 1", "punto clave 2", "punto clave 3", "punto clave 4", "punto clave 5"],
            "suggestedEvents": [
              {
                "title": "Título del Evento",
                "description": "Descripción del Evento",
-               "date": "Fecha si se menciona"
+               "date": "Fecha si se menciona (opcional)"
              }
            ]
          }`;
@@ -446,7 +412,8 @@ async function generateAnalysis(transcript: string, language: string): Promise<{
           { role: "user", content: transcript }
         ],
         max_tokens: 1000,
-        temperature: 0.5
+        temperature: 0.5,
+        response_format: { type: "json_object" }
       })
     });
 
@@ -462,21 +429,14 @@ async function generateAnalysis(transcript: string, language: string): Promise<{
     
     // Parse the JSON from the response
     try {
-      // Extract JSON object from the response
       const content = analysisData.choices[0].message.content;
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      const result = JSON.parse(content);
       
-      if (jsonMatch) {
-        const parsedResult = JSON.parse(jsonMatch[0]);
-        
-        return {
-          summary: parsedResult.summary || (language === "en" ? "Summary not available" : "Resumen no disponible"),
-          keyPoints: parsedResult.keyPoints || [(language === "en" ? "No key points extracted" : "No se pudieron extraer puntos clave")],
-          suggestedEvents: parsedResult.suggestedEvents || []
-        };
-      }
-      
-      throw new Error("Could not extract JSON from response");
+      return {
+        summary: result.summary || (language === "en" ? "Summary not available" : "Resumen no disponible"),
+        keyPoints: result.keyPoints || [(language === "en" ? "No key points extracted" : "No se pudieron extraer puntos clave")],
+        suggestedEvents: result.suggestedEvents || []
+      };
     } catch (error) {
       console.error("Error parsing analysis response:", error);
       

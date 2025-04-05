@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
 import { transcribeAudio, blobToBase64 } from "@/lib/groq";
 import { useAudioProcessor } from "@/hooks/use-audio-processor";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type RecordingState = "idle" | "recording" | "paused";
 
@@ -26,6 +27,7 @@ export function AudioRecorder() {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState("default");
+  const [subject, setSubject] = useState("");
   
   const [hasPermission, setHasPermission] = useState(false);
   
@@ -172,8 +174,8 @@ export function AudioRecorder() {
           language: "es"
         });
         
-        // Use the real GROQ API for transcription without relying on subject
-        transcriptionResult = await transcribeAudio(audioBlob);
+        // Use the real GROQ API for transcription with subject
+        transcriptionResult = await transcribeAudio(audioBlob, subject);
         
         if (!transcriptionResult || !transcriptionResult.transcript) {
           throw new Error("No se pudo transcribir el audio correctamente");
@@ -200,7 +202,7 @@ export function AudioRecorder() {
         folderId: selectedFolder,
         duration: recordingDuration,
         language: transcriptionResult.language || "es",
-        subject: transcriptionResult.subject || "",
+        subject: subject || "Sin materia especificada",
         suggestedEvents: transcriptionResult.suggestedEvents || []
       });
       
@@ -208,6 +210,7 @@ export function AudioRecorder() {
       setIsProcessing(false);
       setRecordingState('idle');
       setRecordingName('');
+      setSubject('');
       setAudioBlob(null);
       setRecordingDuration(0);
       
@@ -224,6 +227,19 @@ export function AudioRecorder() {
       <h2 className="text-xl font-semibold mb-4 text-custom-primary">Nueva grabación</h2>
       
       <div className="space-y-4">
+        {recordingState === "idle" && audioBlob === null && (
+          <div className="space-y-2">
+            <Label htmlFor="subject" className="text-custom-text">Materia</Label>
+            <Input
+              id="subject"
+              placeholder="Ingresa la materia (ej: Matemáticas, Historia, etc.)"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
+            />
+          </div>
+        )}
+        
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             {recordingState === "idle" && (
@@ -275,6 +291,19 @@ export function AudioRecorder() {
                 className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
               />
             </div>
+            
+            {!subject && (
+              <div className="space-y-2">
+                <Label htmlFor="subject" className="text-custom-text">Materia</Label>
+                <Input
+                  id="subject"
+                  placeholder="Ingresa la materia (ej: Matemáticas, Historia, etc.)"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
+                />
+              </div>
+            )}
             
             <div className="space-y-2">
               <Label htmlFor="folder" className="text-custom-text">Carpeta</Label>
