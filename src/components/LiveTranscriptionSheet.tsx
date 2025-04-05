@@ -5,11 +5,12 @@ import {
   SheetHeader, 
   SheetTitle, 
   SheetDescription,
-  SheetTrigger
+  SheetTrigger,
+  SheetClose
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { TranscriptionPanel } from "./TranscriptionPanel";
-import { Mic, MicOff, X } from "lucide-react";
+import { Mic, X } from "lucide-react";
 
 interface LiveTranscriptionSheetProps {
   isTranscribing: boolean;
@@ -89,7 +90,7 @@ export function LiveTranscriptionSheet({
               </>
             ) : (
               <>
-                <MicOff className="h-4 w-4" />
+                <Mic className="h-4 w-4" />
                 <span>Ver transcripción</span>
               </>
             )}
@@ -100,20 +101,22 @@ export function LiveTranscriptionSheet({
       <SheetContent side="right" className="w-full sm:max-w-md md:max-w-xl p-0 flex flex-col overflow-hidden">
         <SheetHeader className="p-4 border-b flex flex-row justify-between items-center">
           <div>
-            <SheetTitle>Información del webhook</SheetTitle>
+            <SheetTitle>Transcripción en proceso</SheetTitle>
             <SheetDescription>
-              Visualiza la información recibida del webhook
+              Visualiza la transcripción en tiempo real
             </SheetDescription>
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-8 w-8 p-0" 
-            onClick={handleClose}
-          >
-            <X className="h-4 w-4" />
-            <span className="sr-only">Cerrar</span>
-          </Button>
+          <SheetClose asChild>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-0" 
+              onClick={handleClose}
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Cerrar</span>
+            </Button>
+          </SheetClose>
         </SheetHeader>
         
         <div className="flex-1 overflow-hidden">

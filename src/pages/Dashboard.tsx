@@ -99,28 +99,21 @@ export default function Dashboard() {
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h1 className="text-2xl md:text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">Mi Dashboard</h1>
           
-          <LiveTranscriptionSheet
-            isTranscribing={isTranscribing}
-            output={webhookOutput}
-          >
-            <Button 
-              variant={isTranscribing ? "default" : "outline"} 
-              className="flex items-center gap-2"
-              size="sm"
+          {isTranscribing && (
+            <LiveTranscriptionSheet
+              isTranscribing={isTranscribing}
+              output={webhookOutput}
             >
-              {isTranscribing ? (
-                <>
-                  <Mic className="h-4 w-4 text-white animate-pulse" />
-                  <span>Transcribiendo...</span>
-                </>
-              ) : (
-                <>
-                  <FileText className="h-4 w-4" />
-                  <span>Información del webhook</span>
-                </>
-              )}
-            </Button>
-          </LiveTranscriptionSheet>
+              <Button 
+                variant="default"
+                className="flex items-center gap-2"
+                size="sm"
+              >
+                <Mic className="h-4 w-4 text-white animate-pulse" />
+                <span>Transcribiendo...</span>
+              </Button>
+            </LiveTranscriptionSheet>
+          )}
         </div>
         
         {user?.role === "teacher" ? (
