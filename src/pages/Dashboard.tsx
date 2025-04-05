@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -29,6 +28,7 @@ export default function Dashboard() {
     language: "es",
     summary: ""
   });
+  const [waitingForWebhook, setWaitingForWebhook] = useState(false);
   
   const filteredRecordings = recordings.filter(recording => {
     const folderMatch = selectedFolder === "default" ? true : recording.folderId === selectedFolder;
@@ -62,6 +62,7 @@ export default function Dashboard() {
       }));
     } else if (type === 'transcriptionComplete') {
       setIsTranscribing(false);
+      setWaitingForWebhook(true);
       
       if (data) {
         setLiveTranscription(prevState => ({
@@ -69,11 +70,10 @@ export default function Dashboard() {
           transcript: data.transcript || prevState.transcript,
           translation: data.translation || prevState.translation,
           language: data.language || prevState.language
-          // No actualizamos summary o keyPoints aquí - esperamos al webhook
         }));
       }
       
-      toast.success("Transcripción completada");
+      toast.success("Transcripción completada, esperando análisis...");
     }
   };
 
@@ -82,12 +82,23 @@ export default function Dashboard() {
     
     if (type === 'webhook_analysis') {
       console.log("Recibido análisis de webhook:", data);
-      setLiveTranscription(prevState => ({
-        ...prevState,
-        summary: data.summary || "",
-        keyPoints: data.keyPoints || []
-      }));
-      toast.success("Análisis de transcripción recibido");
+      setWaitingForWebhook(false);
+      
+      if (data) {
+        setLiveTranscription(prevState => ({
+          ...prevState,
+          summary: data.summary || null,
+          keyPoints: data.keyPoints || []
+        }));
+        toast.success("Análisis de transcripción recibido");
+      } else {
+        setLiveTranscription(prevState => ({
+          ...prevState,
+          summary: null,
+          keyPoints: []
+        }));
+        toast.error("No se recibió análisis del webhook");
+      }
     }
   };
   
@@ -125,9 +136,10 @@ export default function Dashboard() {
             keyPoints={liveTranscription.keyPoints}
             language={liveTranscription.language}
             summary={liveTranscription.summary}
+            waitingForWebhook={waitingForWebhook}
           >
             <Button 
-              variant={isTranscribing ? "default" : "outline"} 
+              variant={isTranscribing || waitingForWebhook ? "default" : "outline"} 
               className="flex items-center gap-2"
               size="sm"
             >
@@ -135,6 +147,11 @@ export default function Dashboard() {
                 <>
                   <Mic className="h-4 w-4 text-white animate-pulse" />
                   <span>Transcribiendo...</span>
+                </>
+              ) : waitingForWebhook ? (
+                <>
+                  <FileText className="h-4 w-4 text-white animate-pulse" />
+                  <span>Esperando análisis...</span>
                 </>
               ) : (
                 <>

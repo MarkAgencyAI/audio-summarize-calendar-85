@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { 
   Sheet, 
@@ -18,6 +19,7 @@ interface LiveTranscriptionSheetProps {
   keyPoints: string[];
   language: string;
   summary: string;
+  waitingForWebhook?: boolean;
   children?: React.ReactNode;
 }
 
@@ -28,6 +30,7 @@ export function LiveTranscriptionSheet({
   keyPoints,
   language,
   summary,
+  waitingForWebhook = false,
   children
 }: LiveTranscriptionSheetProps) {
   const [open, setOpen] = useState(false);
@@ -105,6 +108,7 @@ export function LiveTranscriptionSheet({
             language={language}
             summary={summary}
             isLoading={isTranscribing && !transcript}
+            waitingForWebhook={waitingForWebhook}
           />
         </div>
       </SheetContent>

@@ -15,6 +15,7 @@ interface TranscriptionPanelProps {
   language: string;
   summary: string;
   isLoading?: boolean;
+  waitingForWebhook?: boolean;
 }
 
 export function TranscriptionPanel({
@@ -23,7 +24,8 @@ export function TranscriptionPanel({
   keyPoints,
   language,
   summary,
-  isLoading = false
+  isLoading = false,
+  waitingForWebhook = false
 }: TranscriptionPanelProps) {
   const getLanguageDisplay = (code?: string) => {
     const languages: Record<string, string> = {
@@ -36,8 +38,6 @@ export function TranscriptionPanel({
     };
     return code ? languages[code] || code.toUpperCase() : "Desconocido";
   };
-
-  const waitingForSummary = transcript && !summary && !isLoading;
 
   return (
     <div className="w-full h-full flex flex-col bg-card rounded-lg border shadow-sm overflow-hidden">
@@ -71,14 +71,14 @@ export function TranscriptionPanel({
                 </div>
               </div>
             </div>
-          ) : waitingForSummary ? (
+          ) : waitingForWebhook ? (
             <div className="h-full flex items-center justify-center">
               <div className="flex flex-col items-center">
                 <div className="w-24 h-24 bg-muted/30 rounded-full flex items-center justify-center mb-4">
                   <Clock className="h-12 w-12 text-muted-foreground/60 animate-pulse" />
                 </div>
                 <div className="text-center text-muted-foreground">
-                  Esperando respuesta del análisis...
+                  Esperando respuesta del webhook...
                 </div>
               </div>
             </div>
@@ -115,7 +115,7 @@ export function TranscriptionPanel({
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-sm text-muted-foreground">Esperando puntos clave del análisis...</p>
+                      <p className="text-sm text-muted-foreground">No hay puntos clave disponibles</p>
                     )}
                   </div>
                 </ScrollArea>
@@ -127,7 +127,7 @@ export function TranscriptionPanel({
                     {summary ? (
                       <pre className="whitespace-pre-wrap font-sans text-sm">{summary}</pre>
                     ) : (
-                      <p className="text-sm text-muted-foreground">Esperando resumen del análisis...</p>
+                      <p className="text-sm text-muted-foreground">No hay resumen disponible</p>
                     )}
                   </div>
                 </ScrollArea>
