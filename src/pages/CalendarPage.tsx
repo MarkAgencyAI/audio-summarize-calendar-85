@@ -14,14 +14,12 @@ export default function CalendarPage() {
   } = useAuth();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (!user) {
       navigate("/login");
     }
   }, [user, navigate]);
 
-  // Load events from localStorage
   useEffect(() => {
     const storedEvents = localStorage.getItem("events");
     if (storedEvents) {
@@ -29,17 +27,14 @@ export default function CalendarPage() {
     }
   }, []);
 
-  // Save events to localStorage when they change
   useEffect(() => {
     localStorage.setItem("events", JSON.stringify(events));
   }, [events]);
 
-  // Handle recording from state (if coming from dashboard)
   useEffect(() => {
     if (location.state?.recording) {
       const recording = location.state.recording;
       if (recording.keyPoints?.length > 0) {
-        // Create a dialog to add events from the recording
         const dialog = document.createElement("dialog");
         dialog.className = "fixed inset-0 flex items-center justify-center bg-black/50 z-50";
         dialog.innerHTML = `
@@ -64,27 +59,23 @@ export default function CalendarPage() {
         dialog.showModal();
         const suggestedEventsContainer = dialog.querySelector("#suggested-events");
 
-        // Create suggested events based on key points
-        if (suggestedEventsContainer) {
-          recording.keyPoints.forEach((point, index) => {
-            const now = new Date();
-            const eventDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (index + 1));
-            const eventEl = document.createElement("div");
-            eventEl.className = "flex items-center space-x-2";
-            eventEl.innerHTML = `
-              <input type="checkbox" id="event-${index}" class="h-4 w-4" checked />
-              <label for="event-${index}" class="flex-1 dark:text-white">
-                <div class="font-medium">${point}</div>
-                <div class="text-xs text-muted-foreground dark:text-white/60">
-                  ${format(eventDate, "PPP")}
-                </div>
-              </label>
-            `;
-            suggestedEventsContainer.appendChild(eventEl);
-          });
-        }
+        recording.keyPoints.forEach((point, index) => {
+          const now = new Date();
+          const eventDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (index + 1));
+          const eventEl = document.createElement("div");
+          eventEl.className = "flex items-center space-x-2";
+          eventEl.innerHTML = `
+            <input type="checkbox" id="event-${index}" class="h-4 w-4" checked />
+            <label for="event-${index}" class="flex-1 dark:text-white">
+              <div class="font-medium">${point}</div>
+              <div class="text-xs text-muted-foreground dark:text-white/60">
+                ${format(eventDate, "PPP")}
+              </div>
+            </label>
+          `;
+          suggestedEventsContainer.appendChild(eventEl);
+        });
 
-        // Add event listeners
         const cancelButton = dialog.querySelector("#cancel-button");
         const addButton = dialog.querySelector("#add-button");
         if (cancelButton) {
@@ -95,7 +86,6 @@ export default function CalendarPage() {
         }
         if (addButton) {
           addButton.addEventListener("click", () => {
-            // Get selected events
             const checkboxes = dialog.querySelectorAll("input[type=checkbox]:checked");
             checkboxes.forEach((checkbox, index) => {
               const now = new Date();
@@ -115,7 +105,6 @@ export default function CalendarPage() {
         }
       }
 
-      // Clear the state
       navigate("/calendar", {
         replace: true
       });
@@ -139,8 +128,10 @@ export default function CalendarPage() {
       <div className="space-y-6 max-w-full overflow-hidden">
         <h1 className="text-2xl md:text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">Calendario</h1>
         
-        <div className="glassmorphism rounded-xl p-3 md:p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40 overflow-hidden">
-          <Calendar events={events} onAddEvent={handleAddEvent} onDeleteEvent={handleDeleteEvent} />
+        <div className="glassmorphism rounded-xl p-3 md:p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40 overflow-hidden w-full">
+          <div className="w-full overflow-x-auto">
+            <Calendar events={events} onAddEvent={handleAddEvent} onDeleteEvent={handleDeleteEvent} />
+          </div>
         </div>
       </div>
     </Layout>
