@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Folder, Mic, FileText } from "lucide-react";
 import { LiveTranscriptionSheet } from "@/components/LiveTranscriptionSheet";
+import { toast } from "sonner";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -53,22 +54,39 @@ export default function Dashboard() {
     setSelectedFolder(folderId);
   };
 
-  // Handle transcription updates from AudioRecorder
-  const handleTranscriptionUpdate = (transcriptionData: any) => {
-    setIsTranscribing(true);
-    setLiveTranscription({
-      transcript: transcriptionData.transcript || "",
-      translation: transcriptionData.translation || "",
-      keyPoints: transcriptionData.keyPoints || [],
-      language: transcriptionData.language || "es",
-      summary: transcriptionData.summary || ""
-    });
+  // Create a custom event handler for the AudioRecorder that will be passed to data-* attributes
+  // and handled via event listeners
+  const handleAudioRecorderMessage = (event: CustomEvent) => {
+    const { type, data } = event.detail;
+    
+    if (type === 'transcriptionUpdate') {
+      setIsTranscribing(true);
+      setLiveTranscription({
+        transcript: data.transcript || "",
+        translation: data.translation || "",
+        keyPoints: data.keyPoints || [],
+        language: data.language || "es",
+        summary: data.summary || ""
+      });
+    } else if (type === 'transcriptionComplete') {
+      setIsTranscribing(false);
+      toast.success("Transcripción completada");
+    }
   };
-
-  // Handle transcription complete
-  const handleTranscriptionComplete = () => {
-    setIsTranscribing(false);
-  };
+  
+  // Add event listener on component mount
+  React.useEffect(() => {
+    // Use a typed event listener
+    const handleEvent = (e: Event) => {
+      handleAudioRecorderMessage(e as CustomEvent);
+    };
+    
+    window.addEventListener('audioRecorderMessage', handleEvent);
+    
+    return () => {
+      window.removeEventListener('audioRecorderMessage', handleEvent);
+    };
+  }, []);
 
   return (
     <Layout>
@@ -110,10 +128,9 @@ export default function Dashboard() {
           /* Teacher section: PDF Uploader */
           <PdfUploader />
         ) : (
-          /* Student section: Audio Recorder with transcription callbacks */
+          /* Student section: Audio Recorder - we'll use data attributes instead of props */
           <AudioRecorder 
-            onTranscriptionUpdate={handleTranscriptionUpdate}
-            onTranscriptionComplete={handleTranscriptionComplete}
+            data-enable-messaging="true"
           />
         )}
         
