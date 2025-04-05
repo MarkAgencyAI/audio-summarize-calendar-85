@@ -1,4 +1,3 @@
-
 import { useState, useRef, useCallback } from "react";
 import { transcribeAudio } from "@/lib/groq";
 
@@ -11,23 +10,18 @@ export function useAudioProcessor() {
   const dataArrayRef = useRef<Uint8Array | null>(null);
   const processingIntervalRef = useRef<number | null>(null);
   
-  // Audio processing setup
   const setupAudioProcessing = useCallback((stream: MediaStream) => {
-    // Create audio context
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     audioContextRef.current = audioContext;
     
-    // Create analyser
     const analyser = audioContext.createAnalyser();
     analyser.fftSize = 2048;
     analyserRef.current = analyser;
     
-    // Create buffer
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
     dataArrayRef.current = dataArray;
     
-    // Connect stream to analyser
     const source = audioContext.createMediaStreamSource(stream);
     streamSourceRef.current = source;
     source.connect(analyser);
@@ -40,7 +34,6 @@ export function useAudioProcessor() {
     };
   }, []);
   
-  // Process audio from stream to detect voice activity and noise levels
   const processAudioStream = useCallback((
     onUpdate: (data: { 
       hasVoice: boolean; 
@@ -50,25 +43,20 @@ export function useAudioProcessor() {
   ) => {
     if (!analyserRef.current || !dataArrayRef.current) return;
     
-    // Start processing loop
     processingIntervalRef.current = window.setInterval(() => {
       const analyser = analyserRef.current;
       const dataArray = dataArrayRef.current;
       
       if (!analyser || !dataArray) return;
       
-      // Get frequency data
       analyser.getByteFrequencyData(dataArray);
       
-      // Calculate average level
       let sum = 0;
       for (let i = 0; i < dataArray.length; i++) {
         sum += dataArray[i];
       }
       const avgLevel = sum / dataArray.length;
       
-      // Check for voice (higher frequencies between 300Hz-3000Hz will be stronger)
-      // This is a simplified approach, would need more complex processing for accurate voice detection
       const voiceFreqStart = Math.floor(300 * dataArray.length / (analyser.context.sampleRate / 2));
       const voiceFreqEnd = Math.floor(3000 * dataArray.length / (analyser.context.sampleRate / 2));
       
@@ -78,16 +66,14 @@ export function useAudioProcessor() {
       }
       const voiceAvg = voiceSum / (voiceFreqEnd - voiceFreqStart);
       
-      // Detect voice if voice frequency average is significantly higher than overall average
       const hasVoice = voiceAvg > 20 && voiceAvg > avgLevel * 1.5;
       
-      // Call the update function with the processed data
       onUpdate({
         hasVoice,
         noiseLevel: avgLevel,
-        frequencyData: new Uint8Array(dataArray) // Clone array to avoid mutations
+        frequencyData: new Uint8Array(dataArray)
       });
-    }, 100); // Update at 10Hz
+    }, 100);
     
     return () => {
       if (processingIntervalRef.current) {
@@ -97,7 +83,6 @@ export function useAudioProcessor() {
     };
   }, []);
   
-  // Clean up audio processing resources
   const cleanupAudioProcessing = useCallback(() => {
     if (processingIntervalRef.current) {
       clearInterval(processingIntervalRef.current);
@@ -118,30 +103,25 @@ export function useAudioProcessor() {
     dataArrayRef.current = null;
   }, []);
   
-  // Process completed audio file
   const processAudioFile = async (
     audioBlob: Blob,
-    subject?: string,
     onTranscriptionProgress?: (data: any) => void
   ) => {
     setIsProcessing(true);
     setProgress(0);
     
     try {
-      // Simulate progress updates (since the actual API doesn't provide progress)
       let progressInterval: number | null = null;
       if (onTranscriptionProgress) {
         progressInterval = window.setInterval(() => {
           setProgress((prev) => {
             const newProgress = Math.min(prev + 5, 90);
             
-            // Call the progress callback with dummy data to show in UI
             if (newProgress > 10 && newProgress % 20 === 0) {
               onTranscriptionProgress({
-                transcript: "Transcripción en progreso...",
-                keyPoints: ["Procesando audio..."],
-                language: "es",
-                summary: "Generando resumen..."
+                transcript: "Transcribiendo audio...",
+                keyPoints: ["Analizando grabación..."],
+                language: "es"
               });
             }
             
@@ -150,10 +130,8 @@ export function useAudioProcessor() {
         }, 500);
       }
       
-      // Actually transcribe the audio
-      const result = await transcribeAudio(audioBlob, subject);
+      const result = await transcribeAudio(audioBlob);
       
-      // Clear the simulated progress interval
       if (progressInterval) {
         clearInterval(progressInterval);
       }

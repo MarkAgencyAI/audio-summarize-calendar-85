@@ -1,6 +1,6 @@
 
 import { useState, useRef, useEffect } from "react";
-import { Mic, X, Play, Pause, Loader2, Square, BookOpen } from "lucide-react";
+import { Mic, X, Play, Pause, Loader2, Square } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -9,13 +9,14 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
 import { transcribeAudio, blobToBase64 } from "@/lib/groq";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useAudioProcessor } from "@/hooks/use-audio-processor";
 
 type RecordingState = "idle" | "recording" | "paused";
 
 export function AudioRecorder() {
   const { addRecording, folders } = useRecordings();
   const { user } = useAuth();
+  const { processAudioFile } = useAudioProcessor();
   
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
@@ -25,8 +26,6 @@ export function AudioRecorder() {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState("default");
-  const [subjectName, setSubjectName] = useState("");
-  const [showSubjectDialog, setShowSubjectDialog] = useState(false);
   
   const [hasPermission, setHasPermission] = useState(false);
   
@@ -44,10 +43,6 @@ export function AudioRecorder() {
     
     checkPermissions();
   }, []);
-  
-  const initiateRecording = () => {
-    setShowSubjectDialog(true);
-  };
   
   const startRecording = async () => {
     if (!hasPermission) {
@@ -139,6 +134,25 @@ export function AudioRecorder() {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
   
+  const dispatchTranscriptionUpdate = (data: any) => {
+    const event = new CustomEvent('audioRecorderMessage', {
+      detail: {
+        type: 'transcriptionUpdate',
+        data
+      }
+    });
+    window.dispatchEvent(event);
+  };
+  
+  const dispatchTranscriptionComplete = () => {
+    const event = new CustomEvent('audioRecorderMessage', {
+      detail: {
+        type: 'transcriptionComplete'
+      }
+    });
+    window.dispatchEvent(event);
+  };
+  
   const saveRecording = async (audioBlob: Blob) => {
     try {
       setIsProcessing(true);
@@ -151,22 +165,28 @@ export function AudioRecorder() {
       
       let transcriptionResult;
       try {
-        // Use the real GROQ API for transcription
-        transcriptionResult = await transcribeAudio(audioBlob, subjectName);
+        // Update the progress UI via events
+        dispatchTranscriptionUpdate({
+          transcript: "Iniciando transcripción...",
+          keyPoints: ["Procesando audio..."],
+          language: "es"
+        });
+        
+        // Use the real GROQ API for transcription without relying on subject
+        transcriptionResult = await transcribeAudio(audioBlob);
+        
+        if (!transcriptionResult || !transcriptionResult.transcript) {
+          throw new Error("No se pudo transcribir el audio correctamente");
+        }
+        
         toast.success("Audio transcrito correctamente");
+        dispatchTranscriptionComplete();
       } catch (error) {
         console.error("Error transcribing audio:", error);
-        toast.error("Error al transcribir el audio. Se usará un texto genérico.");
+        toast.error("Error al transcribir el audio. No se pudo procesar.");
         
-        // Provide default values if transcription fails
-        transcriptionResult = {
-          transcript: "Error en la transcripción. No se pudo procesar el audio.",
-          summary: "No se pudo generar un resumen debido a un error en la transcripción.",
-          keyPoints: ["Error al procesar el audio"],
-          language: "es",
-          subject: subjectName || "Sin materia especificada",
-          suggestedEvents: []
-        };
+        // Don't provide default values - treat this as a real error
+        throw error;
       }
       
       // Add the recording with all data
@@ -175,12 +195,12 @@ export function AudioRecorder() {
         audioUrl,
         audioData: base64AudioData as string,
         transcript: transcriptionResult.transcript,
-        summary: transcriptionResult.summary,
-        keyPoints: transcriptionResult.keyPoints,
+        summary: transcriptionResult.summary || "",
+        keyPoints: transcriptionResult.keyPoints || [],
         folderId: selectedFolder,
         duration: recordingDuration,
-        language: transcriptionResult.language,
-        subject: subjectName,
+        language: transcriptionResult.language || "es",
+        subject: transcriptionResult.subject || "",
         suggestedEvents: transcriptionResult.suggestedEvents || []
       });
       
@@ -190,7 +210,6 @@ export function AudioRecorder() {
       setRecordingName('');
       setAudioBlob(null);
       setRecordingDuration(0);
-      setSubjectName('');
       
       toast.success('Grabación guardada correctamente');
     } catch (error) {
@@ -208,7 +227,7 @@ export function AudioRecorder() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             {recordingState === "idle" && (
-              <Button onClick={initiateRecording} disabled={isProcessing} className="bg-custom-primary hover:bg-custom-primary/90 text-white">
+              <Button onClick={startRecording} disabled={isProcessing} className="bg-custom-primary hover:bg-custom-primary/90 text-white">
                 <Mic className="h-4 w-4 mr-2" />
                 Grabar
               </Button>
@@ -258,17 +277,6 @@ export function AudioRecorder() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="subject-name" className="text-custom-text">Materia</Label>
-              <Input
-                id="subject-name"
-                placeholder="Materia de la grabación"
-                value={subjectName}
-                onChange={(e) => setSubjectName(e.target.value)}
-                className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
-              />
-            </div>
-            
-            <div className="space-y-2">
               <Label htmlFor="folder" className="text-custom-text">Carpeta</Label>
               <select
                 id="folder"
@@ -310,48 +318,6 @@ export function AudioRecorder() {
           </div>
         )}
       </div>
-      
-      {/* Subject Dialog */}
-      <Dialog open={showSubjectDialog} onOpenChange={setShowSubjectDialog}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Información de la grabación</DialogTitle>
-            <DialogDescription>
-              Ingresa la materia o asignatura relacionada con esta grabación
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="subject" className="text-right col-span-1">
-                Materia
-              </Label>
-              <div className="col-span-3 flex items-center gap-2">
-                <BookOpen className="h-4 w-4 text-gray-500" />
-                <Input
-                  id="subject"
-                  value={subjectName}
-                  onChange={(e) => setSubjectName(e.target.value)}
-                  placeholder="Ej: Matemáticas, Historia, Ciencias..."
-                  className="col-span-3"
-                />
-              </div>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSubjectDialog(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={() => {
-              setShowSubjectDialog(false);
-              startRecording();
-            }} disabled={!subjectName.trim()}>
-              Comenzar grabación
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

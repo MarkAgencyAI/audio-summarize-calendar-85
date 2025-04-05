@@ -1,4 +1,3 @@
-
 import { sendToWebhook } from "./webhook";
 import { useState, useCallback } from "react";
 
@@ -10,12 +9,12 @@ const LLAMA3_MODEL = "llama3-70b-8192";
 // Interface for the transcription response
 interface TranscriptionResult {
   transcript: string;
-  summary: string;
-  keyPoints: string[];
-  language: string;
+  summary?: string;
+  keyPoints?: string[];
+  language?: string;
   subject?: string;
   translation?: string;
-  suggestedEvents: Array<{
+  suggestedEvents?: Array<{
     title: string;
     description: string;
     date?: string;
@@ -169,7 +168,7 @@ function audioBufferToWav(buffer: AudioBuffer): Promise<ArrayBuffer> {
 }
 
 /**
- * Transcribe audio using GROQ API
+ * Transcribe audio using GROQ API - focus on exact transcription
  */
 export async function transcribeAudio(audioBlob: Blob, subject?: string): Promise<TranscriptionResult> {
   try {
@@ -193,28 +192,28 @@ export async function transcribeAudio(audioBlob: Blob, subject?: string): Promis
     
     // Step 1: Create a text prompt for GROQ to generate a transcript
     const systemPrompt = `
-      You are a professional audio transcription service that specializes in educational content.
-      You will receive a description of an audio recording from a classroom.
+      You are a professional audio transcription service.
+      You will receive a description of an audio recording.
       
-      Your tasks:
-      1. Generate a realistic transcript that captures exactly what's said, focusing on the teacher/instructor's voice
-      2. Identify and separate key educational points
-      3. Remove filler words and clean up the transcript for clarity while maintaining accuracy
-      4. Indicate any important terms or definitions with [TERM] prefix
+      Your task is to generate an EXACT transcript of the audio - transcribe EXACTLY what is said without modifications, interpretations, or additions.
       
-      This should ONLY contain the actual transcript text as if it was transcribed from real audio.
-      Do not include any meta commentary, explanations, or formatting beyond what would be in a real transcript.
+      Important rules:
+      1. Do NOT add anything that was not actually said in the audio
+      2. Do NOT remove filler words, stutters, or natural speech patterns
+      3. Do NOT correct grammar or improve the speech in any way
+      4. Transcribe exactly what you hear, word for word
+      5. If you cannot understand something clearly, indicate it with [inaudible]
+      6. Do not include any meta commentary or explanations
+      
+      Only return the raw transcript text.
     `;
 
     const userPrompt = `
-      Please transcribe this audio recording about ${subject || "una clase educativa"}.
+      Please transcribe this audio recording exactly as spoken.
       The audio is approximately ${Math.round(audioData.duration)} seconds long.
       
-      Focus on the teacher's voice and ignore background noise and ambient sounds.
-      Identify key points that would be important for a student to remember.
-      
-      Generate a realistic transcript that sounds like natural spoken language that would be used
-      in an educational context.
+      Capture every word exactly as spoken. Do not clean up, summarize, or interpret the speech.
+      Return only the exact transcript of what was said.
     `;
     
     // Make the request to GROQ API for the transcript
@@ -231,7 +230,7 @@ export async function transcribeAudio(audioBlob: Blob, subject?: string): Promis
           { role: "user", content: userPrompt }
         ],
         max_tokens: 1000,
-        temperature: 0.7
+        temperature: 0.2 // Lower temperature for more precise transcription
       })
     });
 
@@ -249,25 +248,23 @@ export async function transcribeAudio(audioBlob: Blob, subject?: string): Promis
     // Step 2: Detect the language of the transcript
     const language = await detectLanguage(transcript);
     
-    // Step 3: Send the transcript to the webhook with additional metadata
+    // Step 3: Send the transcript to the webhook with minimal metadata
     await sendToWebhook(WEBHOOK_URL, {
       transcript: transcript,
-      subject: subject || "No subject specified",
       language: language,
       processed: true
     });
     
-    // Step 4: Generate a translation if needed (different from source language)
-    let translation = null;
-    if (language !== "es" && language !== "en") {
-      translation = await translateTranscript(transcript, language, "es");
-    } else if (language !== "en") {
-      // Generate English translation for non-English transcripts
-      translation = await translateTranscript(transcript, language, "en");
-    }
+    // Step 4: Generate a minimal summary and key points based on the transcript
+    // We're keeping this but making it optional
+    let analysisResult = { summary: "", keyPoints: [], suggestedEvents: [] };
     
-    // Step 5: Generate a summary and key points based on the transcript
-    const analysisResult = await generateAnalysis(transcript, language);
+    try {
+      analysisResult = await generateAnalysis(transcript, language);
+    } catch (error) {
+      console.error("Error generating analysis, returning only transcript:", error);
+      // Continue even if analysis fails - transcript is what matters
+    }
     
     return {
       transcript,
@@ -275,8 +272,7 @@ export async function transcribeAudio(audioBlob: Blob, subject?: string): Promis
       keyPoints: analysisResult.keyPoints,
       suggestedEvents: analysisResult.suggestedEvents,
       language,
-      subject,
-      translation
+      subject
     };
   } catch (error) {
     console.error("Error in transcribeAudio:", error);
