@@ -1,6 +1,5 @@
-
 import React, { useState } from "react";
-import { useRecordings, Folder, Grade } from "@/context/RecordingsContext";
+import { useRecordings, Folder, Grade, Recording } from "@/context/RecordingsContext";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
@@ -25,7 +24,12 @@ import {
   Plus,
   X,
   Award,
-  Star
+  Star,
+  FileText,
+  Play,
+  Pause,
+  Clock,
+  Calendar
 } from "lucide-react";
 import { 
   Select, 
@@ -38,6 +42,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RecordingDetails } from "@/components/RecordingDetails";
+import { formatDate, formatTimeFromSeconds } from "@/lib/utils";
 
 // Definir iconos académicos
 interface IconOption {
@@ -152,6 +158,85 @@ const GradeItem = ({ grade, onDelete, onEdit }: { grade: Grade, onDelete: () => 
   );
 };
 
+// Recording Item component - New component for displaying recordings in folders
+const RecordingListItem = ({ recording }: { recording: Recording }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [showRecordingDetails, setShowRecordingDetails] = useState(false);
+  
+  // Toggle audio playback
+  const togglePlay = () => {
+    if (!audioElement) {
+      const audio = new Audio(recording.audioUrl);
+      setAudioElement(audio);
+      
+      audio.addEventListener('ended', () => {
+        setIsPlaying(false);
+      });
+      
+      audio.play();
+      setIsPlaying(true);
+    } else {
+      if (isPlaying) {
+        audioElement.pause();
+      } else {
+        audioElement.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+  
+  // Clean up audio element on unmount
+  React.useEffect(() => {
+    return () => {
+      if (audioElement) {
+        audioElement.pause();
+        audioElement.src = "";
+      }
+    };
+  }, [audioElement]);
+  
+  return (
+    <>
+      <div className="flex items-center justify-between bg-background/80 p-2 rounded-md mb-2">
+        <div className="flex items-center max-w-[70%]">
+          <FileText className="h-4 w-4 mr-2 text-blue-500" />
+          <span className="text-sm truncate">{recording.name}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-gray-500 mr-2">
+            {formatTimeFromSeconds(recording.duration)}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0"
+            onClick={togglePlay}
+          >
+            {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0 text-blue-500"
+            onClick={() => setShowRecordingDetails(true)}
+          >
+            <FileText className="h-3 w-3" />
+          </Button>
+        </div>
+      </div>
+      
+      {showRecordingDetails && (
+        <RecordingDetails 
+          recording={recording} 
+          isOpen={showRecordingDetails} 
+          onOpenChange={setShowRecordingDetails}
+        />
+      )}
+    </>
+  );
+};
+
 export function FolderSystem() {
   const {
     folders,
@@ -162,7 +247,8 @@ export function FolderSystem() {
     updateGrade,
     deleteGrade,
     getFolderGrades,
-    calculateFolderAverage
+    calculateFolderAverage,
+    recordings
   } = useRecordings();
   const [showAddFolderDialog, setShowAddFolderDialog] = useState(false);
   const [showEditFolderDialog, setShowEditFolderDialog] = useState(false);
@@ -171,6 +257,7 @@ export function FolderSystem() {
   const [folderColor, setFolderColor] = useState("#3b82f6");
   const [folderIcon, setFolderIcon] = useState("folder");
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
+  const [expandedSections, setExpandedSections] = useState<Record<string, Record<string, boolean>>>({});
   const [showAddGradeDialog, setShowAddGradeDialog] = useState(false);
   const [gradeName, setGradeName] = useState("");
   const [gradeScore, setGradeScore] = useState("7");
@@ -180,6 +267,16 @@ export function FolderSystem() {
     setExpandedFolders(prev => ({
       ...prev,
       [folderId]: !prev[folderId]
+    }));
+  };
+  
+  const toggleSection = (folderId: string, section: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [folderId]: {
+        ...(prev[folderId] || {}),
+        [section]: !(prev[folderId] && prev[folderId][section])
+      }
     }));
   };
 
@@ -260,6 +357,11 @@ export function FolderSystem() {
     updateGrade(gradeId, { score });
     toast.success("Nota actualizada");
   };
+  
+  // Function to get recordings for a specific folder
+  const getFolderRecordings = (folderId: string) => {
+    return recordings.filter(recording => recording.folderId === folderId);
+  };
 
   return (
     <div className="p-2 md:p-4 flex-1">
@@ -281,8 +383,14 @@ export function FolderSystem() {
       <div className="grid gap-4 grid-cols-1">
         {folders.map(folder => {
           const folderGrades = getFolderGrades(folder.id);
+          const folderRecordings = getFolderRecordings(folder.id);
           const average = calculateFolderAverage(folder.id);
           const isExpanded = !!expandedFolders[folder.id];
+          
+          // Check if sections are expanded
+          const sectionsState = expandedSections[folder.id] || {};
+          const isGradesExpanded = !!sectionsState["grades"];
+          const isRecordingsExpanded = !!sectionsState["recordings"];
           
           return (
             <Card 
@@ -341,33 +449,87 @@ export function FolderSystem() {
               
               {isExpanded && (
                 <CardContent className="p-4 pt-0">
-                  <div className="flex justify-between items-center mb-3">
-                    <h3 className="text-sm font-medium">Evaluaciones</h3>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-8 text-xs" 
-                      onClick={() => openAddGradeDialog(folder.id)}
+                  {/* Sección de Evaluaciones */}
+                  <div className="mb-4">
+                    <div 
+                      className="flex justify-between items-center mb-3 cursor-pointer"
+                      onClick={() => toggleSection(folder.id, "grades")}
                     >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Agregar nota
-                    </Button>
+                      <h3 className="text-sm font-medium flex items-center">
+                        <Award className="h-4 w-4 mr-1 text-yellow-500" />
+                        Evaluaciones
+                        {folderGrades.length > 0 && (
+                          <span className="ml-2 bg-gray-200 dark:bg-gray-700 text-xs px-2 py-0.5 rounded-full">
+                            {folderGrades.length}
+                          </span>
+                        )}
+                      </h3>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-8 text-xs" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openAddGradeDialog(folder.id);
+                        }}
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Agregar nota
+                      </Button>
+                    </div>
+                    
+                    {isGradesExpanded && (
+                      <div className="bg-background/50 p-3 rounded-md">
+                        {folderGrades.length === 0 ? (
+                          <div className="text-center text-muted-foreground py-2 text-sm">
+                            No hay evaluaciones registradas
+                          </div>
+                        ) : (
+                          folderGrades.map(grade => (
+                            <GradeItem 
+                              key={grade.id} 
+                              grade={grade} 
+                              onDelete={() => deleteGrade(grade.id)}
+                              onEdit={(score) => handleUpdateGrade(grade.id, score)}
+                            />
+                          ))
+                        )}
+                      </div>
+                    )}
                   </div>
                   
-                  <div className="bg-background/50 p-3 rounded-md">
-                    {folderGrades.length === 0 ? (
-                      <div className="text-center text-muted-foreground py-2 text-sm">
-                        No hay evaluaciones registradas
+                  {/* Sección de Grabaciones */}
+                  <div className="mb-4">
+                    <div 
+                      className="flex justify-between items-center mb-3 cursor-pointer"
+                      onClick={() => toggleSection(folder.id, "recordings")}
+                    >
+                      <h3 className="text-sm font-medium flex items-center">
+                        <FileText className="h-4 w-4 mr-1 text-blue-500" />
+                        Grabaciones
+                        {folderRecordings.length > 0 && (
+                          <span className="ml-2 bg-gray-200 dark:bg-gray-700 text-xs px-2 py-0.5 rounded-full">
+                            {folderRecordings.length}
+                          </span>
+                        )}
+                      </h3>
+                    </div>
+                    
+                    {isRecordingsExpanded && (
+                      <div className="bg-background/50 p-3 rounded-md">
+                        {folderRecordings.length === 0 ? (
+                          <div className="text-center text-muted-foreground py-2 text-sm">
+                            No hay grabaciones en esta materia
+                          </div>
+                        ) : (
+                          folderRecordings.map(recording => (
+                            <RecordingListItem 
+                              key={recording.id} 
+                              recording={recording} 
+                            />
+                          ))
+                        )}
                       </div>
-                    ) : (
-                      folderGrades.map(grade => (
-                        <GradeItem 
-                          key={grade.id} 
-                          grade={grade} 
-                          onDelete={() => deleteGrade(grade.id)}
-                          onEdit={(score) => handleUpdateGrade(grade.id, score)}
-                        />
-                      ))
                     )}
                   </div>
                 </CardContent>
