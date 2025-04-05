@@ -1,4 +1,3 @@
-
 import { ReactNode, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -48,9 +47,9 @@ export function Layout({ children }: LayoutProps) {
     <div className="flex min-h-screen bg-background text-foreground antialiased">
       {/* Mobile Top Navbar */}
       {isMobile && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-card dark:bg-card border-b border-border dark:border-border h-14 flex items-center justify-between px-4">
+        <div className="fixed top-0 left-0 right-0 z-50 bg-card dark:bg-card border-b border-border dark:border-border h-16 flex items-center justify-between px-4">
           <div onClick={() => navigate("/dashboard")} className="cursor-pointer">
-            <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="h-8" />
+            <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="h-12 w-12 object-contain" />
           </div>
           <ThemeToggle />
         </div>
@@ -63,10 +62,10 @@ export function Layout({ children }: LayoutProps) {
         }`}>
           <div className="p-4 border-b border-sidebar-border dark:border-sidebar-border flex items-center justify-between">
             <div className={`${sidebarOpen ? 'hidden md:block' : 'hidden'}`}>
-              <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="h-8" />
+              <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="h-12 w-12 object-contain" />
             </div>
             <div className={`${sidebarOpen ? 'block md:hidden' : 'hidden'}`}>
-              <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="h-8 w-8 object-contain" />
+              <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="h-10 w-10 object-contain" />
             </div>
           </div>
           
