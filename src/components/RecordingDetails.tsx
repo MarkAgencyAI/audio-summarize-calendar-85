@@ -41,9 +41,9 @@ export function RecordingDetails({
   const [newName, setNewName] = useState(recording.name);
   const [isOpen, setIsOpenState] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState(recording.folderId);
-  const [isEditingSummary, setIsEditingSummary] = useState(false);
-  const [editedSummary, setEditedSummary] = useState(recording.summary || "");
-  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [isEditingOutput, setIsEditingOutput] = useState(false);
+  const [editedOutput, setEditedOutput] = useState(recording.output || "");
+  const [isGeneratingOutput, setIsGeneratingOutput] = useState(false);
   
   // Use controlled or uncontrolled state based on whether props are provided
   const dialogOpen = propIsOpen !== undefined ? propIsOpen : isOpen;
@@ -91,51 +91,44 @@ export function RecordingDetails({
     toast.success("Carpeta actualizada");
   };
   
-  const handleSaveSummary = async () => {
-    // Send updated summary to webhook
+  const handleSaveOutput = async () => {
+    // Send updated output to webhook
     await sendToWebhook(WEBHOOK_URL, {
-      type: "summary_update",
+      type: "output_update",
       recordingId: recording.id,
-      summary: editedSummary,
+      output: editedOutput,
       timestamp: new Date().toISOString()
     });
     
     updateRecording(recording.id, {
-      summary: editedSummary
+      output: editedOutput
     });
-    setIsEditingSummary(false);
-    toast.success("Resumen actualizado");
+    setIsEditingOutput(false);
+    toast.success("Contenido actualizado");
   };
   
-  const handleCancelSummaryEdit = () => {
-    setEditedSummary(recording.summary || "");
-    setIsEditingSummary(false);
+  const handleCancelOutputEdit = () => {
+    setEditedOutput(recording.output || "");
+    setIsEditingOutput(false);
   };
 
-  const generateSummaryWithGroq = async () => {
-    if (!recording.transcript) {
-      toast.error("No hay transcripción para generar un resumen");
-      return;
-    }
-
+  const generateOutputWithGroq = async () => {
     try {
-      setIsGeneratingSummary(true);
-      toast.info("Generando resumen con IA...");
+      setIsGeneratingOutput(true);
+      toast.info("Generando contenido con IA...");
 
-      // First, send the transcript to the webhook
+      // Send a request to the webhook to indicate we're starting a generation
       await sendToWebhook(WEBHOOK_URL, {
-        type: "generating_summary",
+        type: "generating_output",
         recordingId: recording.id,
-        transcript: recording.transcript,
+        audioUrl: recording.audioUrl,
         timestamp: new Date().toISOString()
       });
 
-      // Generate a prompt for the summary
-      const prompt = `Genera un resumen conciso de la siguiente transcripción. Destaca los puntos principales, las fechas importantes si las hay, y organiza la información de forma clara y coherente. Si hay temas educativos, enfócate en explicarlos de manera didáctica:
+      // Generate a prompt for the analysis
+      const prompt = `Genera un análisis del siguiente audio. Destaca los puntos principales, las fechas importantes si las hay, y organiza la información de forma clara y coherente. Si hay temas educativos, enfócate en explicarlos de manera didáctica.
 
-${recording.transcript}
-
-Por favor proporciona un resumen bien estructurado de aproximadamente 5-10 oraciones.`;
+Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 oraciones.`;
 
       // Call the GROQ API
       const response = await llama3({
@@ -150,69 +143,69 @@ Por favor proporciona un resumen bien estructurado de aproximadamente 5-10 oraci
       });
 
       if (response && response.choices && response.choices[0]?.message?.content) {
-        const summary = response.choices[0].message.content;
+        const output = response.choices[0].message.content;
         
-        // Send the generated summary to the webhook
+        // Send the generated output to the webhook
         await sendToWebhook(WEBHOOK_URL, {
-          type: "generated_summary",
+          type: "generated_output",
           recordingId: recording.id,
-          summary: summary,
+          output: output,
           timestamp: new Date().toISOString()
         });
         
-        // Update the recording with the generated summary
+        // Update the recording with the generated output
         updateRecording(recording.id, {
-          summary: summary
+          output: output
         });
         
         // Update local state
-        setEditedSummary(summary);
+        setEditedOutput(output);
         
-        toast.success("Resumen generado exitosamente");
+        toast.success("Contenido generado exitosamente");
       } else {
-        // Try to generate a basic summary if the API fails
-        const simpleSummary = `Resumen generado localmente: Este es un resumen básico de la transcripción "${recording.name}" que contiene aproximadamente ${recording.transcript.length} caracteres.`;
+        // Try to generate a basic output if the API fails
+        const simpleOutput = `Contenido generado localmente: Este es un análisis básico de la grabación "${recording.name}" que contiene aproximadamente ${recording.audioData.length} caracteres.`;
         
-        // Send the simple summary to the webhook
+        // Send the simple output to the webhook
         await sendToWebhook(WEBHOOK_URL, {
-          type: "fallback_summary",
+          type: "fallback_output",
           recordingId: recording.id,
-          summary: simpleSummary,
+          output: simpleOutput,
           error: "No se pudo obtener respuesta de la API",
           timestamp: new Date().toISOString()
         });
         
-        // Update with simple summary
+        // Update with simple output
         updateRecording(recording.id, {
-          summary: simpleSummary
+          output: simpleOutput
         });
         
         // Update local state
-        setEditedSummary(simpleSummary);
+        setEditedOutput(simpleOutput);
         
-        toast.warning("Se generó un resumen básico debido a problemas con la API");
+        toast.warning("Se generó un contenido básico debido a problemas con la API");
       }
     } catch (error) {
-      console.error("Error al generar el resumen:", error);
+      console.error("Error al generar el contenido:", error);
       
       // Send error to webhook
       await sendToWebhook(WEBHOOK_URL, {
-        type: "summary_generation_error",
+        type: "output_generation_error",
         recordingId: recording.id,
         error: String(error),
         timestamp: new Date().toISOString()
       });
       
-      toast.error("Error al generar el resumen");
+      toast.error("Error al generar el contenido");
       
-      // Generate fallback summary
-      const errorSummary = "No se pudo generar un resumen automático. Por favor, intente más tarde o edite manualmente el resumen.";
-      setEditedSummary(errorSummary);
+      // Generate fallback output
+      const errorOutput = "No se pudo generar un análisis automático. Por favor, intente más tarde o edite manualmente el contenido.";
+      setEditedOutput(errorOutput);
       updateRecording(recording.id, {
-        summary: errorSummary
+        output: errorOutput
       });
     } finally {
-      setIsGeneratingSummary(false);
+      setIsGeneratingOutput(false);
     }
   };
 
@@ -307,10 +300,10 @@ Por favor proporciona un resumen bien estructurado de aproximadamente 5-10 oraci
             </Select>
           </div>
           
-          {recording.language && (
+          {recording.subject && (
             <div className="flex items-center gap-1 ml-auto text-xs bg-muted px-2 py-1 rounded-full dark:bg-custom-secondary/40 dark:text-white">
               <Globe className="h-3 w-3" />
-              <span>{getLanguageDisplay(recording.language)}</span>
+              <span>{recording.subject}</span>
             </div>
           )}
         </div>
@@ -322,15 +315,15 @@ Por favor proporciona un resumen bien estructurado de aproximadamente 5-10 oraci
             <div className="mb-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <h3 className="font-medium mb-2 dark:text-custom-accent text-[#005c5f] dark:text-[#f1f2f6]">
-                  Resumen
+                  Contenido
                 </h3>
                 <div className="flex gap-1 flex-wrap">
-                  {isEditingSummary ? (
+                  {isEditingOutput ? (
                     <>
-                      <Button variant="ghost" size="sm" onClick={handleSaveSummary} className="h-7 py-0">
+                      <Button variant="ghost" size="sm" onClick={handleSaveOutput} className="h-7 py-0">
                         <Save className="h-3.5 w-3.5 mr-1" /> Guardar
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={handleCancelSummaryEdit} className="h-7 py-0">
+                      <Button variant="ghost" size="sm" onClick={handleCancelOutputEdit} className="h-7 py-0">
                         <X className="h-3.5 w-3.5 mr-1" /> Cancelar
                       </Button>
                     </>
@@ -339,7 +332,7 @@ Por favor proporciona un resumen bien estructurado de aproximadamente 5-10 oraci
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        onClick={() => setIsEditingSummary(true)} 
+                        onClick={() => setIsEditingOutput(true)} 
                         className="h-7 py-0"
                       >
                         <Edit className="h-3.5 w-3.5 mr-1" /> Editar
@@ -347,11 +340,11 @@ Por favor proporciona un resumen bien estructurado de aproximadamente 5-10 oraci
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={generateSummaryWithGroq}
-                        disabled={isGeneratingSummary || isGroqLoading}
+                        onClick={generateOutputWithGroq}
+                        disabled={isGeneratingOutput || isGroqLoading}
                         className="h-7 py-0"
                       >
-                        {isGeneratingSummary ? 'Generando...' : 'Generar con IA'}
+                        {isGeneratingOutput ? 'Generando...' : 'Generar con IA'}
                       </Button>
                     </>
                   )}
@@ -359,35 +352,33 @@ Por favor proporciona un resumen bien estructurado de aproximadamente 5-10 oraci
               </div>
               
               <div className="prose prose-sm dark:prose-invert max-w-none">
-                {isEditingSummary ? (
+                {isEditingOutput ? (
                   <Textarea 
-                    value={editedSummary} 
-                    onChange={e => setEditedSummary(e.target.value)}
+                    value={editedOutput} 
+                    onChange={e => setEditedOutput(e.target.value)}
                     className="min-h-[150px] whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90"
                   />
                 ) : (
                   <pre className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 overflow-x-auto">
-                    {recording.summary || "No hay resumen disponible. Edita o genera un resumen con IA."}
+                    {recording.output || "No hay contenido disponible. Edita o genera contenido con IA."}
                   </pre>
                 )}
               </div>
             </div>
             
-            {recording.keyPoints && recording.keyPoints.length > 0 && (
+            {recording.suggestedEvents && recording.suggestedEvents.length > 0 && (
               <div className="mb-4">
-                <h3 className="font-medium mb-2 dark:text-custom-accent">Puntos clave</h3>
+                <h3 className="font-medium mb-2 dark:text-custom-accent">Eventos sugeridos</h3>
                 <ul className="space-y-1 ml-5 list-disc dark:text-white/90">
-                  {recording.keyPoints.map((point, index) => (
-                    <li key={index}>{point}</li>
+                  {recording.suggestedEvents.map((event, index) => (
+                    <li key={index}>
+                      <strong>{event.title}</strong>: {event.description}
+                      {event.date && <span className="text-sm text-muted-foreground ml-2">({event.date})</span>}
+                    </li>
                   ))}
                 </ul>
               </div>
             )}
-            
-            <h3 className="font-medium mb-2 dark:text-custom-accent">Transcripción completa</h3>
-            <pre className="whitespace-pre-wrap text-sm font-sans bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 overflow-x-auto">
-              {recording.transcript}
-            </pre>
           </ScrollArea>
         </div>
         

@@ -9,7 +9,7 @@ export interface Recording {
   name: string;
   audioUrl: string;
   audioData: string;
-  output: string; // Changed from transcript/summary/keyPoints to a single output field
+  output: string; // Contains the data from webhook
   createdAt: number;
   folderId: string;
   duration: number;
@@ -57,12 +57,13 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       { id: "default", name: "General", color: "#6366f1", createdAt: Date.now(), icon: "folder" }
     ];
     
-    // Update old recordings to use output field
+    // Convert any old recordings format to new format
     const updatedRecordings = savedRecordings.map(recording => {
-      if (!('output' in recording)) {
+      if (!('output' in recording) && 'transcript' in recording) {
+        const rec = recording as any; // Use any to access old properties
         return {
           ...recording,
-          output: recording.transcript || recording.summary || "No hay información disponible"
+          output: rec.transcript || rec.summary || "No hay información disponible"
         };
       }
       return recording;
