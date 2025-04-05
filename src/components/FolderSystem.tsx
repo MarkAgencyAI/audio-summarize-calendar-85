@@ -1,5 +1,6 @@
+
 import React, { useState } from "react";
-import { useRecordings, Folder } from "@/context/RecordingsContext";
+import { useRecordings, Folder, Grade } from "@/context/RecordingsContext";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
@@ -20,7 +21,11 @@ import {
   Languages,
   Folder as FolderIcon,
   Edit,
-  Trash
+  Trash,
+  Plus,
+  X,
+  Award,
+  Star
 } from "lucide-react";
 import { 
   Select, 
@@ -32,6 +37,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Definir iconos académicos
 interface IconOption {
@@ -73,12 +79,90 @@ const renderIcon = (iconName: string, color: string): JSX.Element => {
   return IconComponent;
 };
 
+// Grade component
+const GradeItem = ({ grade, onDelete, onEdit }: { grade: Grade, onDelete: () => void, onEdit: (score: number) => void }) => {
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [newScore, setNewScore] = useState(grade.score.toString());
+
+  const handleSaveEdit = () => {
+    const score = parseFloat(newScore);
+    if (isNaN(score) || score < 0 || score > 10) {
+      toast.error("La nota debe ser un número entre 0 y 10");
+      return;
+    }
+    onEdit(score);
+    setShowEditDialog(false);
+  };
+
+  return (
+    <>
+      <div className="flex items-center justify-between bg-background/80 p-2 rounded-md mb-2">
+        <div className="flex items-center">
+          <Star className="h-4 w-4 mr-2 text-yellow-500" />
+          <span className="text-sm">{grade.name}</span>
+        </div>
+        <div className="flex items-center">
+          <span className={`font-bold text-sm mr-4 ${grade.score >= 6 ? 'text-green-500' : 'text-red-500'}`}>
+            {grade.score.toFixed(1)}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-blue-500"
+            onClick={() => setShowEditDialog(true)}
+          >
+            <Edit className="h-3 w-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-red-500"
+            onClick={onDelete}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      </div>
+
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="sm:max-w-[350px]">
+          <DialogHeader>
+            <DialogTitle>Editar nota</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="mb-4">
+              <label className="block mb-2 text-sm font-medium">Nota (0-10)</label>
+              <Input
+                type="number"
+                min="0"
+                max="10"
+                step="0.1"
+                value={newScore}
+                onChange={(e) => setNewScore(e.target.value)}
+                className="w-full"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleSaveEdit}>Guardar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
 export function FolderSystem() {
   const {
     folders,
     addFolder,
     updateFolder,
-    deleteFolder
+    deleteFolder,
+    addGrade,
+    updateGrade,
+    deleteGrade,
+    getFolderGrades,
+    calculateFolderAverage
   } = useRecordings();
   const [showAddFolderDialog, setShowAddFolderDialog] = useState(false);
   const [showEditFolderDialog, setShowEditFolderDialog] = useState(false);
@@ -86,14 +170,26 @@ export function FolderSystem() {
   const [folderName, setFolderName] = useState("");
   const [folderColor, setFolderColor] = useState("#3b82f6");
   const [folderIcon, setFolderIcon] = useState("folder");
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
+  const [showAddGradeDialog, setShowAddGradeDialog] = useState(false);
+  const [gradeName, setGradeName] = useState("");
+  const [gradeScore, setGradeScore] = useState("7");
+  const [selectedFolderForGrade, setSelectedFolderForGrade] = useState<string | null>(null);
+
+  const toggleFolder = (folderId: string) => {
+    setExpandedFolders(prev => ({
+      ...prev,
+      [folderId]: !prev[folderId]
+    }));
+  };
 
   const handleAddFolder = () => {
     if (!folderName.trim()) {
-      toast.error("El nombre de la carpeta es obligatorio");
+      toast.error("El nombre de la materia es obligatorio");
       return;
     }
     addFolder(folderName, folderColor, folderIcon);
-    toast.success("Carpeta creada");
+    toast.success("Materia creada");
     setFolderName("");
     setFolderIcon("folder");
     setShowAddFolderDialog(false);
@@ -102,7 +198,7 @@ export function FolderSystem() {
   const handleEditFolder = () => {
     if (!selectedFolder) return;
     if (!folderName.trim()) {
-      toast.error("El nombre de la carpeta es obligatorio");
+      toast.error("El nombre de la materia es obligatorio");
       return;
     }
     updateFolder(selectedFolder.id, {
@@ -110,7 +206,7 @@ export function FolderSystem() {
       color: folderColor,
       icon: folderIcon
     });
-    toast.success("Carpeta actualizada");
+    toast.success("Materia actualizada");
     setSelectedFolder(null);
     setShowEditFolderDialog(false);
   };
@@ -118,11 +214,11 @@ export function FolderSystem() {
   const handleDeleteFolder = (folder: Folder) => {
     // Don't allow deleting the default folder
     if (folder.id === "default") {
-      toast.error("No puedes eliminar la carpeta predeterminada");
+      toast.error("No puedes eliminar la materia predeterminada");
       return;
     }
     deleteFolder(folder.id);
-    toast.success("Carpeta eliminada");
+    toast.success("Materia eliminada");
   };
 
   const openEditDialog = (folder: Folder) => {
@@ -133,10 +229,42 @@ export function FolderSystem() {
     setShowEditFolderDialog(true);
   };
 
+  const openAddGradeDialog = (folderId: string) => {
+    setSelectedFolderForGrade(folderId);
+    setGradeName("");
+    setGradeScore("7");
+    setShowAddGradeDialog(true);
+  };
+
+  const handleAddGrade = () => {
+    if (!selectedFolderForGrade) return;
+    if (!gradeName.trim()) {
+      toast.error("El nombre de la evaluación es obligatorio");
+      return;
+    }
+    
+    const score = parseFloat(gradeScore);
+    if (isNaN(score) || score < 0 || score > 10) {
+      toast.error("La nota debe ser un número entre 0 y 10");
+      return;
+    }
+    
+    addGrade(selectedFolderForGrade, gradeName, score);
+    toast.success("Nota agregada");
+    setGradeName("");
+    setGradeScore("7");
+    setShowAddGradeDialog(false);
+  };
+
+  const handleUpdateGrade = (gradeId: string, score: number) => {
+    updateGrade(gradeId, { score });
+    toast.success("Nota actualizada");
+  };
+
   return (
     <div className="p-2 md:p-4 flex-1">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold text-emerald-800 dark:text-emerald-400">Carpetas</h2>
+        <h2 className="text-xl font-bold text-emerald-800 dark:text-emerald-400">Materias</h2>
         <Button 
           onClick={() => {
             setFolderName("");
@@ -146,65 +274,114 @@ export function FolderSystem() {
           }}
           className="bg-gray-100 dark:bg-gray-800 text-black dark:text-white"
         >
-          Nueva carpeta
+          Nueva materia
         </Button>
       </div>
       
       <div className="grid gap-4 grid-cols-1">
-        {folders.map(folder => (
-          <div 
-            key={folder.id} 
-            className="w-full p-4 rounded border border-gray-300 dark:border-gray-600 mb-4" 
-            style={{
-              backgroundColor: `${folder.color}20`
-            }}
-          >
-            <div className="flex justify-between items-center flex-wrap gap-2">
-              <div className="flex items-center">
-                <div 
-                  className="h-10 w-10 rounded flex justify-center items-center flex-shrink-0" 
-                  style={{
-                    backgroundColor: folder.color
-                  }}
-                >
-                  {renderIcon(folder.icon || "folder", "#ffffff")}
+        {folders.map(folder => {
+          const folderGrades = getFolderGrades(folder.id);
+          const average = calculateFolderAverage(folder.id);
+          const isExpanded = !!expandedFolders[folder.id];
+          
+          return (
+            <Card 
+              key={folder.id} 
+              className="w-full border border-gray-300 dark:border-gray-600 overflow-hidden" 
+              style={{
+                backgroundColor: `${folder.color}10`
+              }}
+            >
+              <CardHeader className="p-4 pb-3">
+                <div className="flex justify-between items-center flex-wrap gap-2">
+                  <div className="flex items-center" onClick={() => toggleFolder(folder.id)} style={{ cursor: 'pointer' }}>
+                    <div 
+                      className="h-10 w-10 rounded flex justify-center items-center flex-shrink-0" 
+                      style={{
+                        backgroundColor: folder.color
+                      }}
+                    >
+                      {renderIcon(folder.icon || "folder", "#ffffff")}
+                    </div>
+                    <div className="ml-3">
+                      <CardTitle className="text-lg font-medium text-black dark:text-white">{folder.name}</CardTitle>
+                      {average > 0 && (
+                        <span className={`text-sm font-semibold ${average >= 6 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                          Promedio: {average.toFixed(1)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-blue-500 dark:text-blue-400 disabled:opacity-50" 
+                      onClick={() => openEditDialog(folder)} 
+                      disabled={folder.id === "default"}
+                    >
+                      <Edit className="h-4 w-4 mr-1" />
+                      <span className="hidden sm:inline">Editar</span>
+                    </Button>
+                    
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-red-500 dark:text-red-400 disabled:opacity-50" 
+                      onClick={() => handleDeleteFolder(folder)} 
+                      disabled={folder.id === "default"}
+                    >
+                      <Trash className="h-4 w-4 mr-1" />
+                      <span className="hidden sm:inline">Eliminar</span>
+                    </Button>
+                  </div>
                 </div>
-                <span className="ml-3 font-medium text-black dark:text-white">{folder.name}</span>
-              </div>
+              </CardHeader>
               
-              <div className="flex">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-blue-500 dark:text-blue-400 disabled:opacity-50" 
-                  onClick={() => openEditDialog(folder)} 
-                  disabled={folder.id === "default"}
-                >
-                  <Edit className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">Editar</span>
-                </Button>
-                
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-red-500 dark:text-red-400 disabled:opacity-50" 
-                  onClick={() => handleDeleteFolder(folder)} 
-                  disabled={folder.id === "default"}
-                >
-                  <Trash className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">Eliminar</span>
-                </Button>
-              </div>
-            </div>
-          </div>
-        ))}
+              {isExpanded && (
+                <CardContent className="p-4 pt-0">
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="text-sm font-medium">Evaluaciones</h3>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-8 text-xs" 
+                      onClick={() => openAddGradeDialog(folder.id)}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Agregar nota
+                    </Button>
+                  </div>
+                  
+                  <div className="bg-background/50 p-3 rounded-md">
+                    {folderGrades.length === 0 ? (
+                      <div className="text-center text-muted-foreground py-2 text-sm">
+                        No hay evaluaciones registradas
+                      </div>
+                    ) : (
+                      folderGrades.map(grade => (
+                        <GradeItem 
+                          key={grade.id} 
+                          grade={grade} 
+                          onDelete={() => deleteGrade(grade.id)}
+                          onEdit={(score) => handleUpdateGrade(grade.id, score)}
+                        />
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          );
+        })}
       </div>
       
       {/* Add folder dialog */}
       <Dialog open={showAddFolderDialog} onOpenChange={setShowAddFolderDialog}>
         <DialogContent className="max-w-[95vw] w-[450px]">
           <DialogHeader>
-            <DialogTitle>Nueva carpeta</DialogTitle>
+            <DialogTitle>Nueva materia</DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
@@ -274,7 +451,7 @@ export function FolderSystem() {
               className="w-full sm:w-auto" 
               onClick={handleAddFolder}
             >
-              Crear carpeta
+              Crear materia
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -284,7 +461,7 @@ export function FolderSystem() {
       <Dialog open={showEditFolderDialog} onOpenChange={setShowEditFolderDialog}>
         <DialogContent className="max-w-[95vw] w-[450px]">
           <DialogHeader>
-            <DialogTitle>Editar carpeta</DialogTitle>
+            <DialogTitle>Editar materia</DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
@@ -355,6 +532,49 @@ export function FolderSystem() {
               onClick={handleEditFolder}
             >
               Guardar cambios
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Add grade dialog */}
+      <Dialog open={showAddGradeDialog} onOpenChange={setShowAddGradeDialog}>
+        <DialogContent className="max-w-[95vw] w-[450px]">
+          <DialogHeader>
+            <DialogTitle>Agregar evaluación</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="mb-4">
+              <label className="block mb-2 text-sm font-medium">Nombre de la evaluación</label>
+              <Input 
+                value={gradeName} 
+                onChange={e => setGradeName(e.target.value)} 
+                className="w-full"
+                placeholder="Ej: Examen parcial, Trabajo práctico, etc."
+              />
+            </div>
+            
+            <div className="mb-4">
+              <label className="block mb-2 text-sm font-medium">Nota (0-10)</label>
+              <Input 
+                type="number"
+                min="0"
+                max="10"
+                step="0.1"
+                value={gradeScore} 
+                onChange={e => setGradeScore(e.target.value)} 
+                className="w-full"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              className="w-full sm:w-auto" 
+              onClick={handleAddGrade}
+            >
+              Agregar nota
             </Button>
           </DialogFooter>
         </DialogContent>

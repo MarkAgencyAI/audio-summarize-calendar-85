@@ -21,13 +21,23 @@ export interface Recording {
   }>;
 }
 
+// Grade type
+export interface Grade {
+  id: string;
+  name: string;
+  score: number;
+  createdAt: number;
+  folderId: string;
+}
+
 // Folder type
 export interface Folder {
   id: string;
   name: string;
   color: string;
   createdAt: number;
-  icon?: string; // Add icon field to match usage in FolderSystem
+  icon?: string;
+  grades?: Grade[];
 }
 
 // Context type
@@ -40,6 +50,12 @@ interface RecordingsContextType {
   addFolder: (name: string, color: string, icon?: string) => void;
   updateFolder: (id: string, data: Partial<Folder>) => void;
   deleteFolder: (id: string) => void;
+  grades: Grade[];
+  addGrade: (folderId: string, name: string, score: number) => void;
+  updateGrade: (id: string, data: Partial<Grade>) => void;
+  deleteGrade: (id: string) => void;
+  getFolderGrades: (folderId: string) => Grade[];
+  calculateFolderAverage: (folderId: string) => number;
 }
 
 // Create context
@@ -49,13 +65,15 @@ const RecordingsContext = createContext<RecordingsContextType | null>(null);
 export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [grades, setGrades] = useState<Grade[]>([]);
 
-  // Load recordings and folders from storage on mount
+  // Load recordings, folders and grades from storage on mount
   useEffect(() => {
     const savedRecordings = loadFromStorage<Recording[]>("recordings") || [];
     const savedFolders = loadFromStorage<Folder[]>("folders") || [
       { id: "default", name: "General", color: "#6366f1", createdAt: Date.now(), icon: "folder" }
     ];
+    const savedGrades = loadFromStorage<Grade[]>("grades") || [];
     
     // Convert any old recordings format to new format
     const updatedRecordings = savedRecordings.map((recording: any) => {
@@ -82,9 +100,10 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     
     setRecordings(updatedRecordings);
     setFolders(savedFolders);
+    setGrades(savedGrades);
   }, []);
 
-  // Save recordings and folders to storage on change
+  // Save recordings, folders and grades to storage on change
   useEffect(() => {
     if (recordings.length > 0) {
       saveToStorage("recordings", recordings);
@@ -96,6 +115,12 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       saveToStorage("folders", folders);
     }
   }, [folders]);
+
+  useEffect(() => {
+    if (grades.length > 0) {
+      saveToStorage("grades", grades);
+    }
+  }, [grades]);
 
   // Add a new recording
   const addRecording = (recordingData: Omit<Recording, "id" | "createdAt">) => {
@@ -188,6 +213,14 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       return updatedRecordings;
     });
     
+    // Delete the folder's grades
+    setGrades(prev => {
+      const updatedGrades = prev.filter(grade => grade.folderId !== id);
+      // Save to localStorage immediately
+      saveToStorage("grades", updatedGrades);
+      return updatedGrades;
+    });
+    
     // Delete the folder
     setFolders(prev => {
       const updatedFolders = prev.filter(folder => folder.id !== id);
@@ -195,6 +228,60 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       saveToStorage("folders", updatedFolders);
       return updatedFolders;
     });
+  };
+
+  // Add a new grade
+  const addGrade = (folderId: string, name: string, score: number) => {
+    const newGrade: Grade = {
+      id: uuidv4(),
+      name,
+      score,
+      createdAt: Date.now(),
+      folderId
+    };
+    
+    setGrades(prev => {
+      const updatedGrades = [...prev, newGrade];
+      // Save to localStorage immediately
+      saveToStorage("grades", updatedGrades);
+      return updatedGrades;
+    });
+  };
+
+  // Update a grade
+  const updateGrade = (id: string, data: Partial<Grade>) => {
+    setGrades(prev => {
+      const updatedGrades = prev.map(grade => 
+        grade.id === id ? { ...grade, ...data } : grade
+      );
+      // Save to localStorage immediately
+      saveToStorage("grades", updatedGrades);
+      return updatedGrades;
+    });
+  };
+
+  // Delete a grade
+  const deleteGrade = (id: string) => {
+    setGrades(prev => {
+      const updatedGrades = prev.filter(grade => grade.id !== id);
+      // Save to localStorage immediately
+      saveToStorage("grades", updatedGrades);
+      return updatedGrades;
+    });
+  };
+
+  // Get grades for a specific folder
+  const getFolderGrades = (folderId: string) => {
+    return grades.filter(grade => grade.folderId === folderId);
+  };
+
+  // Calculate average grade for a folder
+  const calculateFolderAverage = (folderId: string) => {
+    const folderGrades = getFolderGrades(folderId);
+    if (folderGrades.length === 0) return 0;
+    
+    const sum = folderGrades.reduce((total, grade) => total + grade.score, 0);
+    return parseFloat((sum / folderGrades.length).toFixed(1));
   };
 
   return (
@@ -206,7 +293,13 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       folders,
       addFolder,
       updateFolder,
-      deleteFolder
+      deleteFolder,
+      grades,
+      addGrade,
+      updateGrade,
+      deleteGrade,
+      getFolderGrades,
+      calculateFolderAverage
     }}>
       {children}
     </RecordingsContext.Provider>
