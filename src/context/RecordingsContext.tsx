@@ -62,7 +62,7 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (!('output' in recording) && 'transcript' in recording) {
         const rec = recording as any; // Use any to access old properties
         return {
-          ...recording,
+          ...recording as object, // Fix the spread error by casting to object
           output: rec.transcript || rec.summary || "No hay información disponible"
         };
       }
@@ -85,9 +85,16 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Add a new recording
   const addRecording = (recordingData: Omit<Recording, "id" | "createdAt">) => {
     const newRecording: Recording = {
-      ...recordingData,
       id: uuidv4(),
       createdAt: Date.now(),
+      name: recordingData.name,
+      audioUrl: recordingData.audioUrl,
+      audioData: recordingData.audioData,
+      output: recordingData.output,
+      folderId: recordingData.folderId,
+      duration: recordingData.duration,
+      subject: recordingData.subject,
+      suggestedEvents: recordingData.suggestedEvents
     };
     setRecordings(prev => [newRecording, ...prev]);
   };
