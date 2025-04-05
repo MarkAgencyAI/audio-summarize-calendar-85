@@ -20,13 +20,15 @@ export default function CalendarPage() {
     }
   }, [user, navigate]);
 
+  // Load events from localStorage on component mount
   useEffect(() => {
-    const loadedEvents = loadFromStorage<CalendarEvent[]>("events") || [];
+    const loadedEvents = loadFromStorage<CalendarEvent[]>("calendarEvents") || [];
     setEvents(loadedEvents);
   }, []);
 
+  // Save events to localStorage whenever they change
   useEffect(() => {
-    saveToStorage("events", events);
+    saveToStorage("calendarEvents", events);
   }, [events]);
 
   useEffect(() => {
@@ -85,6 +87,8 @@ export default function CalendarPage() {
         if (addButton) {
           addButton.addEventListener("click", () => {
             const checkboxes = dialog.querySelectorAll("input[type=checkbox]:checked");
+            const newEvents: CalendarEvent[] = [];
+            
             checkboxes.forEach((checkbox, index) => {
               const now = new Date();
               const eventDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (index + 1));
@@ -94,8 +98,12 @@ export default function CalendarPage() {
                 description: `Evento basado en la grabación: ${recording.name}`,
                 date: eventDate.toISOString()
               };
-              setEvents(prev => [...prev, newEvent]);
+              newEvents.push(newEvent);
             });
+            
+            // Update state with new events
+            setEvents(prev => [...prev, ...newEvents]);
+            
             toast.success("Eventos agregados al calendario");
             dialog.close();
             dialog.remove();
@@ -114,11 +122,21 @@ export default function CalendarPage() {
       ...event,
       id: crypto.randomUUID()
     };
-    setEvents(prev => [...prev, newEvent]);
+    setEvents(prev => {
+      const updatedEvents = [...prev, newEvent];
+      // Save to localStorage immediately
+      saveToStorage("calendarEvents", updatedEvents);
+      return updatedEvents;
+    });
   };
 
   const handleDeleteEvent = (id: string) => {
-    setEvents(prev => prev.filter(event => event.id !== id));
+    setEvents(prev => {
+      const updatedEvents = prev.filter(event => event.id !== id);
+      // Save to localStorage immediately
+      saveToStorage("calendarEvents", updatedEvents);
+      return updatedEvents;
+    });
   };
 
   return (

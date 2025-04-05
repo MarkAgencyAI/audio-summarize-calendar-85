@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { parseISO, format, isWithinInterval, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { loadFromStorage, saveToStorage } from "@/lib/storage";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface CalendarEvent {
   id: string;
@@ -181,6 +182,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const loadEvents = () => {
@@ -228,21 +230,28 @@ export default function Dashboard() {
         </div>
 
         {/* Main Content Area */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Left Column */}
-          <div className="md:col-span-1 space-y-6">
+        <div className={isMobile ? "grid grid-cols-1 gap-6" : "grid grid-cols-1 md:grid-cols-3 gap-6"}>
+          {/* Left Column - For mobile display everything in one column */}
+          <div className={isMobile ? "" : "md:col-span-1 space-y-6"}>
             {/* Tools Card */}
             <ToolsCard />
 
-            {/* Upcoming Events Card */}
-            <UpcomingEvents events={upcomingEvents} />
+            {/* For mobile, show the upcoming events before transcriptions */}
+            {isMobile && <UpcomingEvents events={upcomingEvents} />}
           </div>
 
           {/* Right Column */}
-          <div className="md:col-span-2">
+          <div className={isMobile ? "" : "md:col-span-2"}>
             {/* Transcriptions Card */}
             <Transcriptions />
           </div>
+
+          {/* For desktop, show the upcoming events in the sidebar */}
+          {!isMobile && (
+            <div className="md:col-span-1 space-y-6">
+              <UpcomingEvents events={upcomingEvents} />
+            </div>
+          )}
         </div>
       </div>
     </Layout>
