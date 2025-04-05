@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Globe, BookOpen, Key, Clock } from "lucide-react";
+import { Globe, BookOpen, Key, Clock, AlertCircle } from "lucide-react";
 
 interface TranscriptionPanelProps {
   transcript: string;
@@ -49,6 +49,12 @@ export function TranscriptionPanel({
               <Globe className="h-3 w-3" />
               <span>{getLanguageDisplay(language)}</span>
             </Badge>
+            {waitingForWebhook && (
+              <Badge variant="outline" className="flex items-center gap-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">
+                <Clock className="h-3 w-3 animate-pulse" />
+                <span>Esperando webhook</span>
+              </Badge>
+            )}
           </div>
         </div>
         
@@ -56,7 +62,7 @@ export function TranscriptionPanel({
           <TabsTrigger value="transcript">Transcripción</TabsTrigger>
           {translation && <TabsTrigger value="translation">Traducción</TabsTrigger>}
           <TabsTrigger value="keypoints">Puntos Clave</TabsTrigger>
-          {summary && <TabsTrigger value="summary">Resumen</TabsTrigger>}
+          <TabsTrigger value="summary">Resumen</TabsTrigger>
         </TabsList>
         
         <div className="flex-1 overflow-hidden p-4">
@@ -80,13 +86,23 @@ export function TranscriptionPanel({
                 <div className="text-center text-muted-foreground">
                   Esperando respuesta del webhook...
                 </div>
+                <div className="text-center text-muted-foreground/70 text-sm mt-2 max-w-md">
+                  Esto puede tomar unos momentos. La transcripción y el análisis se actualizarán automáticamente cuando se reciba la respuesta.
+                </div>
               </div>
             </div>
           ) : (
             <>
               <TabsContent value="transcript" className="mt-0 h-full">
                 <ScrollArea className="h-full bg-muted/20 rounded-md p-4">
-                  <pre className="whitespace-pre-wrap font-sans text-sm">{transcript || "No hay transcripción disponible"}</pre>
+                  {transcript ? (
+                    <pre className="whitespace-pre-wrap font-sans text-sm">{transcript}</pre>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                      <AlertCircle className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                      <p className="text-muted-foreground">No hay transcripción disponible del webhook</p>
+                    </div>
+                  )}
                 </ScrollArea>
               </TabsContent>
               
@@ -115,7 +131,10 @@ export function TranscriptionPanel({
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-sm text-muted-foreground">No hay puntos clave disponibles</p>
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <AlertCircle className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                        <p className="text-muted-foreground">No hay puntos clave disponibles del webhook</p>
+                      </div>
                     )}
                   </div>
                 </ScrollArea>
@@ -127,7 +146,10 @@ export function TranscriptionPanel({
                     {summary ? (
                       <pre className="whitespace-pre-wrap font-sans text-sm">{summary}</pre>
                     ) : (
-                      <p className="text-sm text-muted-foreground">No hay resumen disponible</p>
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <AlertCircle className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                        <p className="text-muted-foreground">No hay resumen disponible del webhook</p>
+                      </div>
                     )}
                   </div>
                 </ScrollArea>

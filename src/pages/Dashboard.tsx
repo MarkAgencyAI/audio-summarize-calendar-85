@@ -64,6 +64,7 @@ export default function Dashboard() {
       setIsTranscribing(false);
       setWaitingForWebhook(true);
       
+      // Solo actualizamos el estado inicial - esperaremos la respuesta completa del webhook
       if (data) {
         setLiveTranscription(prevState => ({
           ...prevState,
@@ -73,32 +74,42 @@ export default function Dashboard() {
         }));
       }
       
-      toast.success("Transcripción completada, esperando análisis...");
+      toast.success("Transcripción completada, esperando análisis del webhook...");
     }
   };
 
   const handleWebhookMessage = (event: CustomEvent) => {
-    const { type, data } = event.detail;
+    const { type, data, error } = event.detail;
     
     if (type === 'webhook_analysis') {
       console.log("Recibido análisis de webhook:", data);
       setWaitingForWebhook(false);
       
       if (data) {
+        // Actualizar todos los campos con los datos del webhook
         setLiveTranscription(prevState => ({
           ...prevState,
-          transcript: data.transcript !== undefined ? data.transcript : prevState.transcript,
-          summary: data.summary || null,
-          keyPoints: data.keyPoints || []
+          // Usar los datos del webhook o mantener los actuales si no hay datos
+          transcript: data.transcript !== null ? data.transcript : prevState.transcript,
+          summary: data.summary !== null ? data.summary : null,
+          keyPoints: data.keyPoints && data.keyPoints.length > 0 ? data.keyPoints : []
         }));
-        toast.success("Análisis de transcripción recibido");
-      } else {
+        
+        toast.success("Análisis de webhook recibido correctamente");
+      } else if (error) {
+        toast.error("Error en la respuesta del webhook");
         setLiveTranscription(prevState => ({
           ...prevState,
           summary: null,
           keyPoints: []
         }));
-        toast.error("No se recibió análisis del webhook");
+      } else {
+        toast.warning("No se recibieron datos del webhook");
+        setLiveTranscription(prevState => ({
+          ...prevState,
+          summary: null,
+          keyPoints: []
+        }));
       }
     }
   };
