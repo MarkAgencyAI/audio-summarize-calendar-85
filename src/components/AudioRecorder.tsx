@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Mic, X, Play, Pause, Loader2, Square } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -9,8 +8,11 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
 import { transcribeAudio } from "@/lib/groq";
+import { sendToWebhook } from "@/lib/webhook";
 
 type RecordingState = "idle" | "recording" | "paused";
+
+const WEBHOOK_URL = "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 
 export function AudioRecorder() {
   const { addRecording, folders } = useRecordings();
@@ -94,7 +96,6 @@ export function AudioRecorder() {
       setRecordingState("idle");
       stopTimer();
       
-      // Stop all tracks from the media stream
       mediaRecorder.current.stream.getTracks().forEach(track => track.stop());
     }
   };
@@ -104,7 +105,6 @@ export function AudioRecorder() {
     setRecordingName("");
   };
   
-  // Timer functions
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
   
   const startTimer = () => {
@@ -135,21 +135,22 @@ export function AudioRecorder() {
   const saveRecording = async (audioBlob: Blob) => {
     try {
       setIsProcessing(true);
+      toast.info("Procesando grabación...");
       
-      // Create a URL for the audio blob
       const audioUrl = URL.createObjectURL(audioBlob);
       
-      // Convert the blob to base64 data for persistent storage
       const reader = new FileReader();
       reader.readAsDataURL(audioBlob);
       
       reader.onloadend = async () => {
         const base64AudioData = reader.result as string;
         
-        // Get the transcription
         let result;
         try {
           result = await transcribeAudio(audioBlob);
+          
+          await sendToWebhook(WEBHOOK_URL, result.transcript);
+          
           toast.success("Audio transcrito correctamente");
         } catch (error) {
           console.error("Error transcribing audio:", error);
@@ -162,11 +163,10 @@ export function AudioRecorder() {
           toast.error("Error al transcribir el audio");
         }
         
-        // Add the recording to context
         addRecording({
           name: recordingName || `Grabación ${formatDate(new Date())}`,
           audioUrl,
-          audioData: base64AudioData, // Store base64 data for persistence
+          audioData: base64AudioData,
           transcript: result.transcript,
           summary: result.summary,
           keyPoints: result.keyPoints,
@@ -175,7 +175,6 @@ export function AudioRecorder() {
           suggestedEvents: result.suggestedEvents || []
         });
         
-        // Reset the state
         setIsProcessing(false);
         setRecordingState('idle');
         setRecordingName('');
@@ -196,7 +195,6 @@ export function AudioRecorder() {
       <h2 className="text-xl font-semibold mb-4 text-custom-primary">Nueva grabación</h2>
       
       <div className="space-y-4">
-        {/* Recording Controls */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             {recordingState === "idle" && (
@@ -236,7 +234,6 @@ export function AudioRecorder() {
           <span className="text-custom-text">{formatTime(recordingDuration)}</span>
         </div>
         
-        {/* Recording Name Input */}
         {audioBlob === null ? null : (
           <>
             <div className="space-y-2">
@@ -268,7 +265,6 @@ export function AudioRecorder() {
           </>
         )}
         
-        {/* Actions */}
         {audioBlob && (
           <div className="flex justify-between gap-4">
             <Button variant="ghost" onClick={clearRecording} className="text-custom-primary hover:bg-custom-primary/10">

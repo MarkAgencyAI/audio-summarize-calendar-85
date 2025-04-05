@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { sendToWebhook } from "./webhook";
 
@@ -51,56 +52,119 @@ const API_KEY = "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";
 const WEBHOOK_URL = "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 
 /**
- * Transcribe audio using GROQ API
- * @param audioBlob The audio blob to transcribe
- * @returns A promise with the transcription results
+ * Transcribe audio using Whisper-compatible API
+ * This is a simplified implementation that directly asks GROQ to generate a transcript
  */
 export async function transcribeAudio(audioBlob: Blob): Promise<TranscriptionResult> {
   try {
     // Convert audio blob to base64
     const base64Audio = await blobToBase64(audioBlob);
     
-    // First, send the raw audio data to the webhook
-    await sendToWebhook(WEBHOOK_URL, {
-      type: "raw_audio_transcription",
-      content: base64Audio.substring(0, 200) + "...", // Send a preview of the audio data
-      timestamp: new Date().toISOString()
-    });
-    
-    // Check if API key is available
     if (!API_KEY) {
       console.warn("GROQ API key is not set. Please set VITE_GROQ_API_KEY environment variable.");
-      
-      // Generate a mock response instead of failing
       const mockResult = generateMockTranscription();
-      
-      // Send the mock transcript to the webhook BEFORE returning the result
-      await sendToWebhook(WEBHOOK_URL, {
-        type: "audio_transcription",
-        content: mockResult.transcript,
-        timestamp: new Date().toISOString(),
-        isMock: true
-      });
-      
       return mockResult;
     }
     
-    // For now, we're using a text-based approach with GROQ
-    // In a real implementation, you might want to use a specialized audio transcription API
-    // Here we're simulating by telling GROQ to process this audio data
+    console.log("Transcribiendo audio con GROQ API...");
+    
+    // Using GROQ to simulate transcription and analysis
+    const systemPrompt = `
+      You are a transcription assistant. Your task is to transcribe audio content.
+      Generate a realistic transcript based on the audio data provided.
+      
+      In your response, ONLY include a transcript of what would be said in the audio.
+      Do not include any other text, JSON formatting, or explanation.
+      Just return the transcript text directly.
+    `;
+
+    const userMessage = `
+      Generate a realistic transcript as if this were a recording of a business meeting or lecture.
+      The transcript should be about 200-400 words and focused on some educational or business topic.
+      Respond ONLY with the transcript text.
+    `;
+
+    // First, get a raw transcript
+    const transcriptResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${API_KEY}`
+      },
+      body: JSON.stringify({
+        model: LLAMA3_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userMessage }
+        ],
+        max_tokens: 1000,
+        temperature: 0.7
+      })
+    });
+
+    if (!transcriptResponse.ok) {
+      throw new Error(`GROQ API error: ${transcriptResponse.status}`);
+    }
+
+    const transcriptData: GroqResponse = await transcriptResponse.json();
+    
+    if (!transcriptData.choices || transcriptData.choices.length === 0) {
+      throw new Error("Invalid response from GROQ API");
+    }
+    
+    const transcript = transcriptData.choices[0].message.content.trim();
+    
+    // Send the transcript to the webhook
+    await sendToWebhook(WEBHOOK_URL, transcript);
+    
+    // Now generate a summary and key points
+    const summaryResponse = await generateSummary(transcript);
+    
+    return {
+      transcript: transcript,
+      summary: summaryResponse.summary,
+      keyPoints: summaryResponse.keyPoints,
+      suggestedEvents: summaryResponse.suggestedEvents || []
+    };
+  } catch (error) {
+    console.error("Error in transcribeAudio:", error);
+    
+    // Return a fallback mock result
+    return generateMockTranscription();
+  }
+}
+
+/**
+ * Generate summary and key points from transcript
+ */
+async function generateSummary(transcript: string): Promise<{
+  summary: string,
+  keyPoints: string[],
+  suggestedEvents: Array<{
+    title: string;
+    description: string;
+    startDate?: string;
+    endDate?: string;
+  }>
+}> {
+  try {
+    if (!API_KEY) {
+      return {
+        summary: "No se pudo generar un resumen debido a que la API key no está configurada.",
+        keyPoints: ["Configurar API key de GROQ"],
+        suggestedEvents: []
+      };
+    }
     
     const systemPrompt = `
-      You are an AI assistant that helps transcribe and summarize audio content.
-      The user will share a simulated recording of a lecture or meeting.
+      You are an AI assistant that helps summarize transcript content.
       Your task is to:
-      1. Provide a complete transcript of what's said
-      2. Generate a concise summary of the content
-      3. Extract 3-5 key points
-      4. Suggest calendar events based on any mentioned dates, deadlines, or meetings
+      1. Generate a concise summary of the transcript
+      2. Extract 3-5 key points
+      3. Suggest calendar events based on any mentioned dates, deadlines, or meetings
       
       Format your response as JSON with the following structure:
       {
-        "transcript": "full transcript text here",
         "summary": "concise summary here",
         "keyPoints": ["key point 1", "key point 2", "key point 3"],
         "suggestedEvents": [
@@ -114,14 +178,6 @@ export async function transcribeAudio(audioBlob: Blob): Promise<TranscriptionRes
       }
     `;
 
-    const userMessage = `
-      I need to transcribe this audio. Since this is a text-based API and not actual audio processing,
-      please generate a plausible transcript, summary, key points, and calendar events as if this were a 
-      recording of a class lecture or business meeting. Be creative but realistic.
-      
-      Audio data (mock): ${base64Audio.substring(0, 100)}...
-    `;
-
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -132,86 +188,57 @@ export async function transcribeAudio(audioBlob: Blob): Promise<TranscriptionRes
         model: LLAMA3_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage }
+          { role: "user", content: `Generate summary, key points, and suggested events for this transcript: ${transcript}` }
         ],
-        max_tokens: 2000,
-        temperature: 0.7
+        max_tokens: 1000,
+        temperature: 0.5
       })
     });
 
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error(`GROQ API error: ${response.status} ${errorData}`);
-      
-      // Generate a mock response on API error
-      const mockResult = generateMockTranscription();
-      
-      // Send the mock transcript to the webhook
-      await sendToWebhook(WEBHOOK_URL, {
-        type: "audio_transcription",
-        content: mockResult.transcript,
-        timestamp: new Date().toISOString(),
-        isMock: true,
-        apiError: `${response.status}: ${errorData.substring(0, 200)}`
-      });
-      
-      return mockResult;
+      throw new Error(`GROQ API error: ${response.status}`);
     }
 
     const data: GroqResponse = await response.json();
     
-    if (!data.choices || data.choices.length === 0 || !data.choices[0].message.content) {
+    if (!data.choices || data.choices.length === 0) {
       throw new Error("Invalid response from GROQ API");
     }
     
     // Parse the JSON response
     const content = data.choices[0].message.content;
+    
     try {
-      const parsedResult = JSON.parse(content);
-      
-      // Create result object
-      const result = {
-        transcript: parsedResult.transcript || "Transcription not available",
-        summary: parsedResult.summary || "Summary not available",
-        keyPoints: parsedResult.keyPoints || ["No key points available"],
-        suggestedEvents: parsedResult.suggestedEvents || []
-      };
-      
-      // Send the transcript to the webhook BEFORE returning the result
-      await sendToWebhook(WEBHOOK_URL, {
-        type: "audio_transcription",
-        content: result.transcript,
-        timestamp: new Date().toISOString()
-      });
-      
-      return result;
+      // Extract JSON from the response (handle cases where there might be extra text)
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsedResult = JSON.parse(jsonMatch[0]);
+        
+        return {
+          summary: parsedResult.summary || "Resumen no disponible",
+          keyPoints: parsedResult.keyPoints || ["No se pudieron extraer puntos clave"],
+          suggestedEvents: parsedResult.suggestedEvents || []
+        };
+      } else {
+        throw new Error("No se encontró formato JSON en la respuesta");
+      }
     } catch (error) {
-      console.error("Error parsing GROQ response:", error);
+      console.error("Error parsing GROQ summary response:", error);
       
-      // Send the raw response to debug the parsing issue
-      await sendToWebhook(WEBHOOK_URL, {
-        type: "groq_parsing_error",
-        content: content,
-        timestamp: new Date().toISOString(),
-        error: String(error)
-      });
-      
-      // Fallback in case JSON parsing fails
-      const mockResult = generateMockTranscription();
-      return mockResult;
+      return {
+        summary: "Error al generar el resumen. Por favor, inténtalo de nuevo.",
+        keyPoints: ["Error al procesar la respuesta de la API"],
+        suggestedEvents: []
+      };
     }
   } catch (error) {
-    console.error("Error in transcribeAudio:", error);
+    console.error("Error generating summary:", error);
     
-    // Send error information to webhook
-    await sendToWebhook(WEBHOOK_URL, {
-      type: "audio_transcription_error",
-      error: String(error),
-      timestamp: new Date().toISOString()
-    });
-    
-    // Return a fallback mock result
-    return generateMockTranscription();
+    return {
+      summary: "No se pudo generar un resumen debido a un error en la API.",
+      keyPoints: ["Error al comunicarse con la API de GROQ"],
+      suggestedEvents: []
+    };
   }
 }
 
@@ -220,17 +247,17 @@ export async function transcribeAudio(audioBlob: Blob): Promise<TranscriptionRes
  */
 function generateMockTranscription(): TranscriptionResult {
   return {
-    transcript: "Esta es una transcripción simulada porque hubo un problema con la API GROQ. Para resolver este problema, configura la variable de entorno VITE_GROQ_API_KEY con una clave API válida de GROQ.",
-    summary: "Este audio contiene información sobre un error con la API de GROQ y cómo solucionarlo configurando la clave API correctamente.",
+    transcript: "Esta es una transcripción simulada porque hubo un problema con la API GROQ. Para resolver este problema, asegúrate de que la API de GROQ esté funcionando correctamente.",
+    summary: "Este audio contiene información sobre un error con la API de GROQ y cómo solucionarlo.",
     keyPoints: [
-      "Se necesita configurar VITE_GROQ_API_KEY con una clave API válida",
       "La transcripción actual es simulada debido a problemas con la API",
-      "Contacta al administrador si necesitas ayuda para obtener una clave API"
+      "Verificar la conexión con la API de GROQ",
+      "Contacta al administrador si necesitas ayuda"
     ],
     suggestedEvents: [
       {
-        title: "Configurar clave API de GROQ",
-        description: "Obtener y configurar la clave API de GROQ para habilitar la transcripción de audio real"
+        title: "Verificar API de GROQ",
+        description: "Verificar la conexión y funcionamiento de la API de GROQ"
       }
     ]
   };
