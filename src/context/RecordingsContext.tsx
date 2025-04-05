@@ -58,10 +58,8 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     ];
     
     // Convert any old recordings format to new format
-    const updatedRecordings = savedRecordings.map(recording => {
+    const updatedRecordings = savedRecordings.map((recording: any) => {
       if (!('output' in recording) && 'transcript' in recording) {
-        const rec = recording as any; // Use any to access old properties
-        
         // Create a new recording object with all required properties
         const updatedRec: Recording = {
           id: recording.id,
@@ -71,7 +69,7 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           createdAt: recording.createdAt,
           folderId: recording.folderId,
           duration: recording.duration,
-          output: rec.transcript || rec.summary || "No hay información disponible",
+          output: recording.transcript || recording.summary || "No hay información disponible",
           // Copy optional properties if they exist
           subject: recording.subject,
           suggestedEvents: recording.suggestedEvents
@@ -79,7 +77,7 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         
         return updatedRec;
       }
-      return recording;
+      return recording as Recording;
     });
     
     setRecordings(updatedRecordings);
