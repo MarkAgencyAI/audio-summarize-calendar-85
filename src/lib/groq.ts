@@ -1,5 +1,5 @@
-
 import { sendToWebhook } from "./webhook";
+import { useState, useCallback } from "react";
 
 // Define the GROQ API key
 const API_KEY = "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";
@@ -17,6 +17,15 @@ interface TranscriptionResult {
     title: string;
     description: string;
     date?: string;
+  }>;
+}
+
+// Interface for GROQ API response
+interface GroqApiResponse {
+  choices: Array<{
+    message: {
+      content: string;
+    };
   }>;
 }
 
@@ -298,4 +307,60 @@ export async function blobToBase64(blob: Blob): Promise<string> {
     reader.onerror = reject;
     reader.readAsDataURL(blob);
   });
+}
+
+// Hook to use GROQ API in React components
+export function useGroq() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Function to generate content using llama3 model
+  const llama3 = useCallback(async ({ 
+    messages, 
+    temperature = 0.7, 
+    max_tokens = 800 
+  }: { 
+    messages: Array<{role: string, content: string}>,
+    temperature?: number,
+    max_tokens?: number
+  }) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${API_KEY}`
+        },
+        body: JSON.stringify({
+          model: LLAMA3_MODEL,
+          messages,
+          max_tokens,
+          temperature
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`GROQ API error: ${response.status}`);
+      }
+      
+      const data: GroqApiResponse = await response.json();
+      return data;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(errorMessage);
+      console.error("Error in GROQ API call:", errorMessage);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+  
+  return {
+    llama3,
+    isLoading,
+    error
+  };
 }
