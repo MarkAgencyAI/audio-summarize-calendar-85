@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface CalendarEvent {
   id: string;
@@ -39,6 +40,7 @@ export function Calendar({
   });
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const isMobile = useIsMobile();
 
   const goToPreviousMonth = () => setCurrentDate(subMonths(currentDate, 1));
   const goToNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
@@ -118,6 +120,14 @@ export function Calendar({
     }
   };
 
+  // Calculate the days of the week names based on screen size
+  const getDayNames = () => {
+    if (isMobile) {
+      return ["D", "L", "M", "X", "J", "V", "S"];
+    }
+    return ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+  };
+
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-6">
@@ -136,10 +146,10 @@ export function Calendar({
         </div>
       </div>
       
-      <div className="w-full overflow-auto pb-2">
-        <div className="min-w-[640px] max-w-full">
+      <div className="calendar-container w-full overflow-hidden">
+        <div className="calendar-grid-container min-w-full">
           <div className="calendar-grid mb-1">
-            {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map(day => 
+            {getDayNames().map(day => 
               <div key={day} className="py-2 text-center font-medium text-sm">
                 {day}
               </div>

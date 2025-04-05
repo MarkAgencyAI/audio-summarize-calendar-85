@@ -1,11 +1,10 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* Light mode colors - using the new custom primary color */
+    /* Light mode colors - using the new custom primary */
     --background: 182 16% 96%;
     --foreground: 182 100% 18%;
     --primary: 176 50% 32%; /* Adjusted to match custom primary */
@@ -120,15 +119,31 @@
     @apply bg-card/80 backdrop-blur-xl border border-border dark:bg-card/60 dark:border-border;
   }
 
+  .calendar-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+  }
+  
+  .calendar-container::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Edge */
+  }
+  
+  .calendar-grid-container {
+    padding-bottom: 0.5rem;
+  }
+
   .calendar-grid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(7, minmax(40px, 1fr));
     gap: 1px;
+    min-width: 100%;
   }
 
   .calendar-date {
     aspect-ratio: 1/1;
     position: relative;
+    min-width: 40px;
   }
 
   .calendar-event {
