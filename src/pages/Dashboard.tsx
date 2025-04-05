@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -74,17 +75,20 @@ function UpcomingEvents({ events }: { events: CalendarEvent[] }) {
 }
 
 function ToolsCard() {
-  const { addRecording } = useRecordings();
+  const { recordings, addRecording } = useRecordings();
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [transcriptionOutput, setTranscriptionOutput] = useState("");
   const [transcriptionOpen, setTranscriptionOpen] = useState(false);
 
   const handleFileUpload = (file: File) => {
+    // Fixed to match the Recording type properties
     addRecording({
-      id: Date.now().toString(),
-      title: file.name,
-      date: new Date().toISOString(),
-      type: file.type,
-      transcription: "Transcribiendo...",
-      url: URL.createObjectURL(file),
+      name: file.name,
+      audioUrl: URL.createObjectURL(file),
+      audioData: "",
+      output: "Transcribiendo...",
+      folderId: "default",
+      duration: 0
     });
     toast.success("Archivo subido correctamente!");
   };
@@ -98,26 +102,40 @@ function ToolsCard() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <PdfUploader onFileUpload={handleFileUpload} />
-        <AudioRecorder onNewRecording={handleFileUpload} />
-        <Button variant="outline" className="w-full" onClick={() => setTranscriptionOpen(true)}>
+        <PdfUploader />
+        <AudioRecorder />
+        <Button 
+          variant="outline" 
+          className="w-full" 
+          onClick={() => setTranscriptionOpen(true)}
+        >
           <FileText className="mr-2 h-4 w-4" />
           Transcripción en vivo
         </Button>
-        <LiveTranscriptionSheet open={transcriptionOpen} setOpen={setTranscriptionOpen} />
+        <LiveTranscriptionSheet
+          isTranscribing={isTranscribing}
+          output={transcriptionOutput}
+        />
       </CardContent>
     </Card>
   );
 }
 
 function Transcriptions() {
-  const { recordings, removeRecording } = useRecordings();
+  const { recordings, deleteRecording } = useRecordings();
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
 
+  // Adding null check and fallback for recording.name
   const filteredRecordings = recordings.filter(recording =>
-    recording.title.toLowerCase().includes(searchQuery.toLowerCase())
+    (recording.name || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleAddToCalendar = (recording: any) => {
+    // This function would handle adding recording events to calendar
+    console.log("Add to calendar:", recording);
+    toast.info("Funcionalidad en desarrollo");
+  };
 
   return (
     <Card>
@@ -142,8 +160,7 @@ function Transcriptions() {
             <RecordingItem
               key={recording.id}
               recording={recording}
-              onDelete={removeRecording}
-              onClick={() => navigate(`/recording/${recording.id}`)}
+              onAddToCalendar={handleAddToCalendar}
             />
           ))}
           {filteredRecordings.length === 0 && (
@@ -165,19 +182,24 @@ export default function Dashboard() {
   useEffect(() => {
     const storedEvents = loadFromStorage("calendarEvents");
     if (storedEvents) {
-      const parsedEvents = JSON.parse(storedEvents).map((event: any) => ({
-        ...event,
-        date: event.date,
-      }));
-      setUpcomingEvents(parsedEvents);
+      try {
+        const parsedEvents = JSON.parse(storedEvents);
+        // Filter events to only show those within the next 14 days
+        const now = new Date();
+        const filteredEvents = parsedEvents.filter((event: CalendarEvent) => {
+          const eventDate = parseISO(event.date);
+          return isWithinInterval(eventDate, {
+            start: now,
+            end: addDays(now, 14)
+          });
+        });
+        setUpcomingEvents(filteredEvents);
+      } catch (error) {
+        console.error("Error parsing calendar events:", error);
+        setUpcomingEvents([]);
+      }
     }
   }, []);
-
-  useEffect(() => {
-    if (upcomingEvents) {
-      saveToStorage("calendarEvents", JSON.stringify(upcomingEvents));
-    }
-  }, [upcomingEvents]);
 
   return (
     <Layout>

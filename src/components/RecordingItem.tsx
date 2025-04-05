@@ -7,7 +7,12 @@ import { Button } from "@/components/ui/button";
 import { formatDate, formatTimeFromSeconds } from "@/lib/utils";
 import { Mic, Clock, Trash2, Calendar, File, Play, Pause, Folder } from "lucide-react";
 
-export function RecordingItem({ recording, onAddToCalendar }) {
+interface RecordingItemProps {
+  recording: any;
+  onAddToCalendar: (recording: any) => void;
+}
+
+export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps) {
   const { deleteRecording, folders } = useRecordings();
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);

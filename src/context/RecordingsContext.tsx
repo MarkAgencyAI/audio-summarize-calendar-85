@@ -63,13 +63,13 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         // Create a new recording object with all required properties
         const updatedRec: Recording = {
           id: recording.id,
-          name: recording.name,
-          audioUrl: recording.audioUrl,
-          audioData: recording.audioData,
-          createdAt: recording.createdAt,
-          folderId: recording.folderId,
-          duration: recording.duration,
-          output: recording.transcript || recording.summary || "No hay información disponible",
+          name: recording.name || recording.title || "Sin nombre",
+          audioUrl: recording.audioUrl || "",
+          audioData: recording.audioData || "",
+          createdAt: recording.createdAt || Date.now(),
+          folderId: recording.folderId || "default",
+          duration: recording.duration || 0,
+          output: recording.transcript || recording.summary || recording.output || "No hay información disponible",
           // Copy optional properties if they exist
           subject: recording.subject,
           suggestedEvents: recording.suggestedEvents
