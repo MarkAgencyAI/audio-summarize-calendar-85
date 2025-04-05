@@ -132,7 +132,7 @@ export function useAudioProcessor() {
         }, 500);
       }
       
-      // Pass the subject parameter to the transcribeAudio function
+      // Make sure to pass the subject parameter to transcribeAudio 
       const result = await transcribeAudio(audioBlob, subject);
       
       if (progressInterval) {

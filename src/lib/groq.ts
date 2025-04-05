@@ -1,4 +1,3 @@
-
 import { sendToWebhook } from "./webhook";
 import { useState, useCallback } from "react";
 
@@ -199,8 +198,8 @@ export async function transcribeAudio(audioBlob: Blob, subject?: string): Promis
     // Step 1: Create form data for the audio transcription API
     const formData = new FormData();
     formData.append("file", processedAudio, "audio.wav");
-    formData.append("model", "whisper-large-v3-turbo"); // Use the correct model from the image
-    formData.append("response_format", "verbose_json"); // Optional but recommended
+    formData.append("model", "whisper-large-v3-turbo");
+    formData.append("response_format", "verbose_json");
     
     if (subject) {
       formData.append("prompt", `This is related to ${subject}. Specify context or spelling.`);
@@ -208,6 +207,7 @@ export async function transcribeAudio(audioBlob: Blob, subject?: string): Promis
       formData.append("prompt", "Specify context or spelling.");
     }
     
+    // Set language explicitly to Spanish
     formData.append("language", "es");
     
     // Make the request to GROQ Audio API for the transcript
@@ -235,8 +235,8 @@ export async function transcribeAudio(audioBlob: Blob, subject?: string): Promis
     
     const transcript = transcriptData.text.trim();
     
-    // Step 2: Detect the language of the transcript
-    const language = await detectLanguage(transcript);
+    // Always set language to Spanish for this particular use case
+    const language = "es"; 
     
     // Step 3: Send the transcript to the webhook with subject metadata
     await sendToWebhook(WEBHOOK_URL, {

@@ -30,6 +30,12 @@ export function AudioRecorder() {
   
   const [hasPermission, setHasPermission] = useState(false);
   
+  const subjectRef = useRef(subject);
+  
+  useEffect(() => {
+    subjectRef.current = subject;
+  }, [subject]);
+  
   useEffect(() => {
     const checkPermissions = async () => {
       try {
@@ -162,22 +168,19 @@ export function AudioRecorder() {
       
       const audioUrl = URL.createObjectURL(audioBlob);
       
-      // Convert audio to base64 for storage
       const base64AudioData = await blobToBase64(audioBlob);
       
       let transcriptionResult;
       try {
-        // Update the progress UI via events
         dispatchTranscriptionUpdate({
           transcript: "Iniciando transcripción...",
           keyPoints: ["Procesando audio..."],
           language: "es"
         });
         
-        // Use the real GROQ API for transcription with subject
         transcriptionResult = await processAudioFile(
           audioBlob, 
-          subject,
+          subjectRef.current,
           (progressData) => dispatchTranscriptionUpdate(progressData)
         );
         
@@ -187,18 +190,15 @@ export function AudioRecorder() {
         
         toast.success("Audio transcrito correctamente");
         
-        // Send the complete transcription results to update the transcription panel
         dispatchTranscriptionUpdate(transcriptionResult);
         dispatchTranscriptionComplete(transcriptionResult);
       } catch (error) {
         console.error("Error transcribing audio:", error);
         toast.error("Error al transcribir el audio. No se pudo procesar.");
         
-        // Don't provide default values - treat this as a real error
         throw error;
       }
       
-      // Add the recording with all data
       addRecording({
         name: recordingName || `Grabación ${formatDate(new Date())}`,
         audioUrl,
@@ -209,11 +209,10 @@ export function AudioRecorder() {
         folderId: selectedFolder,
         duration: recordingDuration,
         language: transcriptionResult.language || "es",
-        subject: subject || "Sin materia especificada",
+        subject: subjectRef.current || "Sin materia especificada",
         suggestedEvents: transcriptionResult.suggestedEvents || []
       });
       
-      // Reset all states
       setIsProcessing(false);
       setRecordingState('idle');
       setRecordingName('');
@@ -299,18 +298,16 @@ export function AudioRecorder() {
               />
             </div>
             
-            {!subject && (
-              <div className="space-y-2">
-                <Label htmlFor="subject" className="text-custom-text">Materia</Label>
-                <Input
-                  id="subject"
-                  placeholder="Ingresa la materia (ej: Matemáticas, Historia, etc.)"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
-                />
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="subject-after-recording" className="text-custom-text">Materia</Label>
+              <Input
+                id="subject-after-recording"
+                placeholder="Ingresa la materia (ej: Matemáticas, Historia, etc.)"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
+              />
+            </div>
             
             <div className="space-y-2">
               <Label htmlFor="folder" className="text-custom-text">Carpeta</Label>

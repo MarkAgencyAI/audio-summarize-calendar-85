@@ -93,7 +93,7 @@ export function LiveTranscriptionSheet({
         <SheetHeader className="p-4 border-b">
           <SheetTitle>Transcripción en tiempo real</SheetTitle>
           <SheetDescription>
-            Visualiza la transcripción, traducción y puntos clave
+            Visualiza la transcripción y puntos clave
           </SheetDescription>
         </SheetHeader>
         
