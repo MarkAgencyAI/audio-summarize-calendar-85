@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -21,7 +20,6 @@ export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFolder, setSelectedFolder] = useState("default");
   
-  // Estado para la transcripción en tiempo real
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [liveTranscription, setLiveTranscription] = useState({
     transcript: "",
@@ -31,11 +29,8 @@ export default function Dashboard() {
     summary: ""
   });
   
-  // Filter recordings based on search term and selected folder
   const filteredRecordings = recordings.filter(recording => {
-    // Filter by folder
     const folderMatch = selectedFolder === "default" ? true : recording.folderId === selectedFolder;
-    // Filter by search term
     const searchMatch = searchTerm 
       ? recording.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
         recording.transcript.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -46,7 +41,6 @@ export default function Dashboard() {
   });
   
   const handleAddToCalendar = (recording) => {
-    // Navigate to calendar with the recording data
     navigate("/calendar", { state: { recording } });
   };
   
@@ -54,8 +48,6 @@ export default function Dashboard() {
     setSelectedFolder(folderId);
   };
 
-  // Create a custom event handler for the AudioRecorder that will be passed to data-* attributes
-  // and handled via event listeners
   const handleAudioRecorderMessage = (event: CustomEvent) => {
     const { type, data } = event.detail;
     
@@ -71,7 +63,6 @@ export default function Dashboard() {
     } else if (type === 'transcriptionComplete') {
       setIsTranscribing(false);
       
-      // Update with the final transcription data if available
       if (data) {
         setLiveTranscription({
           transcript: data.transcript || "",
@@ -85,18 +76,34 @@ export default function Dashboard() {
       toast.success("Transcripción completada");
     }
   };
+
+  const handleWebhookMessage = (event: CustomEvent) => {
+    const { type, data } = event.detail;
+    
+    if (type === 'webhook_analysis') {
+      setLiveTranscription(prevState => ({
+        ...prevState,
+        summary: data.summary || prevState.summary,
+        keyPoints: data.keyPoints || prevState.keyPoints
+      }));
+    }
+  };
   
-  // Add event listener on component mount
   useEffect(() => {
-    // Use a typed event listener
     const handleEvent = (e: Event) => {
-      handleAudioRecorderMessage(e as CustomEvent);
+      if ((e as CustomEvent).detail?.type === 'audioRecorderMessage') {
+        handleAudioRecorderMessage(e as CustomEvent);
+      } else if ((e as CustomEvent).detail?.type === 'webhook_analysis') {
+        handleWebhookMessage(e as CustomEvent);
+      }
     };
     
     window.addEventListener('audioRecorderMessage', handleEvent);
+    window.addEventListener('webhookMessage', handleEvent);
     
     return () => {
       window.removeEventListener('audioRecorderMessage', handleEvent);
+      window.removeEventListener('webhookMessage', handleEvent);
     };
   }, []);
 
@@ -106,7 +113,6 @@ export default function Dashboard() {
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h1 className="text-2xl md:text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">Mi Dashboard</h1>
           
-          {/* Panel de transcripción en tiempo real */}
           <LiveTranscriptionSheet
             isTranscribing={isTranscribing}
             transcript={liveTranscription.transcript}
@@ -135,12 +141,9 @@ export default function Dashboard() {
           </LiveTranscriptionSheet>
         </div>
         
-        {/* Mostrar componentes según el rol del usuario */}
         {user?.role === "teacher" ? (
-          /* Teacher section: PDF Uploader */
           <PdfUploader />
         ) : (
-          /* Student section: Audio Recorder - we'll use data attributes instead of props */
           <AudioRecorder 
             data-enable-messaging="true"
           />
