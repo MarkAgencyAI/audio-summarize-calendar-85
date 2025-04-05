@@ -1,5 +1,6 @@
+
 import { useState, useRef, useEffect } from "react";
-import { Mic, X, Play, Pause, Loader2, Square } from "lucide-react";
+import { Mic, X, Play, Pause, Loader2, Square, BookOpen } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
 import { transcribeAudio } from "@/lib/groq";
 import { sendToWebhook } from "@/lib/webhook";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 type RecordingState = "idle" | "recording" | "paused";
 
@@ -26,6 +28,8 @@ export function AudioRecorder() {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState("default");
+  const [subjectName, setSubjectName] = useState("");
+  const [showSubjectDialog, setShowSubjectDialog] = useState(false);
   
   const [hasPermission, setHasPermission] = useState(false);
   
@@ -43,6 +47,10 @@ export function AudioRecorder() {
     
     checkPermissions();
   }, []);
+  
+  const initiateRecording = () => {
+    setShowSubjectDialog(true);
+  };
   
   const startRecording = async () => {
     if (!hasPermission) {
@@ -147,9 +155,7 @@ export function AudioRecorder() {
         
         let result;
         try {
-          result = await transcribeAudio(audioBlob);
-          
-          await sendToWebhook(WEBHOOK_URL, result.transcript);
+          result = await transcribeAudio(audioBlob, subjectName);
           
           toast.success("Audio transcrito correctamente");
         } catch (error) {
@@ -158,7 +164,9 @@ export function AudioRecorder() {
             transcript: "Error en la transcripción",
             summary: "No se pudo generar un resumen",
             keyPoints: ["No se pudieron extraer puntos clave"],
-            suggestedEvents: []
+            suggestedEvents: [],
+            language: "es",
+            subject: subjectName || "Sin materia especificada"
           };
           toast.error("Error al transcribir el audio");
         }
@@ -172,7 +180,9 @@ export function AudioRecorder() {
           keyPoints: result.keyPoints,
           folderId: selectedFolder,
           duration: recordingDuration,
-          suggestedEvents: result.suggestedEvents || []
+          suggestedEvents: result.suggestedEvents || [],
+          language: result.language || "es",
+          subject: subjectName
         });
         
         setIsProcessing(false);
@@ -180,6 +190,7 @@ export function AudioRecorder() {
         setRecordingName('');
         setAudioBlob(null);
         setRecordingDuration(0);
+        setSubjectName('');
         
         toast.success('Grabación guardada correctamente');
       };
@@ -198,7 +209,7 @@ export function AudioRecorder() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             {recordingState === "idle" && (
-              <Button onClick={startRecording} disabled={isProcessing} className="bg-custom-primary hover:bg-custom-primary/90 text-white">
+              <Button onClick={initiateRecording} disabled={isProcessing} className="bg-custom-primary hover:bg-custom-primary/90 text-white">
                 <Mic className="h-4 w-4 mr-2" />
                 Grabar
               </Button>
@@ -248,6 +259,17 @@ export function AudioRecorder() {
             </div>
             
             <div className="space-y-2">
+              <Label htmlFor="subject-name" className="text-custom-text">Materia</Label>
+              <Input
+                id="subject-name"
+                placeholder="Materia de la grabación"
+                value={subjectName}
+                onChange={(e) => setSubjectName(e.target.value)}
+                className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
+              />
+            </div>
+            
+            <div className="space-y-2">
               <Label htmlFor="folder" className="text-custom-text">Carpeta</Label>
               <select
                 id="folder"
@@ -289,6 +311,48 @@ export function AudioRecorder() {
           </div>
         )}
       </div>
+      
+      {/* Subject Dialog */}
+      <Dialog open={showSubjectDialog} onOpenChange={setShowSubjectDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Información de la grabación</DialogTitle>
+            <DialogDescription>
+              Ingresa la materia o asignatura relacionada con esta grabación
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="subject" className="text-right col-span-1">
+                Materia
+              </Label>
+              <div className="col-span-3 flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-gray-500" />
+                <Input
+                  id="subject"
+                  value={subjectName}
+                  onChange={(e) => setSubjectName(e.target.value)}
+                  placeholder="Ej: Matemáticas, Historia, Ciencias..."
+                  className="col-span-3"
+                />
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSubjectDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={() => {
+              setShowSubjectDialog(false);
+              startRecording();
+            }} disabled={!subjectName.trim()}>
+              Comenzar grabación
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
