@@ -16,7 +16,7 @@ export async function sendToWebhook(url: string, data: any): Promise<void> {
     
     // Disparar evento personalizado para análisis del webhook
     if (data.type === "transcription_analysis") {
-      const analysisEvent = new CustomEvent('audioRecorderMessage', {
+      const analysisEvent = new CustomEvent('webhookMessage', {
         detail: {
           type: 'webhook_analysis',
           data: {
@@ -26,6 +26,7 @@ export async function sendToWebhook(url: string, data: any): Promise<void> {
         }
       });
       window.dispatchEvent(analysisEvent);
+      console.log("Evento webhook_analysis disparado con:", data.summary, data.keyPoints);
     }
     
     console.log("Datos enviados al webhook correctamente");

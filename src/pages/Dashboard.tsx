@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -53,24 +54,23 @@ export default function Dashboard() {
     
     if (type === 'transcriptionUpdate') {
       setIsTranscribing(true);
-      setLiveTranscription({
-        transcript: data.transcript || "",
-        translation: data.translation || "",
-        keyPoints: data.keyPoints || [],
-        language: data.language || "es",
-        summary: data.summary || ""
-      });
+      setLiveTranscription(prevState => ({
+        ...prevState,
+        transcript: data.transcript || prevState.transcript,
+        translation: data.translation || prevState.translation,
+        language: data.language || prevState.language
+      }));
     } else if (type === 'transcriptionComplete') {
       setIsTranscribing(false);
       
       if (data) {
-        setLiveTranscription({
-          transcript: data.transcript || "",
-          translation: data.translation || "",
-          keyPoints: data.keyPoints || [],
-          language: data.language || "es",
-          summary: data.summary || ""
-        });
+        setLiveTranscription(prevState => ({
+          ...prevState,
+          transcript: data.transcript || prevState.transcript,
+          translation: data.translation || prevState.translation,
+          language: data.language || prevState.language
+          // No actualizamos summary o keyPoints aquí - esperamos al webhook
+        }));
       }
       
       toast.success("Transcripción completada");
@@ -81,20 +81,25 @@ export default function Dashboard() {
     const { type, data } = event.detail;
     
     if (type === 'webhook_analysis') {
+      console.log("Recibido análisis de webhook:", data);
       setLiveTranscription(prevState => ({
         ...prevState,
-        summary: data.summary || prevState.summary,
-        keyPoints: data.keyPoints || prevState.keyPoints
+        summary: data.summary || "",
+        keyPoints: data.keyPoints || []
       }));
+      toast.success("Análisis de transcripción recibido");
     }
   };
   
   useEffect(() => {
     const handleEvent = (e: Event) => {
-      if ((e as CustomEvent).detail?.type === 'audioRecorderMessage') {
-        handleAudioRecorderMessage(e as CustomEvent);
-      } else if ((e as CustomEvent).detail?.type === 'webhook_analysis') {
-        handleWebhookMessage(e as CustomEvent);
+      const customEvent = e as CustomEvent;
+      
+      if (customEvent.detail?.type === 'transcriptionUpdate' || 
+          customEvent.detail?.type === 'transcriptionComplete') {
+        handleAudioRecorderMessage(customEvent);
+      } else if (customEvent.detail?.type === 'webhook_analysis') {
+        handleWebhookMessage(customEvent);
       }
     };
     

@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Globe, BookOpen, Key } from "lucide-react";
+import { Globe, BookOpen, Key, Clock } from "lucide-react";
 
 interface TranscriptionPanelProps {
   transcript: string;
@@ -37,6 +37,8 @@ export function TranscriptionPanel({
     return code ? languages[code] || code.toUpperCase() : "Desconocido";
   };
 
+  const waitingForSummary = transcript && !summary && !isLoading;
+
   return (
     <div className="w-full h-full flex flex-col bg-card rounded-lg border shadow-sm overflow-hidden">
       <Tabs defaultValue="transcript" className="w-full h-full flex flex-col">
@@ -66,6 +68,17 @@ export function TranscriptionPanel({
                 </div>
                 <div className="text-center text-muted-foreground">
                   Procesando audio...
+                </div>
+              </div>
+            </div>
+          ) : waitingForSummary ? (
+            <div className="h-full flex items-center justify-center">
+              <div className="flex flex-col items-center">
+                <div className="w-24 h-24 bg-muted/30 rounded-full flex items-center justify-center mb-4">
+                  <Clock className="h-12 w-12 text-muted-foreground/60 animate-pulse" />
+                </div>
+                <div className="text-center text-muted-foreground">
+                  Esperando respuesta del análisis...
                 </div>
               </div>
             </div>
@@ -102,21 +115,23 @@ export function TranscriptionPanel({
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-sm text-muted-foreground">No hay puntos clave disponibles</p>
+                      <p className="text-sm text-muted-foreground">Esperando puntos clave del análisis...</p>
                     )}
                   </div>
                 </ScrollArea>
               </TabsContent>
               
-              {summary && (
-                <TabsContent value="summary" className="mt-0 h-full">
-                  <ScrollArea className="h-full bg-muted/20 rounded-md p-4">
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                      <pre className="whitespace-pre-wrap font-sans text-sm">{summary || "No hay resumen disponible"}</pre>
-                    </div>
-                  </ScrollArea>
-                </TabsContent>
-              )}
+              <TabsContent value="summary" className="mt-0 h-full">
+                <ScrollArea className="h-full bg-muted/20 rounded-md p-4">
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                    {summary ? (
+                      <pre className="whitespace-pre-wrap font-sans text-sm">{summary}</pre>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Esperando resumen del análisis...</p>
+                    )}
+                  </div>
+                </ScrollArea>
+              </TabsContent>
             </>
           )}
         </div>
