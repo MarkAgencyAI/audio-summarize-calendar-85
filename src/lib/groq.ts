@@ -1,3 +1,4 @@
+
 import { sendToWebhook } from "./webhook";
 import { useState, useCallback } from "react";
 
@@ -198,10 +199,19 @@ export async function transcribeAudio(audioBlob: Blob, subject?: string): Promis
     // Step 1: Create form data for the audio transcription API
     const formData = new FormData();
     formData.append("file", processedAudio, "audio.wav");
-    formData.append("model", "whisper-1");
+    formData.append("model", "whisper-large-v3-turbo"); // Use the correct model from the image
+    formData.append("response_format", "verbose_json"); // Optional but recommended
+    
+    if (subject) {
+      formData.append("prompt", `This is related to ${subject}. Specify context or spelling.`);
+    } else {
+      formData.append("prompt", "Specify context or spelling.");
+    }
+    
     formData.append("language", "es");
     
     // Make the request to GROQ Audio API for the transcript
+    console.log("Making request to GROQ Audio Transcription API...");
     const transcriptResponse = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
       method: "POST",
       headers: {
@@ -211,10 +221,14 @@ export async function transcribeAudio(audioBlob: Blob, subject?: string): Promis
     });
 
     if (!transcriptResponse.ok) {
-      throw new Error(`GROQ API error: ${transcriptResponse.status}`);
+      const errorText = await transcriptResponse.text();
+      console.error("GROQ API error response:", errorText);
+      throw new Error(`GROQ API error: ${transcriptResponse.status} - ${errorText}`);
     }
 
-    const transcriptData: GroqAudioResponse = await transcriptResponse.json();
+    const transcriptData = await transcriptResponse.json();
+    console.log("Transcription response:", transcriptData);
+    
     if (!transcriptData.text) {
       throw new Error("Invalid response from GROQ Audio API");
     }

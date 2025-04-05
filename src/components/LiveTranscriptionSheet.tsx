@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Sheet, 
@@ -39,6 +38,28 @@ export function LiveTranscriptionSheet({
       setOpen(true);
     }
   }, [isTranscribing, open]);
+
+  // Listen for complete transcription events to ensure panel shows final transcription
+  useEffect(() => {
+    const handleTranscriptionComplete = (event: CustomEvent) => {
+      if (event.detail?.data) {
+        // Keep the sheet open to show the final results
+        setOpen(true);
+      }
+    };
+
+    const handleEvent = (e: Event) => {
+      if ((e as CustomEvent).detail?.type === 'transcriptionComplete') {
+        handleTranscriptionComplete(e as CustomEvent);
+      }
+    };
+    
+    window.addEventListener('audioRecorderMessage', handleEvent);
+    
+    return () => {
+      window.removeEventListener('audioRecorderMessage', handleEvent);
+    };
+  }, []);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>

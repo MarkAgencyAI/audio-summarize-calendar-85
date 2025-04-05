@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Mic, X, Play, Pause, Loader2, Square } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -146,10 +145,11 @@ export function AudioRecorder() {
     window.dispatchEvent(event);
   };
   
-  const dispatchTranscriptionComplete = () => {
+  const dispatchTranscriptionComplete = (data: any) => {
     const event = new CustomEvent('audioRecorderMessage', {
       detail: {
-        type: 'transcriptionComplete'
+        type: 'transcriptionComplete',
+        data
       }
     });
     window.dispatchEvent(event);
@@ -175,14 +175,21 @@ export function AudioRecorder() {
         });
         
         // Use the real GROQ API for transcription with subject
-        transcriptionResult = await transcribeAudio(audioBlob, subject);
+        transcriptionResult = await processAudioFile(
+          audioBlob, 
+          subject,
+          (progressData) => dispatchTranscriptionUpdate(progressData)
+        );
         
         if (!transcriptionResult || !transcriptionResult.transcript) {
           throw new Error("No se pudo transcribir el audio correctamente");
         }
         
         toast.success("Audio transcrito correctamente");
-        dispatchTranscriptionComplete();
+        
+        // Send the complete transcription results to update the transcription panel
+        dispatchTranscriptionUpdate(transcriptionResult);
+        dispatchTranscriptionComplete(transcriptionResult);
       } catch (error) {
         console.error("Error transcribing audio:", error);
         toast.error("Error al transcribir el audio. No se pudo procesar.");

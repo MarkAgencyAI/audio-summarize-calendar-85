@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRecordings } from "@/context/RecordingsContext";
 import { useAuth } from "@/context/AuthContext";
@@ -70,12 +70,24 @@ export default function Dashboard() {
       });
     } else if (type === 'transcriptionComplete') {
       setIsTranscribing(false);
+      
+      // Update with the final transcription data if available
+      if (data) {
+        setLiveTranscription({
+          transcript: data.transcript || "",
+          translation: data.translation || "",
+          keyPoints: data.keyPoints || [],
+          language: data.language || "es",
+          summary: data.summary || ""
+        });
+      }
+      
       toast.success("Transcripción completada");
     }
   };
   
   // Add event listener on component mount
-  React.useEffect(() => {
+  useEffect(() => {
     // Use a typed event listener
     const handleEvent = (e: Event) => {
       handleAudioRecorderMessage(e as CustomEvent);

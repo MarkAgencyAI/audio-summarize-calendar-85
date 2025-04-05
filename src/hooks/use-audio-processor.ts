@@ -1,3 +1,4 @@
+
 import { useState, useRef, useCallback } from "react";
 import { transcribeAudio } from "@/lib/groq";
 
@@ -105,6 +106,7 @@ export function useAudioProcessor() {
   
   const processAudioFile = async (
     audioBlob: Blob,
+    subject?: string,
     onTranscriptionProgress?: (data: any) => void
   ) => {
     setIsProcessing(true);
@@ -130,7 +132,8 @@ export function useAudioProcessor() {
         }, 500);
       }
       
-      const result = await transcribeAudio(audioBlob);
+      // Pass the subject parameter to the transcribeAudio function
+      const result = await transcribeAudio(audioBlob, subject);
       
       if (progressInterval) {
         clearInterval(progressInterval);
