@@ -85,7 +85,7 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Add a new recording
   const addRecording = (recordingData: Omit<Recording, "id" | "createdAt">) => {
     const newRecording: Recording = {
-      ...recordingData as object, // Type assertion to make TypeScript happy
+      ...recordingData,
       id: uuidv4(),
       createdAt: Date.now(),
     };
