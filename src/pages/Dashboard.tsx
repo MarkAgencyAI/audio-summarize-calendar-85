@@ -63,10 +63,13 @@ export default function Dashboard() {
       
       if (data && data.output) {
         setWebhookOutput(data.output);
+        setIsTranscribing(false);
         toast.success("Información del webhook recibida correctamente");
       } else if (error) {
+        setIsTranscribing(false);
         toast.error("Error en la respuesta del webhook");
       } else {
+        setIsTranscribing(false);
         toast.warning("No se recibieron datos del webhook");
       }
     }
