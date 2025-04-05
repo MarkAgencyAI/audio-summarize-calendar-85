@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,21 +73,15 @@ export function PdfUploader() {
       setKeyPoints(result.analysis.keyPoints);
       setShowAnalysis(true);
 
-      // Buscar la carpeta seleccionada
-      const folder = folders.find(f => f.id === selectedFolder);
-
       // Guardar la grabación
       addRecording({
         name: lessonName,
         audioUrl: "",
         audioData: "",
-        transcript: result.transcript,
-        summary: result.analysis.summary,
-        keyPoints: result.analysis.keyPoints,
+        output: result.transcript,
         folderId: selectedFolder,
         duration: 0,
-        suggestedEvents: result.analysis.suggestedEvents,
-        language: result.language || "es"
+        suggestedEvents: result.analysis.suggestedEvents
       });
       
       toast.success("PDF procesado correctamente");
