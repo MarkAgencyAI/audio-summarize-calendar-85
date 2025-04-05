@@ -61,10 +61,23 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const updatedRecordings = savedRecordings.map(recording => {
       if (!('output' in recording) && 'transcript' in recording) {
         const rec = recording as any; // Use any to access old properties
-        return {
-          ...recording as object, // Fix the spread error by casting to object
-          output: rec.transcript || rec.summary || "No hay información disponible"
+        
+        // Create a new recording object with all required properties
+        const updatedRec: Recording = {
+          id: recording.id,
+          name: recording.name,
+          audioUrl: recording.audioUrl,
+          audioData: recording.audioData,
+          createdAt: recording.createdAt,
+          folderId: recording.folderId,
+          duration: recording.duration,
+          output: rec.transcript || rec.summary || "No hay información disponible",
+          // Copy optional properties if they exist
+          subject: recording.subject,
+          suggestedEvents: recording.suggestedEvents
         };
+        
+        return updatedRec;
       }
       return recording;
     });
