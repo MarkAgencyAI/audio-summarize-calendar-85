@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
 import { transcribeAudio, blobToBase64 } from "@/lib/groq";
 import { useAudioProcessor } from "@/hooks/use-audio-processor";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type RecordingState = "idle" | "recording" | "paused";
 
@@ -27,8 +26,8 @@ export function AudioRecorder() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState("default");
   const [subject, setSubject] = useState("");
-  
   const [hasPermission, setHasPermission] = useState(false);
+  const [waitingForWebhook, setWaitingForWebhook] = useState(false);
   
   const subjectRef = useRef(subject);
   
@@ -41,7 +40,7 @@ export function AudioRecorder() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         setHasPermission(true);
-        stream.getTracks().forEach(track => track.stop()); // Stop the stream
+        stream.getTracks().forEach(track => track.stop());
       } catch (error) {
         console.error("Error getting microphone permission:", error);
         setHasPermission(false);
@@ -51,9 +50,31 @@ export function AudioRecorder() {
     checkPermissions();
   }, []);
   
+  useEffect(() => {
+    const handleWebhookMessage = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      
+      if (customEvent.detail?.type === 'webhook_analysis') {
+        console.log("AudioRecorder received webhook message:", customEvent.detail);
+        setWaitingForWebhook(false);
+      }
+    };
+    
+    window.addEventListener('webhookMessage', handleWebhookMessage);
+    
+    return () => {
+      window.removeEventListener('webhookMessage', handleWebhookMessage);
+    };
+  }, []);
+  
   const startRecording = async () => {
     if (!hasPermission) {
       toast.error("Por favor, permite el acceso al micrófono");
+      return;
+    }
+    
+    if (!subject.trim()) {
+      toast.error("Por favor, ingresa la materia antes de grabar");
       return;
     }
     
@@ -129,9 +150,6 @@ export function AudioRecorder() {
   const stopTimer = () => {
     if (timerInterval.current) {
       clearInterval(timerInterval.current);
-      setRecordingDuration(prevDuration => {
-        return prevDuration;  // Preserve the final duration
-      });
     }
   };
   
@@ -164,20 +182,20 @@ export function AudioRecorder() {
   const saveRecording = async (audioBlob: Blob) => {
     try {
       setIsProcessing(true);
+      setWaitingForWebhook(true);
       toast.info("Procesando grabación...");
       
       const audioUrl = URL.createObjectURL(audioBlob);
-      
       const base64AudioData = await blobToBase64(audioBlob);
+      
+      dispatchTranscriptionUpdate({
+        transcript: "Iniciando transcripción...",
+        keyPoints: ["Procesando audio..."],
+        language: "es"
+      });
       
       let transcriptionResult;
       try {
-        dispatchTranscriptionUpdate({
-          transcript: "Iniciando transcripción...",
-          keyPoints: ["Procesando audio..."],
-          language: "es"
-        });
-        
         transcriptionResult = await processAudioFile(
           audioBlob, 
           subjectRef.current,
@@ -188,42 +206,86 @@ export function AudioRecorder() {
           throw new Error("No se pudo transcribir el audio correctamente");
         }
         
-        toast.success("Audio transcrito correctamente");
+        toast.success("Audio transcrito correctamente, esperando respuesta del webhook...");
         
         dispatchTranscriptionUpdate(transcriptionResult);
         dispatchTranscriptionComplete(transcriptionResult);
+        
+        let savedTranscriptionData = {
+          transcript: transcriptionResult.transcript,
+          summary: transcriptionResult.summary || "",
+          keyPoints: transcriptionResult.keyPoints || [],
+          language: transcriptionResult.language || "es",
+        };
+        
+        const webhookHandler = (event: Event) => {
+          const customEvent = event as CustomEvent;
+          
+          if (customEvent.detail?.type === 'webhook_analysis' && customEvent.detail?.data) {
+            console.log("Got webhook data for saving:", customEvent.detail.data);
+            
+            savedTranscriptionData = {
+              transcript: customEvent.detail.data.transcript || savedTranscriptionData.transcript,
+              summary: customEvent.detail.data.summary || savedTranscriptionData.summary,
+              keyPoints: customEvent.detail.data.keyPoints || savedTranscriptionData.keyPoints,
+              language: savedTranscriptionData.language,
+            };
+            
+            window.removeEventListener('webhookMessage', webhookHandler);
+            
+            finishSaving();
+          }
+        };
+        
+        window.addEventListener('webhookMessage', webhookHandler);
+        
+        const timeoutId = setTimeout(() => {
+          if (isProcessing) {
+            console.log("Webhook timeout - saving with existing data");
+            window.removeEventListener('webhookMessage', webhookHandler);
+            finishSaving();
+          }
+        }, 15000);
+        
+        const finishSaving = () => {
+          clearTimeout(timeoutId);
+          
+          addRecording({
+            name: recordingName || `Grabación ${formatDate(new Date())}`,
+            audioUrl,
+            audioData: base64AudioData as string,
+            transcript: savedTranscriptionData.transcript,
+            summary: savedTranscriptionData.summary,
+            keyPoints: savedTranscriptionData.keyPoints,
+            folderId: selectedFolder,
+            duration: recordingDuration,
+            language: savedTranscriptionData.language,
+            subject: subjectRef.current || "Sin materia especificada",
+            suggestedEvents: []
+          });
+          
+          setIsProcessing(false);
+          setWaitingForWebhook(false);
+          setRecordingState('idle');
+          setRecordingName('');
+          setSubject('');
+          setAudioBlob(null);
+          setRecordingDuration(0);
+          
+          toast.success('Grabación guardada correctamente');
+        };
+      
       } catch (error) {
         console.error("Error transcribing audio:", error);
         toast.error("Error al transcribir el audio. No se pudo procesar.");
-        
+        setWaitingForWebhook(false);
         throw error;
       }
       
-      addRecording({
-        name: recordingName || `Grabación ${formatDate(new Date())}`,
-        audioUrl,
-        audioData: base64AudioData as string,
-        transcript: transcriptionResult.transcript,
-        summary: transcriptionResult.summary || "",
-        keyPoints: transcriptionResult.keyPoints || [],
-        folderId: selectedFolder,
-        duration: recordingDuration,
-        language: transcriptionResult.language || "es",
-        subject: subjectRef.current || "Sin materia especificada",
-        suggestedEvents: transcriptionResult.suggestedEvents || []
-      });
-      
-      setIsProcessing(false);
-      setRecordingState('idle');
-      setRecordingName('');
-      setSubject('');
-      setAudioBlob(null);
-      setRecordingDuration(0);
-      
-      toast.success('Grabación guardada correctamente');
     } catch (error) {
       console.error('Error saving recording:', error);
       setIsProcessing(false);
+      setWaitingForWebhook(false);
       toast.error('Error al guardar la grabación');
     }
   };
@@ -233,23 +295,31 @@ export function AudioRecorder() {
       <h2 className="text-xl font-semibold mb-4 text-custom-primary">Nueva grabación</h2>
       
       <div className="space-y-4">
-        {recordingState === "idle" && audioBlob === null && (
+        {recordingState === "idle" && (
           <div className="space-y-2">
-            <Label htmlFor="subject" className="text-custom-text">Materia</Label>
+            <Label htmlFor="subject" className="text-custom-text">Materia *</Label>
             <Input
               id="subject"
               placeholder="Ingresa la materia (ej: Matemáticas, Historia, etc.)"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
+              required
             />
+            {recordingState === "idle" && !subject.trim() && (
+              <p className="text-xs text-amber-500">Debes ingresar la materia antes de grabar</p>
+            )}
           </div>
         )}
         
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             {recordingState === "idle" && (
-              <Button onClick={startRecording} disabled={isProcessing} className="bg-custom-primary hover:bg-custom-primary/90 text-white">
+              <Button 
+                onClick={startRecording} 
+                disabled={isProcessing || !subject.trim()} 
+                className={`bg-custom-primary hover:bg-custom-primary/90 text-white ${!subject.trim() ? 'opacity-70' : ''}`}
+              >
                 <Mic className="h-4 w-4 mr-2" />
                 Grabar
               </Button>
@@ -299,17 +369,6 @@ export function AudioRecorder() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="subject-after-recording" className="text-custom-text">Materia</Label>
-              <Input
-                id="subject-after-recording"
-                placeholder="Ingresa la materia (ej: Matemáticas, Historia, etc.)"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
-              />
-            </div>
-            
-            <div className="space-y-2">
               <Label htmlFor="folder" className="text-custom-text">Carpeta</Label>
               <select
                 id="folder"
@@ -336,13 +395,13 @@ export function AudioRecorder() {
             
             <Button
               onClick={() => saveRecording(audioBlob)}
-              disabled={isProcessing}
+              disabled={isProcessing || waitingForWebhook}
               className="bg-custom-primary hover:bg-custom-primary/90 text-white"
             >
-              {isProcessing ? (
+              {isProcessing || waitingForWebhook ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Procesando...
+                  {waitingForWebhook ? "Esperando webhook..." : "Procesando..."}
                 </>
               ) : (
                 "Guardar grabación"

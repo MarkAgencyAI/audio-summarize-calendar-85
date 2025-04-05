@@ -64,7 +64,6 @@ export default function Dashboard() {
       setIsTranscribing(false);
       setWaitingForWebhook(true);
       
-      // Solo actualizamos el estado inicial - esperaremos la respuesta completa del webhook
       if (data) {
         setLiveTranscription(prevState => ({
           ...prevState,
@@ -86,10 +85,8 @@ export default function Dashboard() {
       setWaitingForWebhook(false);
       
       if (data) {
-        // Actualizar todos los campos con los datos del webhook
         setLiveTranscription(prevState => ({
           ...prevState,
-          // Usar los datos del webhook o mantener los actuales si no hay datos
           transcript: data.transcript !== null ? data.transcript : prevState.transcript,
           summary: data.summary !== null ? data.summary : null,
           keyPoints: data.keyPoints && data.keyPoints.length > 0 ? data.keyPoints : []

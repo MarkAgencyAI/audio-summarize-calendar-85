@@ -1,6 +1,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { transcribeAudio } from "@/lib/groq";
+import { sendToWebhook } from "@/lib/webhook";
 
 export function useAudioProcessor() {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -131,17 +132,44 @@ export function useAudioProcessor() {
           });
         }, 500);
       }
-      
-      // Make sure to pass the subject parameter to transcribeAudio 
-      const result = await transcribeAudio(audioBlob, subject);
+
+      // Transcribe the audio with Groq
+      const transcriptionResult = await transcribeAudio(audioBlob, subject);
       
       if (progressInterval) {
         clearInterval(progressInterval);
       }
       
+      setProgress(95);
+      
+      // Prepare data for webhook
+      const webhookData = {
+        transcript: transcriptionResult.transcript,
+        language: transcriptionResult.language || "es",
+        subject: subject || "Sin materia",
+        processed: true
+      };
+      
+      // Notify that we're waiting for webhook
+      if (onTranscriptionProgress) {
+        onTranscriptionProgress({
+          transcript: transcriptionResult.transcript,
+          keyPoints: ["Esperando respuesta del webhook..."],
+          language: transcriptionResult.language || "es"
+        });
+      }
+      
+      // Send data to webhook - use the constant URL
+      const WEBHOOK_URL = "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
+      await sendToWebhook(WEBHOOK_URL, webhookData);
+      
+      // The webhook.ts file will dispatch an event with the response
+      // All processing of the response is now handled by webhook.ts
+      
       setProgress(100);
       
-      return result;
+      // Return the Groq transcription result as a fallback
+      return transcriptionResult;
     } catch (error) {
       console.error("Error processing audio:", error);
       throw error;
