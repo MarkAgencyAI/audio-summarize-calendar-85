@@ -21,6 +21,7 @@ interface CalendarEvent {
   id: string;
   title: string;
   date: string;
+  description?: string;
 }
 
 function UpcomingEvents({ events }: { events: CalendarEvent[] }) {
@@ -79,6 +80,7 @@ function ToolsCard() {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcriptionOutput, setTranscriptionOutput] = useState("");
   const [transcriptionOpen, setTranscriptionOpen] = useState(false);
+  const { user } = useAuth();
 
   const handleFileUpload = (file: File) => {
     // Fixed to match the Recording type properties
@@ -102,7 +104,8 @@ function ToolsCard() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <PdfUploader />
+        {/* Only show PdfUploader for teachers */}
+        {user?.role === "teacher" && <PdfUploader />}
         <AudioRecorder />
         <Button 
           variant="outline" 
@@ -180,25 +183,33 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedEvents = loadFromStorage("calendarEvents");
-    if (storedEvents) {
-      try {
-        const parsedEvents = JSON.parse(storedEvents);
-        // Filter events to only show those within the next 14 days
-        const now = new Date();
-        const filteredEvents = parsedEvents.filter((event: CalendarEvent) => {
+    const loadEvents = () => {
+      const storedEvents = loadFromStorage<CalendarEvent[]>("calendarEvents") || [];
+      // Filter events to only show those within the next 14 days
+      const now = new Date();
+      const filteredEvents = storedEvents.filter((event: CalendarEvent) => {
+        try {
           const eventDate = parseISO(event.date);
           return isWithinInterval(eventDate, {
             start: now,
             end: addDays(now, 14)
           });
-        });
-        setUpcomingEvents(filteredEvents);
-      } catch (error) {
-        console.error("Error parsing calendar events:", error);
-        setUpcomingEvents([]);
-      }
-    }
+        } catch (error) {
+          console.error("Error parsing date for event:", event);
+          return false;
+        }
+      });
+      setUpcomingEvents(filteredEvents);
+    };
+    
+    // Load events initially
+    loadEvents();
+    
+    // Set up interval to refresh events every minute
+    const intervalId = setInterval(loadEvents, 60000);
+    
+    // Cleanup interval on unmount
+    return () => clearInterval(intervalId);
   }, []);
 
   return (
