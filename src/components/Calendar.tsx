@@ -1,4 +1,3 @@
-
 import { useState, useMemo, useEffect } from "react";
 import { addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, format, isSameMonth, isSameDay, addDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -53,7 +52,6 @@ export function Calendar({
   const isMobile = useIsMobile();
   const { folders, addFolder } = useRecordings();
 
-  // Event type options
   const eventTypes = [
     "Examen Parcial",
     "Examen Final",
@@ -155,14 +153,11 @@ export function Calendar({
       return;
     }
     
-    // Add the new folder
     addFolder(newFolderName, newFolderColor);
     
-    // Find the newly created folder (it should be the last one added)
     setTimeout(() => {
       const newFolder = folders[folders.length - 1];
       if (newFolder) {
-        // Set the new folder as the selected one
         setNewEvent({
           ...newEvent,
           folderId: newFolder.id
@@ -176,7 +171,6 @@ export function Calendar({
     setShowNewFolderDialog(false);
   };
 
-  // Calculate the days of the week names based on screen size
   const getDayNames = () => {
     if (isMobile) {
       return ["D", "L", "M", "X", "J", "V", "S"];
@@ -184,7 +178,6 @@ export function Calendar({
     return ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
   };
   
-  // Get the folder name for an event
   const getFolderName = (folderId?: string) => {
     if (!folderId) return "Sin materia";
     const folder = folders.find(f => f.id === folderId);
@@ -282,7 +275,6 @@ export function Calendar({
         </div>
       </div>
       
-      {/* Add Event Dialog */}
       <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
         <DialogContent className="max-w-[95vw] sm:max-w-[450px]">
           <DialogHeader>
@@ -316,7 +308,7 @@ export function Calendar({
                       <SelectValue placeholder="Selecciona una materia" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Sin materia</SelectItem>
+                      <SelectItem value="none">Sin materia</SelectItem>
                       {folders.map(folder => (
                         <SelectItem key={folder.id} value={folder.id}>
                           {folder.name}
@@ -348,7 +340,7 @@ export function Calendar({
                   <SelectValue placeholder="Selecciona un tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Otro</SelectItem>
+                  <SelectItem value="otro">Otro</SelectItem>
                   {eventTypes.map(type => (
                     <SelectItem key={type} value={type}>
                       {type}
@@ -389,7 +381,6 @@ export function Calendar({
         </DialogContent>
       </Dialog>
       
-      {/* New Folder Dialog */}
       <Dialog open={showNewFolderDialog} onOpenChange={setShowNewFolderDialog}>
         <DialogContent className="max-w-[95vw] sm:max-w-[400px]">
           <DialogHeader>
@@ -425,7 +416,6 @@ export function Calendar({
         </DialogContent>
       </Dialog>
       
-      {/* View Event Dialog */}
       <Dialog open={!!selectedEvent} onOpenChange={open => !open && setSelectedEvent(null)}>
         {selectedEvent && 
           <DialogContent className="max-w-[95vw] sm:max-w-[400px]">
