@@ -6,15 +6,20 @@ export async function sendToWebhook(url: string, data: any): Promise<void> {
     console.log("Enviando datos al webhook:", url);
     console.log("Datos enviados:", data);
     
+    // Set proper CORS headers and make sure we're using the correct method
     const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Accept": "application/json, text/plain, */*",
       },
+      mode: "cors", // Changed from 'no-cors' to properly handle the response
       body: JSON.stringify(data),
     });
     
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error en la respuesta del webhook: ${response.status}`, errorText);
       throw new Error(`Error en la respuesta del webhook: ${response.status}`);
     }
     
@@ -54,6 +59,24 @@ export async function sendToWebhook(url: string, data: any): Promise<void> {
           return;
         }
         
+        // Si no hay output pero hay un mensaje, usarlo como output
+        if (rawData && rawData.message) {
+          console.log("Se encontró message en la respuesta:", rawData.message);
+          
+          const analysisEvent = new CustomEvent('webhookMessage', {
+            detail: {
+              type: 'webhook_analysis',
+              data: {
+                output: rawData.message
+              }
+            }
+          });
+          
+          window.dispatchEvent(analysisEvent);
+          toast.success("Datos recibidos del webhook correctamente");
+          return;
+        }
+        
         // Si no hay output, mostramos un mensaje
         toast.warning("La respuesta del webhook no contiene campo 'output'");
         const errorEvent = new CustomEvent('webhookMessage', {
@@ -66,17 +89,19 @@ export async function sendToWebhook(url: string, data: any): Promise<void> {
         window.dispatchEvent(errorEvent);
       } catch (jsonError) {
         console.error("Error al parsear respuesta como JSON:", jsonError);
-        toast.error("Error al procesar la respuesta del webhook");
         
-        // Notificar que hubo un error con el webhook
-        const errorEvent = new CustomEvent('webhookMessage', {
+        // Si no se puede parsear como JSON, usamos el texto directamente
+        const analysisEvent = new CustomEvent('webhookMessage', {
           detail: {
             type: 'webhook_analysis',
-            data: null,
-            error: jsonError.message
+            data: {
+              output: responseText
+            }
           }
         });
-        window.dispatchEvent(errorEvent);
+        
+        window.dispatchEvent(analysisEvent);
+        toast.success("Texto recibido del webhook correctamente");
       }
     } else {
       toast.warning("Respuesta vacía del webhook");
@@ -93,14 +118,14 @@ export async function sendToWebhook(url: string, data: any): Promise<void> {
     }
   } catch (error) {
     console.error("Error al enviar datos al webhook:", error);
-    toast.error("Error al enviar datos al webhook");
+    toast.error(`Error al enviar datos al webhook: ${error.message}`);
     
     // Notificar que hubo un error con el webhook
     const errorEvent = new CustomEvent('webhookMessage', {
       detail: {
         type: 'webhook_analysis',
         data: null,
-        error: true
+        error: error.message || "Error desconocido al contactar el webhook"
       }
     });
     window.dispatchEvent(errorEvent);

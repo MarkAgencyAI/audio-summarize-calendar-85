@@ -1,3 +1,4 @@
+
 import { useState, useRef, useCallback } from "react";
 import { transcribeAudio } from "@/lib/groq";
 import { sendToWebhook } from "@/lib/webhook";
@@ -154,11 +155,22 @@ export function useAudioProcessor() {
         });
       }
       
-      // Send data to webhook - use the constant URL
-      const WEBHOOK_URL = "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
-      await sendToWebhook(WEBHOOK_URL, webhookData);
-      
-      // The webhook.ts file will dispatch an event with the raw response
+      try {
+        // Send data to webhook - use the constant URL
+        const WEBHOOK_URL = "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
+        console.log("Iniciando envío a webhook");
+        await sendToWebhook(WEBHOOK_URL, webhookData);
+        console.log("Webhook completado correctamente");
+      } catch (webhookError) {
+        console.error("Error con el webhook pero continuando con el proceso:", webhookError);
+        
+        // If webhook fails, we'll still return the transcription
+        if (onTranscriptionProgress) {
+          onTranscriptionProgress({
+            output: transcriptionResult.transcript + "\n\n(Error al procesar con el webhook)"
+          });
+        }
+      }
       
       setProgress(100);
       
@@ -166,6 +178,14 @@ export function useAudioProcessor() {
       return transcriptionResult;
     } catch (error) {
       console.error("Error processing audio:", error);
+      
+      // Notify about the error
+      if (onTranscriptionProgress) {
+        onTranscriptionProgress({
+          output: "Error al procesar el audio: " + (error.message || "Error desconocido")
+        });
+      }
+      
       throw error;
     } finally {
       setIsProcessing(false);
