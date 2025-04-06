@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -95,8 +96,9 @@
     @apply bg-background text-foreground antialiased font-sans;
   }
 
+  /* Updated heading styles to use dark text in light mode and light text in dark mode */
   h1, h2, h3, h4, h5, h6 {
-    @apply font-medium tracking-tight text-white dark:text-white;
+    @apply font-medium tracking-tight text-foreground;
   }
 
   h1 {
