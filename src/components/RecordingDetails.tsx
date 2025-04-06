@@ -267,30 +267,36 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex flex-wrap items-center gap-2 mt-2">
-          <div className="flex items-center gap-2">
-            <div 
-              className="h-6 w-6 rounded-full flex items-center justify-center" 
-              style={{
-                backgroundColor: folder.color
-              }}
-            >
-              <Folder className="h-3 w-3 text-white" />
-            </div>
+        {/* Mejorado: Selector de carpeta con más espacio y mejor visualización */}
+        <div className="flex flex-wrap items-center gap-2 mt-2 mb-2">
+          <div className="flex items-center gap-2 w-full">
+            <Label htmlFor="folder-select" className="min-w-20 flex items-center">
+              <div 
+                className="h-6 w-6 rounded-full flex items-center justify-center mr-2" 
+                style={{ backgroundColor: folder.color }}
+              >
+                <Folder className="h-3 w-3 text-white" />
+              </div>
+              <span>Carpeta:</span>
+            </Label>
             
-            <Select value={selectedFolder} onValueChange={handleFolderChange}>
-              <SelectTrigger className="h-7 w-auto min-w-24 max-w-40 dark:bg-custom-secondary/40 dark:border-custom-secondary">
+            <Select 
+              value={selectedFolder} 
+              onValueChange={handleFolderChange}
+              id="folder-select"
+            >
+              <SelectTrigger 
+                className="h-9 w-full min-w-[200px] flex-1 dark:bg-custom-secondary/40 dark:border-custom-secondary"
+              >
                 <SelectValue placeholder="Seleccionar carpeta" />
               </SelectTrigger>
-              <SelectContent className="dark:bg-[#001A29] dark:border-custom-secondary">
+              <SelectContent className="dark:bg-[#001A29] dark:border-custom-secondary max-h-[300px]">
                 {folders.map(f => (
                   <SelectItem key={f.id} value={f.id}>
                     <div className="flex items-center gap-2">
                       <div 
                         className="h-3 w-3 rounded-full" 
-                        style={{
-                          backgroundColor: f.color
-                        }}
+                        style={{ backgroundColor: f.color }}
                       />
                       <span className="truncate">{f.name}</span>
                     </div>
@@ -356,7 +362,7 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                   <Textarea 
                     value={editedOutput} 
                     onChange={e => setEditedOutput(e.target.value)}
-                    className="min-h-[150px] whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90"
+                    className="min-h-[250px] whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90"
                   />
                 ) : (
                   <pre className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 overflow-x-auto">
