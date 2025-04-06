@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Recording, useRecordings } from "@/context/RecordingsContext";
 import { Button } from "@/components/ui/button";
@@ -283,9 +282,9 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
             <Select 
               value={selectedFolder} 
               onValueChange={handleFolderChange}
-              id="folder-select"
             >
               <SelectTrigger 
+                id="folder-select"
                 className="h-9 w-full min-w-[200px] flex-1 dark:bg-custom-secondary/40 dark:border-custom-secondary"
               >
                 <SelectValue placeholder="Seleccionar carpeta" />
