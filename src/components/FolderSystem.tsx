@@ -1,5 +1,7 @@
+
 import React, { useState } from "react";
-import { useRecordings, Folder, Grade, Recording } from "@/context/RecordingsContext";
+import { useNavigate } from "react-router-dom";
+import { useRecordings, Folder } from "@/context/RecordingsContext";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
@@ -22,14 +24,7 @@ import {
   Edit,
   Trash,
   Plus,
-  X,
-  Award,
-  Star,
-  FileText,
-  Play,
-  Pause,
-  Clock,
-  Calendar
+  ChevronRight
 } from "lucide-react";
 import { 
   Select, 
@@ -42,8 +37,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RecordingDetails } from "@/components/RecordingDetails";
-import { formatDate, formatTimeFromSeconds } from "@/lib/utils";
 
 // Definir iconos académicos
 interface IconOption {
@@ -85,170 +78,14 @@ const renderIcon = (iconName: string, color: string): JSX.Element => {
   return IconComponent;
 };
 
-// Grade component
-const GradeItem = ({ grade, onDelete, onEdit }: { grade: Grade, onDelete: () => void, onEdit: (score: number) => void }) => {
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [newScore, setNewScore] = useState(grade.score.toString());
-
-  const handleSaveEdit = () => {
-    const score = parseFloat(newScore);
-    if (isNaN(score) || score < 0 || score > 10) {
-      toast.error("La nota debe ser un número entre 0 y 10");
-      return;
-    }
-    onEdit(score);
-    setShowEditDialog(false);
-  };
-
-  return (
-    <>
-      <div className="flex items-center justify-between bg-background/80 p-2 rounded-md mb-2">
-        <div className="flex items-center">
-          <Star className="h-4 w-4 mr-2 text-yellow-500" />
-          <span className="text-sm">{grade.name}</span>
-        </div>
-        <div className="flex items-center">
-          <span className={`font-bold text-sm mr-4 ${grade.score >= 6 ? 'text-green-500' : 'text-red-500'}`}>
-            {grade.score.toFixed(1)}
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 text-blue-500"
-            onClick={() => setShowEditDialog(true)}
-          >
-            <Edit className="h-3 w-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 text-red-500"
-            onClick={onDelete}
-          >
-            <X className="h-3 w-3" />
-          </Button>
-        </div>
-      </div>
-
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="sm:max-w-[350px]">
-          <DialogHeader>
-            <DialogTitle>Editar nota</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="mb-4">
-              <label className="block mb-2 text-sm font-medium">Nota (0-10)</label>
-              <Input
-                type="number"
-                min="0"
-                max="10"
-                step="0.1"
-                value={newScore}
-                onChange={(e) => setNewScore(e.target.value)}
-                className="w-full"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={handleSaveEdit}>Guardar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-};
-
-// Recording Item component - New component for displaying recordings in folders
-const RecordingListItem = ({ recording }: { recording: Recording }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
-  const [showRecordingDetails, setShowRecordingDetails] = useState(false);
-  
-  // Toggle audio playback
-  const togglePlay = () => {
-    if (!audioElement) {
-      const audio = new Audio(recording.audioUrl);
-      setAudioElement(audio);
-      
-      audio.addEventListener('ended', () => {
-        setIsPlaying(false);
-      });
-      
-      audio.play();
-      setIsPlaying(true);
-    } else {
-      if (isPlaying) {
-        audioElement.pause();
-      } else {
-        audioElement.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
-  
-  // Clean up audio element on unmount
-  React.useEffect(() => {
-    return () => {
-      if (audioElement) {
-        audioElement.pause();
-        audioElement.src = "";
-      }
-    };
-  }, [audioElement]);
-  
-  return (
-    <>
-      <div className="flex items-center justify-between bg-background/80 p-2 rounded-md mb-2">
-        <div className="flex items-center max-w-[70%]">
-          <FileText className="h-4 w-4 mr-2 text-blue-500" />
-          <span className="text-sm truncate">{recording.name}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="text-xs text-gray-500 mr-2">
-            {formatTimeFromSeconds(recording.duration)}
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 w-7 p-0"
-            onClick={togglePlay}
-          >
-            {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 w-7 p-0 text-blue-500"
-            onClick={() => setShowRecordingDetails(true)}
-          >
-            <FileText className="h-3 w-3" />
-          </Button>
-        </div>
-      </div>
-      
-      {showRecordingDetails && (
-        <RecordingDetails 
-          recording={recording} 
-          isOpen={showRecordingDetails} 
-          onOpenChange={setShowRecordingDetails}
-        />
-      )}
-    </>
-  );
-};
-
 export function FolderSystem() {
+  const navigate = useNavigate();
   const {
     folders,
     addFolder,
     updateFolder,
     deleteFolder,
-    addGrade,
-    updateGrade,
-    deleteGrade,
-    getFolderGrades,
-    calculateFolderAverage,
-    recordings
+    calculateFolderAverage
   } = useRecordings();
   const [showAddFolderDialog, setShowAddFolderDialog] = useState(false);
   const [showEditFolderDialog, setShowEditFolderDialog] = useState(false);
@@ -256,29 +93,6 @@ export function FolderSystem() {
   const [folderName, setFolderName] = useState("");
   const [folderColor, setFolderColor] = useState("#3b82f6");
   const [folderIcon, setFolderIcon] = useState("folder");
-  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
-  const [expandedSections, setExpandedSections] = useState<Record<string, Record<string, boolean>>>({});
-  const [showAddGradeDialog, setShowAddGradeDialog] = useState(false);
-  const [gradeName, setGradeName] = useState("");
-  const [gradeScore, setGradeScore] = useState("7");
-  const [selectedFolderForGrade, setSelectedFolderForGrade] = useState<string | null>(null);
-
-  const toggleFolder = (folderId: string) => {
-    setExpandedFolders(prev => ({
-      ...prev,
-      [folderId]: !prev[folderId]
-    }));
-  };
-  
-  const toggleSection = (folderId: string, section: string) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [folderId]: {
-        ...(prev[folderId] || {}),
-        [section]: !(prev[folderId] && prev[folderId][section])
-      }
-    }));
-  };
 
   const handleAddFolder = () => {
     if (!folderName.trim()) {
@@ -318,7 +132,8 @@ export function FolderSystem() {
     toast.success("Materia eliminada");
   };
 
-  const openEditDialog = (folder: Folder) => {
+  const openEditDialog = (folder: Folder, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent clicking through to the folder
     setSelectedFolder(folder);
     setFolderName(folder.name);
     setFolderColor(folder.color);
@@ -326,41 +141,8 @@ export function FolderSystem() {
     setShowEditFolderDialog(true);
   };
 
-  const openAddGradeDialog = (folderId: string) => {
-    setSelectedFolderForGrade(folderId);
-    setGradeName("");
-    setGradeScore("7");
-    setShowAddGradeDialog(true);
-  };
-
-  const handleAddGrade = () => {
-    if (!selectedFolderForGrade) return;
-    if (!gradeName.trim()) {
-      toast.error("El nombre de la evaluación es obligatorio");
-      return;
-    }
-    
-    const score = parseFloat(gradeScore);
-    if (isNaN(score) || score < 0 || score > 10) {
-      toast.error("La nota debe ser un número entre 0 y 10");
-      return;
-    }
-    
-    addGrade(selectedFolderForGrade, gradeName, score);
-    toast.success("Nota agregada");
-    setGradeName("");
-    setGradeScore("7");
-    setShowAddGradeDialog(false);
-  };
-
-  const handleUpdateGrade = (gradeId: string, score: number) => {
-    updateGrade(gradeId, { score });
-    toast.success("Nota actualizada");
-  };
-  
-  // Function to get recordings for a specific folder
-  const getFolderRecordings = (folderId: string) => {
-    return recordings.filter(recording => recording.folderId === folderId);
+  const navigateToFolder = (folderId: string) => {
+    navigate(`/folder/${folderId}`);
   };
 
   return (
@@ -380,29 +162,22 @@ export function FolderSystem() {
         </Button>
       </div>
       
-      <div className="grid gap-4 grid-cols-1">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {folders.map(folder => {
-          const folderGrades = getFolderGrades(folder.id);
-          const folderRecordings = getFolderRecordings(folder.id);
           const average = calculateFolderAverage(folder.id);
-          const isExpanded = !!expandedFolders[folder.id];
-          
-          // Check if sections are expanded
-          const sectionsState = expandedSections[folder.id] || {};
-          const isGradesExpanded = !!sectionsState["grades"];
-          const isRecordingsExpanded = !!sectionsState["recordings"];
           
           return (
             <Card 
               key={folder.id} 
-              className="w-full border border-gray-300 dark:border-gray-600 overflow-hidden" 
+              className="w-full border border-gray-300 dark:border-gray-600 overflow-hidden cursor-pointer hover:shadow-md transition-shadow" 
               style={{
                 backgroundColor: `${folder.color}10`
               }}
+              onClick={() => navigateToFolder(folder.id)}
             >
               <CardHeader className="p-4 pb-3">
-                <div className="flex justify-between items-center flex-wrap gap-2">
-                  <div className="flex items-center" onClick={() => toggleFolder(folder.id)} style={{ cursor: 'pointer' }}>
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center flex-1">
                     <div 
                       className="h-10 w-10 rounded flex justify-center items-center flex-shrink-0" 
                       style={{
@@ -411,8 +186,8 @@ export function FolderSystem() {
                     >
                       {renderIcon(folder.icon || "folder", "#ffffff")}
                     </div>
-                    <div className="ml-3">
-                      <CardTitle className="text-lg font-medium text-black dark:text-white">{folder.name}</CardTitle>
+                    <div className="ml-3 overflow-hidden">
+                      <CardTitle className="text-lg font-medium text-black dark:text-white truncate">{folder.name}</CardTitle>
                       {average > 0 && (
                         <span className={`text-sm font-semibold ${average >= 6 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                           Promedio: {average.toFixed(1)}
@@ -421,119 +196,34 @@ export function FolderSystem() {
                     </div>
                   </div>
                   
-                  <div className="flex">
+                  <div className="flex ml-2">
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      className="text-blue-500 dark:text-blue-400 disabled:opacity-50" 
-                      onClick={() => openEditDialog(folder)} 
+                      className="text-blue-500 dark:text-blue-400 disabled:opacity-50 p-1" 
+                      onClick={(e) => openEditDialog(folder, e)} 
                       disabled={folder.id === "default"}
                     >
-                      <Edit className="h-4 w-4 mr-1" />
-                      <span className="hidden sm:inline">Editar</span>
+                      <Edit className="h-4 w-4" />
                     </Button>
                     
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      className="text-red-500 dark:text-red-400 disabled:opacity-50" 
-                      onClick={() => handleDeleteFolder(folder)} 
+                      className="text-red-500 dark:text-red-400 disabled:opacity-50 p-1" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteFolder(folder);
+                      }} 
                       disabled={folder.id === "default"}
                     >
-                      <Trash className="h-4 w-4 mr-1" />
-                      <span className="hidden sm:inline">Eliminar</span>
+                      <Trash className="h-4 w-4" />
                     </Button>
+                    
+                    <ChevronRight className="h-4 w-4 text-gray-400 ml-1" />
                   </div>
                 </div>
               </CardHeader>
-              
-              {isExpanded && (
-                <CardContent className="p-4 pt-0">
-                  {/* Sección de Evaluaciones */}
-                  <div className="mb-4">
-                    <div 
-                      className="flex justify-between items-center mb-3 cursor-pointer"
-                      onClick={() => toggleSection(folder.id, "grades")}
-                    >
-                      <h3 className="text-sm font-medium flex items-center">
-                        <Award className="h-4 w-4 mr-1 text-yellow-500" />
-                        Evaluaciones
-                        {folderGrades.length > 0 && (
-                          <span className="ml-2 bg-gray-200 dark:bg-gray-700 text-xs px-2 py-0.5 rounded-full">
-                            {folderGrades.length}
-                          </span>
-                        )}
-                      </h3>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-8 text-xs" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openAddGradeDialog(folder.id);
-                        }}
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Agregar nota
-                      </Button>
-                    </div>
-                    
-                    {isGradesExpanded && (
-                      <div className="bg-background/50 p-3 rounded-md">
-                        {folderGrades.length === 0 ? (
-                          <div className="text-center text-muted-foreground py-2 text-sm">
-                            No hay evaluaciones registradas
-                          </div>
-                        ) : (
-                          folderGrades.map(grade => (
-                            <GradeItem 
-                              key={grade.id} 
-                              grade={grade} 
-                              onDelete={() => deleteGrade(grade.id)}
-                              onEdit={(score) => handleUpdateGrade(grade.id, score)}
-                            />
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Sección de Grabaciones */}
-                  <div className="mb-4">
-                    <div 
-                      className="flex justify-between items-center mb-3 cursor-pointer"
-                      onClick={() => toggleSection(folder.id, "recordings")}
-                    >
-                      <h3 className="text-sm font-medium flex items-center">
-                        <FileText className="h-4 w-4 mr-1 text-blue-500" />
-                        Grabaciones
-                        {folderRecordings.length > 0 && (
-                          <span className="ml-2 bg-gray-200 dark:bg-gray-700 text-xs px-2 py-0.5 rounded-full">
-                            {folderRecordings.length}
-                          </span>
-                        )}
-                      </h3>
-                    </div>
-                    
-                    {isRecordingsExpanded && (
-                      <div className="bg-background/50 p-3 rounded-md">
-                        {folderRecordings.length === 0 ? (
-                          <div className="text-center text-muted-foreground py-2 text-sm">
-                            No hay grabaciones en esta materia
-                          </div>
-                        ) : (
-                          folderRecordings.map(recording => (
-                            <RecordingListItem 
-                              key={recording.id} 
-                              recording={recording} 
-                            />
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              )}
             </Card>
           );
         })}
@@ -694,49 +384,6 @@ export function FolderSystem() {
               onClick={handleEditFolder}
             >
               Guardar cambios
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Add grade dialog */}
-      <Dialog open={showAddGradeDialog} onOpenChange={setShowAddGradeDialog}>
-        <DialogContent className="max-w-[95vw] w-[450px]">
-          <DialogHeader>
-            <DialogTitle>Agregar evaluación</DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="mb-4">
-              <label className="block mb-2 text-sm font-medium">Nombre de la evaluación</label>
-              <Input 
-                value={gradeName} 
-                onChange={e => setGradeName(e.target.value)} 
-                className="w-full"
-                placeholder="Ej: Examen parcial, Trabajo práctico, etc."
-              />
-            </div>
-            
-            <div className="mb-4">
-              <label className="block mb-2 text-sm font-medium">Nota (0-10)</label>
-              <Input 
-                type="number"
-                min="0"
-                max="10"
-                step="0.1"
-                value={gradeScore} 
-                onChange={e => setGradeScore(e.target.value)} 
-                className="w-full"
-              />
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button 
-              className="w-full sm:w-auto" 
-              onClick={handleAddGrade}
-            >
-              Agregar nota
             </Button>
           </DialogFooter>
         </DialogContent>

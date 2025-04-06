@@ -13,6 +13,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import CalendarPage from "./pages/CalendarPage";
 import FoldersPage from "./pages/FoldersPage";
+import FolderDetailsPage from "./pages/FolderDetailsPage";
 import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 
@@ -46,6 +47,7 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/calendar" element={<CalendarPage />} />
                 <Route path="/folders" element={<FoldersPage />} />
+                <Route path="/folder/:folderId" element={<FolderDetailsPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
