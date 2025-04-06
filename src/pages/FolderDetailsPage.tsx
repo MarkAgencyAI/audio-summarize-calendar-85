@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
@@ -19,17 +18,19 @@ import {
   Trash, 
   Plus, 
   X,
-  Star
+  Star,
+  CalendarDays
 } from "lucide-react";
 import { formatTimeFromSeconds } from "@/lib/utils";
+import { CalendarEvent } from "@/components/Calendar";
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 
-// Recording Item component
 const RecordingListItem = ({ recording }: { recording: Recording }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const [showRecordingDetails, setShowRecordingDetails] = useState(false);
   
-  // Toggle audio playback
   const togglePlay = () => {
     if (!audioElement) {
       const audio = new Audio(recording.audioUrl);
@@ -51,7 +52,6 @@ const RecordingListItem = ({ recording }: { recording: Recording }) => {
     }
   };
   
-  // Clean up audio element on unmount
   useEffect(() => {
     return () => {
       if (audioElement) {
@@ -102,7 +102,6 @@ const RecordingListItem = ({ recording }: { recording: Recording }) => {
   );
 };
 
-// Grade component
 const GradeItem = ({ grade, onDelete, onEdit }: { grade: Grade, onDelete: () => void, onEdit: (score: number) => void }) => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [newScore, setNewScore] = useState(grade.score.toString());
@@ -175,6 +174,29 @@ const GradeItem = ({ grade, onDelete, onEdit }: { grade: Grade, onDelete: () => 
   );
 };
 
+const EventItem = ({ event }: { event: CalendarEvent }) => {
+  return (
+    <div className="flex items-center justify-between bg-background/80 p-3 rounded-md mb-2">
+      <div className="flex items-center max-w-[70%]">
+        <CalendarDays className="h-4 w-4 mr-2 text-primary" />
+        <div className="flex flex-col">
+          <span className="text-sm font-medium truncate">{event.title}</span>
+          <span className="text-xs text-muted-foreground">
+            {format(parseISO(event.date), "PPP", { locale: es })}
+          </span>
+        </div>
+      </div>
+      <div className="flex items-center">
+        {event.eventType && (
+          <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+            {event.eventType}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export default function FolderDetailsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -198,29 +220,41 @@ export default function FolderDetailsPage() {
   const [folderName, setFolderName] = useState("");
   const [folderColor, setFolderColor] = useState("#3b82f6");
   const [folderIcon, setFolderIcon] = useState("folder");
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   
-  // Find the current folder
   const folder = folders.find(f => f.id === folderId);
   
-  // Get recordings and grades for this folder
   const folderRecordings = recordings.filter(recording => recording.folderId === folderId);
   const folderGrades = getFolderGrades(folderId || "");
   const average = calculateFolderAverage(folderId || "");
   
-  // Handle auth redirection
+  useEffect(() => {
+    const loadEvents = () => {
+      const savedEvents = localStorage.getItem("calendarEvents");
+      if (savedEvents) {
+        const parsedEvents = JSON.parse(savedEvents) as CalendarEvent[];
+        const folderEvents = parsedEvents.filter(event => 
+          event.folderId === folderId || 
+          (event.folderId === "none" && folderId === "default")
+        );
+        setEvents(folderEvents);
+      }
+    };
+    
+    loadEvents();
+  }, [folderId]);
+  
   useEffect(() => {
     if (!user) {
       navigate("/login");
     }
   }, [user, navigate]);
   
-  // Handle folder not found
   useEffect(() => {
     if (!folder && folderId) {
       toast.error("Materia no encontrada");
       navigate("/folders");
     } else if (folder) {
-      // Set folder details for editing
       setFolderName(folder.name);
       setFolderColor(folder.color);
       setFolderIcon(folder.icon || "folder");
@@ -240,7 +274,6 @@ export default function FolderDetailsPage() {
     );
   }
 
-  // Render icon for the folder (simplified version)
   const renderFolderIcon = () => {
     return (
       <div 
@@ -288,7 +321,6 @@ export default function FolderDetailsPage() {
   };
   
   const handleDeleteFolder = () => {
-    // Don't allow deleting the default folder
     if (folderId === "default") {
       toast.error("No puedes eliminar la materia predeterminada");
       return;
@@ -301,7 +333,6 @@ export default function FolderDetailsPage() {
   return (
     <Layout>
       <div className="space-y-6 max-w-full mx-auto">
-        {/* Header with back button */}
         <div className="flex items-center gap-2 mb-4">
           <Button 
             variant="outline" 
@@ -312,7 +343,6 @@ export default function FolderDetailsPage() {
           </Button>
         </div>
         
-        {/* Folder header */}
         <div className="flex justify-between items-center flex-wrap gap-2 bg-card p-4 rounded-lg shadow-sm border">
           <div className="flex items-center">
             {renderFolderIcon()}
@@ -351,7 +381,6 @@ export default function FolderDetailsPage() {
           </div>
         </div>
         
-        {/* Recordings section - MOVED ABOVE GRADES */}
         <Card className="w-full border shadow-sm overflow-hidden">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg font-medium flex items-center">
@@ -382,7 +411,36 @@ export default function FolderDetailsPage() {
           </CardContent>
         </Card>
         
-        {/* Grades section - MOVED BELOW RECORDINGS */}
+        <Card className="w-full border shadow-sm overflow-hidden">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-medium flex items-center">
+              <CalendarDays className="h-5 w-5 mr-2 text-primary" />
+              Eventos
+              {events.length > 0 && (
+                <span className="ml-2 bg-gray-200 dark:bg-gray-700 text-xs px-2 py-0.5 rounded-full">
+                  {events.length}
+                </span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-background/50 p-3 rounded-md">
+              {events.length === 0 ? (
+                <div className="text-center text-muted-foreground py-2 text-sm">
+                  No hay eventos en esta materia
+                </div>
+              ) : (
+                events.map(event => (
+                  <EventItem 
+                    key={event.id} 
+                    event={event} 
+                  />
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        
         <Card className="w-full border shadow-sm overflow-hidden">
           <CardHeader className="pb-3 flex justify-between items-center flex-row">
             <CardTitle className="text-lg font-medium flex items-center">
@@ -424,7 +482,6 @@ export default function FolderDetailsPage() {
           </CardContent>
         </Card>
         
-        {/* Add grade dialog */}
         <Dialog open={showAddGradeDialog} onOpenChange={setShowAddGradeDialog}>
           <DialogContent className="max-w-[95vw] w-[450px]">
             <DialogHeader>
@@ -467,7 +524,6 @@ export default function FolderDetailsPage() {
           </DialogContent>
         </Dialog>
         
-        {/* Edit folder dialog - simplified version */}
         <Dialog open={showEditFolderDialog} onOpenChange={setShowEditFolderDialog}>
           <DialogContent className="max-w-[95vw] w-[450px]">
             <DialogHeader>
