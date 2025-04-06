@@ -1,16 +1,18 @@
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, format, isSameMonth, isSameDay, addDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, FolderPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useRecordings } from "@/context/RecordingsContext";
 
 export interface CalendarEvent {
   id: string;
@@ -18,6 +20,8 @@ export interface CalendarEvent {
   description: string;
   date: string;
   color?: string;
+  folderId?: string;
+  eventType?: string;
 }
 
 interface CalendarProps {
@@ -36,11 +40,30 @@ export function Calendar({
   const [newEvent, setNewEvent] = useState({
     title: "",
     description: "",
-    date: ""
+    date: "",
+    folderId: "",
+    eventType: ""
   });
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [newFolderColor, setNewFolderColor] = useState("#3b82f6");
+  
   const isMobile = useIsMobile();
+  const { folders, addFolder } = useRecordings();
+
+  // Event type options
+  const eventTypes = [
+    "Examen Parcial",
+    "Examen Final",
+    "Trabajo Práctico",
+    "Tarea",
+    "Actividad",
+    "Consulta",
+    "Clase Especial",
+    "Otro"
+  ];
 
   const goToPreviousMonth = () => setCurrentDate(subMonths(currentDate, 1));
   const goToNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
@@ -89,7 +112,9 @@ export function Calendar({
     setNewEvent({
       title: "",
       description: "",
-      date: format(date, "yyyy-MM-dd'T'HH:mm")
+      date: format(date, "yyyy-MM-dd'T'HH:mm"),
+      folderId: "",
+      eventType: ""
     });
     setShowEventDialog(true);
   };
@@ -103,11 +128,15 @@ export function Calendar({
       toast.error("El título es obligatorio");
       return;
     }
+    
     onAddEvent({
       title: newEvent.title,
       description: newEvent.description,
-      date: newEvent.date
+      date: newEvent.date,
+      folderId: newEvent.folderId || undefined,
+      eventType: newEvent.eventType || undefined
     });
+    
     toast.success("Evento agregado");
     setShowEventDialog(false);
   };
@@ -119,6 +148,33 @@ export function Calendar({
       setSelectedEvent(null);
     }
   };
+  
+  const handleCreateFolder = () => {
+    if (!newFolderName.trim()) {
+      toast.error("El nombre de la materia es obligatorio");
+      return;
+    }
+    
+    // Add the new folder
+    addFolder(newFolderName, newFolderColor);
+    
+    // Find the newly created folder (it should be the last one added)
+    setTimeout(() => {
+      const newFolder = folders[folders.length - 1];
+      if (newFolder) {
+        // Set the new folder as the selected one
+        setNewEvent({
+          ...newEvent,
+          folderId: newFolder.id
+        });
+      }
+    }, 100);
+    
+    toast.success("Materia creada");
+    setNewFolderName("");
+    setNewFolderColor("#3b82f6");
+    setShowNewFolderDialog(false);
+  };
 
   // Calculate the days of the week names based on screen size
   const getDayNames = () => {
@@ -126,6 +182,13 @@ export function Calendar({
       return ["D", "L", "M", "X", "J", "V", "S"];
     }
     return ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+  };
+  
+  // Get the folder name for an event
+  const getFolderName = (folderId?: string) => {
+    if (!folderId) return "Sin materia";
+    const folder = folders.find(f => f.id === folderId);
+    return folder ? folder.name : "Sin materia";
   };
 
   return (
@@ -219,8 +282,9 @@ export function Calendar({
         </div>
       </div>
       
+      {/* Add Event Dialog */}
       <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[400px]">
+        <DialogContent className="max-w-[95vw] sm:max-w-[450px]">
           <DialogHeader>
             <DialogTitle>Agregar evento</DialogTitle>
           </DialogHeader>
@@ -236,6 +300,64 @@ export function Calendar({
                 })} 
               />
             </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="folder">Materia</Label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <Select
+                    value={newEvent.folderId}
+                    onValueChange={(value) => setNewEvent({
+                      ...newEvent,
+                      folderId: value
+                    })}
+                  >
+                    <SelectTrigger id="folder">
+                      <SelectValue placeholder="Selecciona una materia" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Sin materia</SelectItem>
+                      {folders.map(folder => (
+                        <SelectItem key={folder.id} value={folder.id}>
+                          {folder.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => setShowNewFolderDialog(true)}
+                >
+                  <FolderPlus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="eventType">Tipo de evento</Label>
+              <Select
+                value={newEvent.eventType}
+                onValueChange={(value) => setNewEvent({
+                  ...newEvent,
+                  eventType: value
+                })}
+              >
+                <SelectTrigger id="eventType">
+                  <SelectValue placeholder="Selecciona un tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Otro</SelectItem>
+                  {eventTypes.map(type => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="description">Descripción</Label>
               <Textarea 
@@ -247,6 +369,7 @@ export function Calendar({
                 })} 
               />
             </div>
+            
             <div className="space-y-2">
               <Label htmlFor="date">Fecha y hora</Label>
               <Input 
@@ -266,6 +389,43 @@ export function Calendar({
         </DialogContent>
       </Dialog>
       
+      {/* New Folder Dialog */}
+      <Dialog open={showNewFolderDialog} onOpenChange={setShowNewFolderDialog}>
+        <DialogContent className="max-w-[95vw] sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Nueva materia</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="folderName">Nombre</Label>
+              <Input 
+                id="folderName" 
+                value={newFolderName} 
+                onChange={e => setNewFolderName(e.target.value)} 
+                placeholder="Nombre de la materia"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="folderColor">Color</Label>
+              <div className="flex items-center">
+                <input 
+                  id="folderColor"
+                  type="color"
+                  className="border border-gray-300 dark:border-gray-700 p-2 rounded w-16 h-10" 
+                  value={newFolderColor} 
+                  onChange={e => setNewFolderColor(e.target.value)} 
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleCreateFolder}>Crear materia</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* View Event Dialog */}
       <Dialog open={!!selectedEvent} onOpenChange={open => !open && setSelectedEvent(null)}>
         {selectedEvent && 
           <DialogContent className="max-w-[95vw] sm:max-w-[400px]">
@@ -273,11 +433,24 @@ export function Calendar({
               <DialogTitle>{selectedEvent.title}</DialogTitle>
             </DialogHeader>
             <div className="py-4">
-              <p className="text-sm text-muted-foreground mb-4">
+              <p className="text-sm text-muted-foreground mb-1">
                 {format(parseISO(selectedEvent.date), "PPPp", {
                   locale: es
                 })}
               </p>
+              
+              {selectedEvent.eventType && (
+                <p className="text-sm font-medium mb-1">
+                  Tipo: {selectedEvent.eventType}
+                </p>
+              )}
+              
+              {selectedEvent.folderId && (
+                <p className="text-sm font-medium mb-3">
+                  Materia: {getFolderName(selectedEvent.folderId)}
+                </p>
+              )}
+              
               <p className="whitespace-pre-line">
                 {selectedEvent.description}
               </p>

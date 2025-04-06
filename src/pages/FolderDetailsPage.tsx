@@ -351,7 +351,38 @@ export default function FolderDetailsPage() {
           </div>
         </div>
         
-        {/* Grades section */}
+        {/* Recordings section - MOVED ABOVE GRADES */}
+        <Card className="w-full border shadow-sm overflow-hidden">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-medium flex items-center">
+              <FileText className="h-5 w-5 mr-2 text-blue-500" />
+              Grabaciones
+              {folderRecordings.length > 0 && (
+                <span className="ml-2 bg-gray-200 dark:bg-gray-700 text-xs px-2 py-0.5 rounded-full">
+                  {folderRecordings.length}
+                </span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-background/50 p-3 rounded-md">
+              {folderRecordings.length === 0 ? (
+                <div className="text-center text-muted-foreground py-2 text-sm">
+                  No hay grabaciones en esta materia
+                </div>
+              ) : (
+                folderRecordings.map(recording => (
+                  <RecordingListItem 
+                    key={recording.id} 
+                    recording={recording} 
+                  />
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* Grades section - MOVED BELOW RECORDINGS */}
         <Card className="w-full border shadow-sm overflow-hidden">
           <CardHeader className="pb-3 flex justify-between items-center flex-row">
             <CardTitle className="text-lg font-medium flex items-center">
@@ -386,37 +417,6 @@ export default function FolderDetailsPage() {
                     grade={grade} 
                     onDelete={() => deleteGrade(grade.id)}
                     onEdit={(score) => updateGrade(grade.id, { score })}
-                  />
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-        
-        {/* Recordings section */}
-        <Card className="w-full border shadow-sm overflow-hidden">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-medium flex items-center">
-              <FileText className="h-5 w-5 mr-2 text-blue-500" />
-              Grabaciones
-              {folderRecordings.length > 0 && (
-                <span className="ml-2 bg-gray-200 dark:bg-gray-700 text-xs px-2 py-0.5 rounded-full">
-                  {folderRecordings.length}
-                </span>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-background/50 p-3 rounded-md">
-              {folderRecordings.length === 0 ? (
-                <div className="text-center text-muted-foreground py-2 text-sm">
-                  No hay grabaciones en esta materia
-                </div>
-              ) : (
-                folderRecordings.map(recording => (
-                  <RecordingListItem 
-                    key={recording.id} 
-                    recording={recording} 
                   />
                 ))
               )}

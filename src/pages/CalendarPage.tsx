@@ -96,7 +96,8 @@ export default function CalendarPage() {
                 id: crypto.randomUUID(),
                 title: recording.keyPoints[index],
                 description: `Evento basado en la grabación: ${recording.name}`,
-                date: eventDate.toISOString()
+                date: eventDate.toISOString(),
+                folderId: recording.folderId // Associate with the recording's folder
               };
               newEvents.push(newEvent);
             });
