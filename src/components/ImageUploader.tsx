@@ -41,13 +41,28 @@ export function ImageUploader() {
 
     setIsUploading(true);
     try {
-      // Convert the file to base64 for sending directly
-      const base64Data = await fileToBase64(selectedFile);
+      // Create a FormData object to handle the file
+      const formData = new FormData();
+      formData.append("image", selectedFile);
       
-      // Send the data directly to the webhook
+      // Upload the image to ImgBB to get a URL
+      // Using a free image hosting service (ImgBB with API key)
+      const uploadResponse = await fetch("https://api.imgbb.com/1/upload?key=26a7315c5f5e1db49888525abb96e6a3", {
+        method: "POST",
+        body: formData,
+      });
+      
+      if (!uploadResponse.ok) {
+        throw new Error("Error al subir la imagen al servicio de alojamiento");
+      }
+      
+      const uploadData = await uploadResponse.json();
+      const imageUrl = uploadData.data.url;
+      
+      // Send the URL to the webhook
       await sendToWebhook("https://sswebhookss.maettiai.tech/webhook/68842cd0-b48e-4cb1-8050-43338dd79f8d", {
         description: description,
-        imageData: base64Data
+        imageUrl: imageUrl
       });
       
       toast.success("Imagen subida correctamente");
@@ -66,16 +81,6 @@ export function ImageUploader() {
     } finally {
       setIsUploading(false);
     }
-  };
-
-  // Helper function to convert File to base64
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
-    });
   };
 
   const triggerFileInput = () => {
