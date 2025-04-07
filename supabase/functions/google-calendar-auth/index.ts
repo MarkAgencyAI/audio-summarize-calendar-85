@@ -6,7 +6,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID') || '';
 const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET') || '';
 const SCOPES = 'https://www.googleapis.com/auth/calendar';
-// Fixed redirect URI that should be registered in Google Console
+// Use dynamic redirect URI based on host domain with /calendar path
 const REDIRECT_URI = 'https://cali-asistente.lovable.ai/calendar';
 
 const corsHeaders = {
@@ -36,7 +36,7 @@ serve(async (req) => {
         );
       }
       
-      // Construct the Google OAuth URL with fixed redirect URI
+      // Construct the Google OAuth URL with proper redirect URI
       const googleAuthUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
       googleAuthUrl.searchParams.append('client_id', GOOGLE_CLIENT_ID);
       googleAuthUrl.searchParams.append('redirect_uri', REDIRECT_URI);
@@ -62,7 +62,7 @@ serve(async (req) => {
         );
       }
       
-      // Exchange the authorization code for an access token using fixed redirect URI
+      // Exchange the authorization code for an access token using proper redirect URI
       const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
         headers: {
