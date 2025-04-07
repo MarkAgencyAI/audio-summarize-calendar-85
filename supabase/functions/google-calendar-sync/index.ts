@@ -24,14 +24,16 @@ serve(async (req) => {
     
     const accessToken = authHeader.split(' ')[1];
     
-    // Get events from request body
-    const { events } = await req.json();
-    if (!events || !Array.isArray(events)) {
+    // Get events and redirectUri from request body
+    const { events, redirectUri } = await req.json();
+    if (!events || !Array.isArray(events) || !redirectUri) {
       return new Response(
-        JSON.stringify({ error: 'Invalid or missing events data' }), 
+        JSON.stringify({ error: 'Invalid or missing events data or redirectUri' }), 
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log(`Processing ${events.length} events for Google Calendar sync with redirectUri: ${redirectUri}`);
 
     // Sync events to Google Calendar
     const syncedEvents = [];

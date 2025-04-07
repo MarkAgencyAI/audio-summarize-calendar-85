@@ -5,8 +5,6 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID') || '';
 const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET') || '';
 const SCOPES = 'https://www.googleapis.com/auth/calendar';
-// Fixed redirect URI that should be registered in Google Console
-const REDIRECT_URI = 'https://cali-asistente.lovable.ai/calendar';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -27,18 +25,21 @@ serve(async (req) => {
     if (path === 'authorize') {
       const params = new URLSearchParams(url.search);
       const state = params.get('state');
+      const redirectUri = params.get('redirectUri');
       
-      if (!state) {
+      if (!state || !redirectUri) {
         return new Response(
-          JSON.stringify({ error: 'Missing required state parameter' }), 
+          JSON.stringify({ error: 'Missing required parameters: state and redirectUri' }), 
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
-      // Construct the Google OAuth URL with fixed redirect URI
+      console.log(`Received authorize request with redirectUri: ${redirectUri}`);
+      
+      // Construct the Google OAuth URL with the provided redirect URI
       const googleAuthUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
       googleAuthUrl.searchParams.append('client_id', GOOGLE_CLIENT_ID);
-      googleAuthUrl.searchParams.append('redirect_uri', REDIRECT_URI);
+      googleAuthUrl.searchParams.append('redirect_uri', redirectUri);
       googleAuthUrl.searchParams.append('response_type', 'code');
       googleAuthUrl.searchParams.append('scope', SCOPES);
       googleAuthUrl.searchParams.append('access_type', 'offline');
@@ -53,14 +54,16 @@ serve(async (req) => {
     
     // Handle token exchange
     if (path === 'token') {
-      const { code } = await req.json();
+      const { code, redirectUri } = await req.json();
       
-      if (!code) {
+      if (!code || !redirectUri) {
         return new Response(
-          JSON.stringify({ error: 'Missing required code parameter' }), 
+          JSON.stringify({ error: 'Missing required parameters: code and redirectUri' }), 
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+      
+      console.log(`Exchanging code for token with redirectUri: ${redirectUri}`);
       
       // Exchange the authorization code for an access token
       const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -72,7 +75,7 @@ serve(async (req) => {
           code,
           client_id: GOOGLE_CLIENT_ID,
           client_secret: GOOGLE_CLIENT_SECRET,
-          redirect_uri: REDIRECT_URI,
+          redirect_uri: redirectUri,
           grant_type: 'authorization_code',
         }),
       });

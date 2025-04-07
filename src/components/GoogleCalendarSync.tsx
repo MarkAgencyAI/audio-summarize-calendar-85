@@ -5,17 +5,15 @@ import { Calendar, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { CalendarEvent } from "@/components/Calendar";
 
-// Define URLs for our Supabase Edge Functions
-const AUTH_URL = import.meta.env.VITE_SUPABASE_URL ? 
-  `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-calendar-auth` : 
-  'http://localhost:54321/functions/v1/google-calendar-auth';
-  
-const SYNC_URL = import.meta.env.VITE_SUPABASE_URL ? 
-  `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-calendar-sync` : 
-  'http://localhost:54321/functions/v1/google-calendar-sync';
+// Define base URL for our Supabase Edge Functions - using the current domain as base
+const BASE_URL = window.location.origin;
 
-// Fixed redirect URI that should match what's in the Edge Function
-const REDIRECT_URI = 'https://cali-asistente.lovable.ai/calendar';
+// Define URLs for our Supabase Edge Functions
+const AUTH_URL = `${BASE_URL}/functions/v1/google-calendar-auth`;
+const SYNC_URL = `${BASE_URL}/functions/v1/google-calendar-sync`;
+
+// Fixed redirect URI that should match what's in the Edge Function and Google Cloud Console
+const REDIRECT_URI = `${BASE_URL}/calendar`;
 
 interface GoogleCalendarSyncProps {
   events: CalendarEvent[];
@@ -28,6 +26,9 @@ export function GoogleCalendarSync({ events, onEventsSynced }: GoogleCalendarSyn
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log("Current BASE_URL:", BASE_URL);
+    console.log("Redirect URI:", REDIRECT_URI);
+    
     // Check if we have a token in localStorage
     const token = localStorage.getItem('google_access_token');
     const expiryTime = localStorage.getItem('google_token_expiry');
@@ -43,6 +44,7 @@ export function GoogleCalendarSync({ events, onEventsSynced }: GoogleCalendarSyn
     const state = queryParams.get('state');
     
     if (code && state === localStorage.getItem('oauth_state')) {
+      console.log("Received authorization code from Google redirect");
       exchangeCodeForToken(code);
       // Clean URL without refreshing the page
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -53,12 +55,13 @@ export function GoogleCalendarSync({ events, onEventsSynced }: GoogleCalendarSyn
   const exchangeCodeForToken = async (code: string) => {
     setIsLoading(true);
     try {
+      console.log(`Exchanging code for token at ${AUTH_URL}/token`);
       const response = await fetch(`${AUTH_URL}/token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ code })
+        body: JSON.stringify({ code, redirectUri: REDIRECT_URI })
       });
       
       if (!response.ok) {
@@ -99,15 +102,19 @@ export function GoogleCalendarSync({ events, onEventsSynced }: GoogleCalendarSyn
       const state = Math.random().toString(36).substring(2);
       localStorage.setItem('oauth_state', state);
       
+      console.log(`Getting authorization URL from ${AUTH_URL}/authorize?state=${state}&redirectUri=${encodeURIComponent(REDIRECT_URI)}`);
+      
       // Get authorization URL from our Edge Function
-      const response = await fetch(`${AUTH_URL}/authorize?state=${state}`);
+      const response = await fetch(`${AUTH_URL}/authorize?state=${state}&redirectUri=${encodeURIComponent(REDIRECT_URI)}`);
       
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('Error getting authorization URL:', errorData);
         throw new Error(`Error getting authorization URL: ${errorData.error || 'Unknown error'}`);
       }
       
       const { authUrl } = await response.json();
+      console.log("Received auth URL:", authUrl);
       
       // Redirect the user to the Google authorization page
       window.location.href = authUrl;
@@ -148,6 +155,8 @@ export function GoogleCalendarSync({ events, onEventsSynced }: GoogleCalendarSyn
         return;
       }
       
+      console.log(`Syncing ${unsyncedEvents.length} events to Google Calendar at ${SYNC_URL}`);
+      
       // Call our secure Edge Function to sync events
       const response = await fetch(SYNC_URL, {
         method: 'POST',
@@ -155,11 +164,15 @@ export function GoogleCalendarSync({ events, onEventsSynced }: GoogleCalendarSyn
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`
         },
-        body: JSON.stringify({ events: unsyncedEvents })
+        body: JSON.stringify({ 
+          events: unsyncedEvents,
+          redirectUri: REDIRECT_URI
+        })
       });
       
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('Error syncing events:', errorData);
         throw new Error(`Error synchronizing events: ${errorData.error || 'Unknown error'}`);
       }
       
