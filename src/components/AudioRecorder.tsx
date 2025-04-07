@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Mic, X, Play, Pause, Loader2, User, Users } from "lucide-react";
+import { Mic, X, Play, Pause, Loader2, Square, User, Users } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
