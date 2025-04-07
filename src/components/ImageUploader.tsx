@@ -67,13 +67,26 @@ export function ImageUploader() {
       const imageUrl = uploadData.data.url;
       console.log("Imagen subida exitosamente a:", imageUrl);
       
-      // Send the URL to the webhook
-      await sendToWebhook("https://sswebhookss.maettiai.tech/webhook/68842cd0-b48e-4cb1-8050-43338dd79f8d", {
+      const webhookData = {
         description: description,
         imageUrl: imageUrl
-      });
+      };
+      
+      // Send the URL to the webhook
+      const webhookResponse = await sendToWebhook("https://sswebhookss.maettiai.tech/webhook/68842cd0-b48e-4cb1-8050-43338dd79f8d", webhookData);
       
       toast.success("Imagen subida correctamente");
+      
+      // Store the data for creating a note
+      localStorage.setItem("lastWebhookData", JSON.stringify(webhookData));
+      
+      // Dispatch a custom event that will be caught by the Dashboard component
+      window.dispatchEvent(new CustomEvent('webhookResponse', {
+        detail: {
+          type: 'webhookResponse',
+          data: webhookData
+        }
+      }));
       
       // Reset the form
       setSelectedFile(null);
@@ -175,4 +188,3 @@ export function ImageUploader() {
     </>
   );
 }
-

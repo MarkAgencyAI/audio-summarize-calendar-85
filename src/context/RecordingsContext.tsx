@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { loadFromStorage, saveToStorage } from "@/lib/storage";
@@ -19,6 +18,17 @@ export interface Recording {
     description: string;
     date?: string;
   }>;
+}
+
+// Note type
+export interface Note {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: number;
+  updatedAt: number;
+  folderId: string;
+  imageUrl?: string;
 }
 
 // Grade type
@@ -56,6 +66,11 @@ interface RecordingsContextType {
   deleteGrade: (id: string) => void;
   getFolderGrades: (folderId: string) => Grade[];
   calculateFolderAverage: (folderId: string) => number;
+  notes: Note[];
+  addNote: (note: Omit<Note, "id" | "createdAt" | "updatedAt">) => void;
+  updateNote: (id: string, data: Partial<Note>) => void;
+  deleteNote: (id: string) => void;
+  getFolderNotes: (folderId: string) => Note[];
 }
 
 // Create context
@@ -66,14 +81,16 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
 
-  // Load recordings, folders and grades from storage on mount
+  // Load recordings, folders, grades and notes from storage on mount
   useEffect(() => {
     const savedRecordings = loadFromStorage<Recording[]>("recordings") || [];
     const savedFolders = loadFromStorage<Folder[]>("folders") || [
       { id: "default", name: "General", color: "#6366f1", createdAt: Date.now(), icon: "folder" }
     ];
     const savedGrades = loadFromStorage<Grade[]>("grades") || [];
+    const savedNotes = loadFromStorage<Note[]>("notes") || [];
     
     // Convert any old recordings format to new format
     const updatedRecordings = savedRecordings.map((recording: any) => {
@@ -101,9 +118,10 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setRecordings(updatedRecordings);
     setFolders(savedFolders);
     setGrades(savedGrades);
+    setNotes(savedNotes);
   }, []);
 
-  // Save recordings, folders and grades to storage on change
+  // Save recordings, folders, grades and notes to storage on change
   useEffect(() => {
     if (recordings.length > 0) {
       saveToStorage("recordings", recordings);
@@ -121,6 +139,12 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       saveToStorage("grades", grades);
     }
   }, [grades]);
+  
+  useEffect(() => {
+    if (notes.length > 0) {
+      saveToStorage("notes", notes);
+    }
+  }, [notes]);
 
   // Add a new recording
   const addRecording = (recordingData: Omit<Recording, "id" | "createdAt">) => {
@@ -213,6 +237,18 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       return updatedRecordings;
     });
     
+    // Move notes to default folder
+    setNotes(prev => {
+      const updatedNotes = prev.map(note => 
+        note.folderId === id 
+          ? { ...note, folderId: "default" } 
+          : note
+      );
+      // Save to localStorage immediately
+      saveToStorage("notes", updatedNotes);
+      return updatedNotes;
+    });
+    
     // Delete the folder's grades
     setGrades(prev => {
       const updatedGrades = prev.filter(grade => grade.folderId !== id);
@@ -284,6 +320,53 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return parseFloat((sum / folderGrades.length).toFixed(1));
   };
 
+  // Add a new note
+  const addNote = (noteData: Omit<Note, "id" | "createdAt" | "updatedAt">) => {
+    const newNote: Note = {
+      id: uuidv4(),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      title: noteData.title,
+      content: noteData.content,
+      folderId: noteData.folderId,
+      imageUrl: noteData.imageUrl,
+    };
+    
+    setNotes(prev => {
+      const updatedNotes = [newNote, ...prev];
+      // Save to localStorage immediately to ensure persistence
+      saveToStorage("notes", updatedNotes);
+      return updatedNotes;
+    });
+  };
+
+  // Update a note
+  const updateNote = (id: string, data: Partial<Note>) => {
+    setNotes(prev => {
+      const updatedNotes = prev.map(note => 
+        note.id === id ? { ...note, ...data, updatedAt: Date.now() } : note
+      );
+      // Save to localStorage immediately
+      saveToStorage("notes", updatedNotes);
+      return updatedNotes;
+    });
+  };
+
+  // Delete a note
+  const deleteNote = (id: string) => {
+    setNotes(prev => {
+      const updatedNotes = prev.filter(note => note.id !== id);
+      // Save to localStorage immediately
+      saveToStorage("notes", updatedNotes);
+      return updatedNotes;
+    });
+  };
+
+  // Get notes for a specific folder
+  const getFolderNotes = (folderId: string) => {
+    return notes.filter(note => note.folderId === folderId);
+  };
+
   return (
     <RecordingsContext.Provider value={{
       recordings,
@@ -299,7 +382,12 @@ export const RecordingsProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       updateGrade,
       deleteGrade,
       getFolderGrades,
-      calculateFolderAverage
+      calculateFolderAverage,
+      notes,
+      addNote,
+      updateNote,
+      deleteNote,
+      getFolderNotes
     }}>
       {children}
     </RecordingsContext.Provider>

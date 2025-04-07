@@ -8,13 +8,15 @@ import { RecordingItem } from "@/components/RecordingItem";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Folder, Mic, FileText, Search, Calendar, Bell } from "lucide-react";
+import { Folder, Mic, FileText, Search, Calendar, Bell, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { parseISO, format, isWithinInterval, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { loadFromStorage } from "@/lib/storage";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ToolsCarousel } from "@/components/ToolsCarousel";
+import { NotesSection } from "@/components/NotesSection";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface CalendarEvent {
   id: string;
@@ -137,6 +139,7 @@ export default function Dashboard() {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcriptionOutput, setTranscriptionOutput] = useState("");
   const [transcriptionOpen, setTranscriptionOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("transcriptions");
 
   useEffect(() => {
     const handleAudioRecorderMessage = (event: Event) => {
@@ -198,6 +201,29 @@ export default function Dashboard() {
     
     return () => clearInterval(intervalId);
   }, []);
+  
+  // Handle webhook data for notes
+  useEffect(() => {
+    // Listen for messages from the ImageUploader component
+    const handleWebhookResponse = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail?.type === 'webhookResponse' && customEvent.detail?.data) {
+        // Store the data in localStorage for the NotesSection to pick up
+        localStorage.setItem("lastWebhookData", JSON.stringify(customEvent.detail.data));
+        
+        // Switch to notes tab
+        setActiveTab("notes");
+        
+        toast.success("¡Imagen recibida! Creando nuevo apunte...");
+      }
+    };
+    
+    window.addEventListener('webhookResponse', handleWebhookResponse);
+    
+    return () => {
+      window.removeEventListener('webhookResponse', handleWebhookResponse);
+    };
+  }, []);
 
   // Fix: Only treat non-empty transcriptionOutput as truthy
   const showTranscriptionOptions = isRecording || isTranscribing || !!transcriptionOutput;
@@ -226,7 +252,25 @@ export default function Dashboard() {
               transcriptionOpen={transcriptionOpen}
               setTranscriptionOpen={setTranscriptionOpen}
             />
-            <Transcriptions />
+            
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="transcriptions" className="flex items-center gap-1">
+                  <FileText className="h-4 w-4" />
+                  <span>Transcripciones</span>
+                </TabsTrigger>
+                <TabsTrigger value="notes" className="flex items-center gap-1">
+                  <BookOpen className="h-4 w-4" />
+                  <span>Apuntes</span>
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="transcriptions">
+                <Transcriptions />
+              </TabsContent>
+              <TabsContent value="notes">
+                <NotesSection />
+              </TabsContent>
+            </Tabs>
           </div>
         )}
 
@@ -241,6 +285,7 @@ export default function Dashboard() {
                 setTranscriptionOpen={setTranscriptionOpen}
               />
               <UpcomingEvents events={upcomingEvents} />
+              <NotesSection />
             </div>
             <div className="md:col-span-2">
               <Transcriptions />

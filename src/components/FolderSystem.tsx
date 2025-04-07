@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRecordings, Folder } from "@/context/RecordingsContext";
@@ -24,7 +23,9 @@ import {
   Edit,
   Trash,
   Plus,
-  ChevronRight
+  ChevronRight,
+  FileText,
+  BookOpen
 } from "lucide-react";
 import { 
   Select, 
@@ -37,8 +38,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
-// Definir iconos académicos
 interface IconOption {
   name: string;
   component: React.ReactNode;
@@ -65,7 +66,6 @@ const academicIcons: IconOption[] = [
   { name: "languages", component: <Languages />, label: "Idiomas", area: "Lingüística" },
 ];
 
-// Renderizado de iconos por nombre
 const renderIcon = (iconName: string, color: string): JSX.Element => {
   const icon = academicIcons.find(i => i.name === iconName);
   if (!icon) return <FolderIcon color={color} />;
@@ -85,7 +85,9 @@ export function FolderSystem() {
     addFolder,
     updateFolder,
     deleteFolder,
-    calculateFolderAverage
+    calculateFolderAverage,
+    recordings,
+    notes,
   } = useRecordings();
   const [showAddFolderDialog, setShowAddFolderDialog] = useState(false);
   const [showEditFolderDialog, setShowEditFolderDialog] = useState(false);
@@ -123,7 +125,6 @@ export function FolderSystem() {
   };
 
   const handleDeleteFolder = (folder: Folder) => {
-    // Don't allow deleting the default folder
     if (folder.id === "default") {
       toast.error("No puedes eliminar la materia predeterminada");
       return;
@@ -133,7 +134,7 @@ export function FolderSystem() {
   };
 
   const openEditDialog = (folder: Folder, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent clicking through to the folder
+    e.stopPropagation();
     setSelectedFolder(folder);
     setFolderName(folder.name);
     setFolderColor(folder.color);
@@ -143,6 +144,14 @@ export function FolderSystem() {
 
   const navigateToFolder = (folderId: string) => {
     navigate(`/folder/${folderId}`);
+  };
+
+  const getRecordingsCount = (folderId: string) => {
+    return recordings.filter(recording => recording.folderId === folderId).length;
+  };
+
+  const getNotesCount = (folderId: string) => {
+    return notes.filter(note => note.folderId === folderId).length;
   };
 
   return (
@@ -165,6 +174,8 @@ export function FolderSystem() {
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {folders.map(folder => {
           const average = calculateFolderAverage(folder.id);
+          const recordingsCount = getRecordingsCount(folder.id);
+          const notesCount = getNotesCount(folder.id);
           
           return (
             <Card 
@@ -224,12 +235,29 @@ export function FolderSystem() {
                   </div>
                 </div>
               </CardHeader>
+              
+              <CardContent className="px-4 pb-3 pt-0">
+                <div className="flex gap-2 mt-1">
+                  {recordingsCount > 0 && (
+                    <Badge variant="outline" className="flex items-center gap-1 bg-green-100 dark:bg-green-900/20">
+                      <FileText className="h-3 w-3" />
+                      <span>{recordingsCount}</span>
+                    </Badge>
+                  )}
+                  
+                  {notesCount > 0 && (
+                    <Badge variant="outline" className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900/20">
+                      <BookOpen className="h-3 w-3" />
+                      <span>{notesCount}</span>
+                    </Badge>
+                  )}
+                </div>
+              </CardContent>
             </Card>
           );
         })}
       </div>
       
-      {/* Add folder dialog */}
       <Dialog open={showAddFolderDialog} onOpenChange={setShowAddFolderDialog}>
         <DialogContent className="max-w-[95vw] w-[450px]">
           <DialogHeader>
@@ -309,7 +337,6 @@ export function FolderSystem() {
         </DialogContent>
       </Dialog>
       
-      {/* Edit folder dialog */}
       <Dialog open={showEditFolderDialog} onOpenChange={setShowEditFolderDialog}>
         <DialogContent className="max-w-[95vw] w-[450px]">
           <DialogHeader>
