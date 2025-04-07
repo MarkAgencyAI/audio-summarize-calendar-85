@@ -14,7 +14,7 @@ interface Window {
         revoke: (token: string, callback: () => void) => void;
       }
     };
-  };
+  } | undefined;
 }
 
 namespace google.accounts.oauth2 {
@@ -34,4 +34,41 @@ namespace google.accounts.oauth2 {
     error?: string;
     error_description?: string;
   }
+}
+
+// Declare the gapi namespace
+declare namespace gapi {
+  let client: {
+    init: (args: {
+      apiKey: string;
+      discoveryDocs: string[];
+    }) => Promise<void>;
+    getToken: () => { access_token: string } | null;
+    setToken: (token: { access_token: string } | null) => void;
+    calendar: {
+      events: {
+        insert: (args: { calendarId: string; resource: any }) => Promise<{
+          result: {
+            id: string;
+            htmlLink: string;
+          }
+        }>;
+      };
+    };
+    load: (api: string, callback: () => void) => void;
+    people?: {
+      people: {
+        get: (params: {
+          resourceName: string;
+          personFields: string;
+        }) => Promise<{
+          result: {
+            emailAddresses?: Array<{
+              value: string;
+            }>;
+          }
+        }>;
+      }
+    };
+  };
 }

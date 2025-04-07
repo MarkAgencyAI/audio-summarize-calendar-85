@@ -32,12 +32,12 @@ export class GoogleCalendarService {
     return new Promise((resolve, reject) => {
       console.log("Initializing Google Calendar Service...");
       
-      // Load the Google API client
-      if (typeof gapi === 'undefined') {
+      // Check if gapi is defined
+      if (typeof window.gapi === 'undefined' || !window.gapi) {
         this.loadScript('https://apis.google.com/js/api.js')
           .then(() => this.initGapi())
           .then(() => {
-            if (typeof google === 'undefined') {
+            if (typeof window.google === 'undefined' || !window.google || !window.google.accounts) {
               return this.loadScript('https://accounts.google.com/gsi/client');
             }
           })
@@ -69,9 +69,14 @@ export class GoogleCalendarService {
     if (this.gapiInitialized) return Promise.resolve();
     
     return new Promise((resolve, reject) => {
-      gapi.load('client', async () => {
+      if (!window.gapi || !window.gapi.load) {
+        reject(new Error("Google API client not loaded"));
+        return;
+      }
+
+      window.gapi.load('client', async () => {
         try {
-          await gapi.client.init({
+          await window.gapi.client.init({
             apiKey: API_KEY,
             discoveryDocs: [DISCOVERY_DOC],
           });
@@ -91,7 +96,13 @@ export class GoogleCalendarService {
     if (this.gisInitialized) return Promise.resolve();
     
     return new Promise((resolve) => {
-      this.tokenClient = google.accounts.oauth2.initTokenClient({
+      if (!window.google || !window.google.accounts || !window.google.accounts.oauth2) {
+        console.error("Google Identity Services not loaded");
+        resolve(); // Resolve anyway to avoid hanging
+        return;
+      }
+
+      this.tokenClient = window.google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
         callback: () => {
@@ -147,7 +158,12 @@ export class GoogleCalendarService {
 
     return new Promise((resolve, reject) => {
       try {
-        this.tokenClient!.requestAccessToken({
+        if (!this.tokenClient) {
+          reject(new Error("Token client not initialized"));
+          return;
+        }
+
+        this.tokenClient.requestAccessToken({
           prompt: 'consent',
           hint: localStorage.getItem('google_user_email') || undefined
         });
@@ -183,11 +199,13 @@ export class GoogleCalendarService {
     localStorage.removeItem('google_user_email');
     
     // Revoke the token if possible
-    const token = gapi.client.getToken();
-    if (token !== null) {
-      google.accounts.oauth2.revoke(token.access_token, () => {
-        gapi.client.setToken(null);
-      });
+    if (window.gapi && window.gapi.client && window.gapi.client.getToken) {
+      const token = window.gapi.client.getToken();
+      if (token !== null && window.google && window.google.accounts && window.google.accounts.oauth2) {
+        window.google.accounts.oauth2.revoke(token.access_token, () => {
+          window.gapi.client.setToken(null);
+        });
+      }
     }
   }
 
@@ -221,7 +239,11 @@ export class GoogleCalendarService {
     
     // Create the event
     try {
-      const response = await gapi.client.calendar.events.insert({
+      if (!window.gapi || !window.gapi.client || !window.gapi.client.calendar) {
+        throw new Error("Google Calendar API not initialized");
+      }
+
+      const response = await window.gapi.client.calendar.events.insert({
         calendarId: 'primary',
         resource: googleEvent
       });
@@ -325,7 +347,12 @@ export class GoogleCalendarService {
     // Refresh the token if expired
     if (isExpired && this.tokenClient) {
       return new Promise((resolve, reject) => {
-        this.tokenClient!.requestAccessToken({
+        if (!this.tokenClient) {
+          reject(new Error("Token client not initialized"));
+          return;
+        }
+
+        this.tokenClient.requestAccessToken({
           prompt: '',
           hint: localStorage.getItem('google_user_email') || undefined,
           callback: (response) => {
@@ -352,8 +379,8 @@ export class GoogleCalendarService {
     localStorage.setItem('google_token_expiry', expiryTime.toString());
     
     // Store user email if available
-    if (gapi.client.getToken() !== null) {
-      gapi.client.people.people.get({
+    if (window.gapi && window.gapi.client && window.gapi.client.getToken && window.gapi.client.people) {
+      window.gapi.client.people.people.get({
         resourceName: 'people/me',
         personFields: 'emailAddresses'
       }).then(resp => {

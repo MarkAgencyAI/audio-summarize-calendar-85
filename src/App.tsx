@@ -34,11 +34,28 @@ function App() {
   // Set the app name in the document title
   document.title = "CALI - Asistente de clases";
   
-  // Add Google API type definition
+  // Initialize Google API objects
   useEffect(() => {
-    // Declare gapi and google types
-    window.gapi = window.gapi || {};
-    window.google = window.google || {};
+    // Initialize empty objects for TypeScript
+    if (typeof window !== 'undefined') {
+      window.gapi = window.gapi || {};
+      window.google = window.google || {};
+      
+      // Ensure google.accounts exists to prevent TypeScript errors
+      if (!window.google.accounts) {
+        window.google.accounts = {
+          oauth2: {
+            initTokenClient: (() => {
+              console.warn('Google API not yet loaded');
+              return {} as google.accounts.oauth2.TokenClient;
+            }) as any,
+            revoke: (() => {
+              console.warn('Google API not yet loaded');
+            }) as any
+          }
+        };
+      }
+    }
   }, []);
   
   return (
