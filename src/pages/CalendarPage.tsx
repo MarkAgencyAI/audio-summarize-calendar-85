@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Layout } from "@/components/Layout";
@@ -20,13 +19,11 @@ export default function CalendarPage() {
     }
   }, [user, navigate]);
 
-  // Load events from localStorage on component mount
   useEffect(() => {
     const loadedEvents = loadFromStorage<CalendarEvent[]>("calendarEvents") || [];
     setEvents(loadedEvents);
   }, []);
 
-  // Save events to localStorage whenever they change
   useEffect(() => {
     saveToStorage("calendarEvents", events);
   }, [events]);
@@ -102,8 +99,11 @@ export default function CalendarPage() {
               newEvents.push(newEvent);
             });
             
-            // Update state with new events
-            setEvents(prev => [...prev, ...newEvents]);
+            setEvents(prev => {
+              const updatedEvents = [...prev, ...newEvents];
+              saveToStorage("calendarEvents", updatedEvents);
+              return updatedEvents;
+            });
             
             toast.success("Eventos agregados al calendario");
             dialog.close();
@@ -125,7 +125,6 @@ export default function CalendarPage() {
     };
     setEvents(prev => {
       const updatedEvents = [...prev, newEvent];
-      // Save to localStorage immediately
       saveToStorage("calendarEvents", updatedEvents);
       return updatedEvents;
     });
@@ -134,7 +133,18 @@ export default function CalendarPage() {
   const handleDeleteEvent = (id: string) => {
     setEvents(prev => {
       const updatedEvents = prev.filter(event => event.id !== id);
-      // Save to localStorage immediately
+      saveToStorage("calendarEvents", updatedEvents);
+      return updatedEvents;
+    });
+  };
+
+  const updateEventWithGoogleId = (eventId: string, googleEventId: string) => {
+    setEvents(prev => {
+      const updatedEvents = prev.map(event => 
+        event.id === eventId 
+          ? { ...event, googleEventId } 
+          : event
+      );
       saveToStorage("calendarEvents", updatedEvents);
       return updatedEvents;
     });
@@ -147,7 +157,11 @@ export default function CalendarPage() {
         
         <div className="glassmorphism rounded-xl p-3 md:p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40 w-full">
           <div className="w-full overflow-hidden">
-            <Calendar events={events} onAddEvent={handleAddEvent} onDeleteEvent={handleDeleteEvent} />
+            <Calendar 
+              events={events} 
+              onAddEvent={handleAddEvent} 
+              onDeleteEvent={handleDeleteEvent} 
+            />
           </div>
         </div>
       </div>
