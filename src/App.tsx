@@ -40,27 +40,25 @@ function App() {
     if (typeof window !== 'undefined') {
       window.gapi = window.gapi || {};
       
-      // Initialize the google object with the required structure
-      window.google = window.google || {};
+      // Initialize the google object if it doesn't exist
+      if (!window.google) {
+        window.google = {} as typeof window.google;
+      }
       
       // Create the accounts object if it doesn't exist
       if (!window.google.accounts) {
-        // Initialize with the required structure using type assertion
-        window.google = {
-          ...window.google,
-          accounts: {
-            oauth2: {
-              initTokenClient: (config: any) => {
-                console.warn('Google API not yet loaded');
-                return {} as google.accounts.oauth2.TokenClient;
-              },
-              revoke: (token: string, callback?: () => void) => {
-                console.warn('Google API not yet loaded');
-                if (callback) callback();
-              }
+        window.google.accounts = {
+          oauth2: {
+            initTokenClient: (config: any) => {
+              console.warn('Google API not yet loaded');
+              return {} as google.accounts.oauth2.TokenClient;
+            },
+            revoke: (token: string, callback?: () => void) => {
+              console.warn('Google API not yet loaded');
+              if (callback) callback();
             }
           }
-        } as any;
+        };
       }
     }
   }, []);

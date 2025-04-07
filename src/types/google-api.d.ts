@@ -14,7 +14,7 @@ interface Window {
         revoke: (token: string, callback: () => void) => void;
       }
     };
-  } | undefined;
+  };
 }
 
 namespace google.accounts.oauth2 {
