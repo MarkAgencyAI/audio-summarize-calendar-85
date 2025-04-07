@@ -1,17 +1,8 @@
 import { useState, useEffect } from "react";
-import { 
-  Sheet, 
-  SheetContent, 
-  SheetHeader, 
-  SheetTitle, 
-  SheetDescription,
-  SheetTrigger,
-  SheetClose
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { TranscriptionPanel } from "./TranscriptionPanel";
 import { Mic, X } from "lucide-react";
-
 interface LiveTranscriptionSheetProps {
   isTranscribing: boolean;
   output: string;
@@ -19,7 +10,6 @@ interface LiveTranscriptionSheetProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
-
 export function LiveTranscriptionSheet({
   isTranscribing,
   output,
@@ -29,28 +19,25 @@ export function LiveTranscriptionSheet({
 }: LiveTranscriptionSheetProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [userClosed, setUserClosed] = useState(false);
-  
   const isControlled = open !== undefined && onOpenChange !== undefined;
   const isOpen = isControlled ? open : internalOpen;
-  
   const handleOpenChange = (newOpen: boolean) => {
     if (isControlled) {
       onOpenChange(newOpen);
     } else {
       setInternalOpen(newOpen);
     }
-    
     if (!newOpen) {
       setUserClosed(true);
     }
   };
-  
+
   // Auto-open the sheet when transcription begins, but only if user hasn't explicitly closed it
   useEffect(() => {
     if (isTranscribing && !isOpen && !userClosed) {
       handleOpenChange(true);
     }
-    
+
     // Reset userClosed flag when transcription stops
     if (!isTranscribing) {
       setUserClosed(false);
@@ -65,52 +52,26 @@ export function LiveTranscriptionSheet({
         handleOpenChange(true);
       }
     };
-
     const handleEvent = (e: Event) => {
       if ((e as CustomEvent).detail?.type === 'transcriptionComplete') {
         handleTranscriptionComplete(e as CustomEvent);
       }
     };
-    
     window.addEventListener('audioRecorderMessage', handleEvent);
-    
     return () => {
       window.removeEventListener('audioRecorderMessage', handleEvent);
     };
   }, [userClosed]);
-
   const handleClose = () => {
     handleOpenChange(false);
     setUserClosed(true);
   };
-
-  return (
-    <Sheet open={isOpen} onOpenChange={handleOpenChange}>
-      {children ? (
-        <SheetTrigger asChild>
+  return <Sheet open={isOpen} onOpenChange={handleOpenChange}>
+      {children ? <SheetTrigger asChild>
           {children}
-        </SheetTrigger>
-      ) : (
-        <SheetTrigger asChild>
-          <Button 
-            variant="outline" 
-            className="flex items-center gap-2"
-            size="sm"
-          >
-            {isTranscribing ? (
-              <>
-                <Mic className="h-4 w-4 text-red-500 animate-pulse" />
-                <span>Transcribiendo...</span>
-              </>
-            ) : (
-              <>
-                <Mic className="h-4 w-4" />
-                <span>Ver transcripción</span>
-              </>
-            )}
-          </Button>
-        </SheetTrigger>
-      )}
+        </SheetTrigger> : <SheetTrigger asChild>
+          
+        </SheetTrigger>}
       
       <SheetContent side="right" className="w-full sm:max-w-md md:max-w-xl p-0 flex flex-col overflow-hidden">
         <SheetHeader className="p-4 border-b flex flex-row justify-between items-center">
@@ -121,12 +82,7 @@ export function LiveTranscriptionSheet({
             </SheetDescription>
           </div>
           <SheetClose asChild>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 w-8 p-0" 
-              onClick={handleClose}
-            >
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={handleClose}>
               <X className="h-4 w-4" />
               <span className="sr-only">Cerrar</span>
             </Button>
@@ -134,12 +90,8 @@ export function LiveTranscriptionSheet({
         </SheetHeader>
         
         <div className="flex-1 overflow-hidden">
-          <TranscriptionPanel
-            output={output}
-            isLoading={isTranscribing && !output}
-          />
+          <TranscriptionPanel output={output} isLoading={isTranscribing && !output} />
         </div>
       </SheetContent>
-    </Sheet>
-  );
+    </Sheet>;
 }
