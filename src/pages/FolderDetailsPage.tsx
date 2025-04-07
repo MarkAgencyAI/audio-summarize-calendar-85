@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -6,13 +5,80 @@ import { Layout } from "@/components/Layout";
 import { RecordingItem } from "@/components/RecordingItem";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { NotesSection } from "@/components/NotesSection";
-import { ArrowLeft, Pencil, Check, X, Folder, FileText, BookOpen, GraduationCap, Plus } from "lucide-react";
+import { ArrowLeft, Pencil, Check, X, Folder, FileText, BookOpen, GraduationCap, Plus, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { loadFromStorage } from "@/lib/storage";
+import { parseISO, format, isWithinInterval, addDays } from "date-fns";
+import { es } from "date-fns/locale";
+
+interface CalendarEvent {
+  id: string;
+  title: string;
+  date: string;
+  description?: string;
+  folderId?: string;
+}
+
+function UpcomingEvents({ events, folderName }: { events: CalendarEvent[], folderName: string }) {
+  const navigate = useNavigate();
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Bell className="h-5 w-5 text-orange-500" />
+          Recordatorios de {folderName}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {events.length === 0 ? (
+          <div className="text-center text-muted-foreground py-2">
+            <p>No hay recordatorios para esta materia</p>
+            <p className="text-xs mt-1">Los eventos de esta materia aparecerán aquí</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {events.slice(0, 5).map(event => (
+              <div
+                key={event.id}
+                className="p-2 bg-secondary/50 rounded-lg transition-colors cursor-pointer"
+                onClick={() => navigate("/calendar")}
+              >
+                <div className="font-medium text-sm flex items-center gap-2">
+                  <Bell className="h-4 w-4 text-orange-500" />
+                  {event.title}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {format(parseISO(event.date), "PPPp", { locale: es })}
+                </div>
+                {event.description && (
+                  <div className="text-xs mt-1 line-clamp-2">
+                    {event.description}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {events.length > 5 && (
+              <Button
+                variant="link"
+                className="w-full text-sm"
+                onClick={() => navigate("/calendar")}
+              >
+                Ver todos los eventos ({events.length})
+              </Button>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function FolderDetailsPage() {
   const { folderId } = useParams<{ folderId: string }>();
@@ -33,6 +99,7 @@ export default function FolderDetailsPage() {
   const [showAddGradeDialog, setShowAddGradeDialog] = useState(false);
   const [newGradeName, setNewGradeName] = useState("");
   const [newGradeScore, setNewGradeScore] = useState<number>(0);
+  const [folderEvents, setFolderEvents] = useState<CalendarEvent[]>([]);
   
   useEffect(() => {
     if (!folder) {
@@ -42,6 +109,43 @@ export default function FolderDetailsPage() {
     
     setFolderName(folder.name);
   }, [folder, navigate]);
+  
+  useEffect(() => {
+    if (!folderId) return;
+    
+    const loadFolderEvents = () => {
+      const allEvents = loadFromStorage<CalendarEvent[]>("calendarEvents") || [];
+      const now = new Date();
+      
+      const filteredEvents = allEvents.filter((event: CalendarEvent) => {
+        try {
+          const isForThisFolder = event.folderId === folderId;
+          
+          if (!isForThisFolder) return false;
+          
+          const eventDate = parseISO(event.date);
+          return isWithinInterval(eventDate, {
+            start: now,
+            end: addDays(now, 14)
+          });
+        } catch (error) {
+          console.error("Error parsing date for event:", event);
+          return false;
+        }
+      });
+      
+      filteredEvents.sort((a, b) => {
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      });
+      
+      setFolderEvents(filteredEvents);
+    };
+    
+    loadFolderEvents();
+    
+    const intervalId = setInterval(loadFolderEvents, 60000);
+    return () => clearInterval(intervalId);
+  }, [folderId]);
   
   if (!folder) {
     return null;
@@ -155,126 +259,133 @@ export default function FolderDetailsPage() {
           )}
         </div>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full max-w-md grid-cols-3">
-            <TabsTrigger value="transcriptions" className="flex items-center gap-1">
-              <FileText className="h-4 w-4" />
-              <span>Transcripciones</span>
-            </TabsTrigger>
-            <TabsTrigger value="notes" className="flex items-center gap-1">
-              <BookOpen className="h-4 w-4" />
-              <span>Apuntes</span>
-            </TabsTrigger>
-            <TabsTrigger value="grades" className="flex items-center gap-1">
-              <GraduationCap className="h-4 w-4" />
-              <span>Evaluaciones</span>
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="transcriptions">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-green-500" />
-                  Transcripciones
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {folderRecordings.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-4">
-                    <p>No hay transcripciones en esta carpeta</p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-border">
-                    {folderRecordings.map(recording => (
-                      <div key={recording.id} className="mb-2">
-                        <RecordingItem
-                          recording={recording}
-                          onAddToCalendar={handleAddToCalendar}
-                        />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="md:col-span-3">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full max-w-md grid-cols-3">
+                <TabsTrigger value="transcriptions" className="flex items-center gap-1">
+                  <FileText className="h-4 w-4" />
+                  <span>Transcripciones</span>
+                </TabsTrigger>
+                <TabsTrigger value="notes" className="flex items-center gap-1">
+                  <BookOpen className="h-4 w-4" />
+                  <span>Apuntes</span>
+                </TabsTrigger>
+                <TabsTrigger value="grades" className="flex items-center gap-1">
+                  <GraduationCap className="h-4 w-4" />
+                  <span>Evaluaciones</span>
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="transcriptions">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-green-500" />
+                      Transcripciones
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {folderRecordings.length === 0 ? (
+                      <div className="text-center text-muted-foreground py-4">
+                        <p>No hay transcripciones en esta carpeta</p>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="notes">
-            <NotesSection folderId={folderId} sectionTitle={`Apuntes de ${folder.name}`} />
-          </TabsContent>
-          
-          <TabsContent value="grades">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <GraduationCap className="h-5 w-5 text-purple-500" />
-                  Evaluaciones
-                  {averageGrade > 0 && (
-                    <span className={`ml-2 text-sm font-medium px-2 py-1 rounded-md ${
-                      averageGrade >= 6 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
-                      : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                    }`}>
-                      Promedio: {averageGrade.toFixed(1)}
-                    </span>
-                  )}
-                </CardTitle>
-                <Button 
-                  size="sm" 
-                  onClick={() => setShowAddGradeDialog(true)}
-                  className="flex items-center gap-1"
-                >
-                  <Plus className="h-4 w-4" />
-                  Nueva evaluación
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {folderGrades.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-4">
-                    <p>No hay evaluaciones en esta materia</p>
-                    <p className="text-xs mt-1">
-                      Agrega evaluaciones para llevar un seguimiento de tu desempeño
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {folderGrades.map(grade => (
-                      <div 
-                        key={grade.id} 
-                        className="flex items-center justify-between p-3 rounded-lg border border-border"
-                      >
-                        <div>
-                          <p className="font-medium">{grade.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(grade.createdAt).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className={`text-lg font-bold ${
-                            grade.score >= 6 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                          }`}>
-                            {grade.score.toFixed(1)}
-                          </span>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="text-red-500 h-8 w-8 p-0"
-                            onClick={() => handleDeleteGrade(grade.id)}
+                    ) : (
+                      <div className="divide-y divide-border">
+                        {folderRecordings.map(recording => (
+                          <div key={recording.id} className="mb-2">
+                            <RecordingItem
+                              recording={recording}
+                              onAddToCalendar={handleAddToCalendar}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="notes">
+                <NotesSection folderId={folderId} sectionTitle={`Apuntes de ${folder.name}`} />
+              </TabsContent>
+              
+              <TabsContent value="grades">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <GraduationCap className="h-5 w-5 text-purple-500" />
+                      Evaluaciones
+                      {averageGrade > 0 && (
+                        <span className={`ml-2 text-sm font-medium px-2 py-1 rounded-md ${
+                          averageGrade >= 6 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
+                          : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                        }`}>
+                          Promedio: {averageGrade.toFixed(1)}
+                        </span>
+                      )}
+                    </CardTitle>
+                    <Button 
+                      size="sm" 
+                      onClick={() => setShowAddGradeDialog(true)}
+                      className="flex items-center gap-1"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Nueva evaluación
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    {folderGrades.length === 0 ? (
+                      <div className="text-center text-muted-foreground py-4">
+                        <p>No hay evaluaciones en esta materia</p>
+                        <p className="text-xs mt-1">
+                          Agrega evaluaciones para llevar un seguimiento de tu desempeño
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {folderGrades.map(grade => (
+                          <div 
+                            key={grade.id} 
+                            className="flex items-center justify-between p-3 rounded-lg border border-border"
                           >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
+                            <div>
+                              <p className="font-medium">{grade.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(grade.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className={`text-lg font-bold ${
+                                grade.score >= 6 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                              }`}>
+                                {grade.score.toFixed(1)}
+                              </span>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="text-red-500 h-8 w-8 p-0"
+                                onClick={() => handleDeleteGrade(grade.id)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
+          
+          <div className="md:col-span-1">
+            <UpcomingEvents events={folderEvents} folderName={folder.name} />
+          </div>
+        </div>
       </div>
       
-      {/* Add Grade Dialog */}
       <Dialog open={showAddGradeDialog} onOpenChange={setShowAddGradeDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
