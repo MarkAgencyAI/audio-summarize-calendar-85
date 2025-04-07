@@ -1,12 +1,9 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { CalendarEvent } from "@/components/Calendar";
-
-// Google API client ID (this is a public key that can be safely included in client-side code)
-const GOOGLE_CLIENT_ID = "694467530438-n4v9g32o6bqqv0phs52qciq09urceogo.apps.googleusercontent.com";
-const REDIRECT_URI = "https://cali-asistente.lovable.ai/calendar";
 
 // Define URLs for our Supabase Edge Functions
 const AUTH_URL = import.meta.env.VITE_SUPABASE_URL ? 
@@ -17,16 +14,18 @@ const SYNC_URL = import.meta.env.VITE_SUPABASE_URL ?
   `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-calendar-sync` : 
   'http://localhost:54321/functions/v1/google-calendar-sync';
 
+// Fixed redirect URI that should match what's in the Edge Function
+const REDIRECT_URI = 'https://cali-asistente.lovable.ai/calendar';
+
 interface GoogleCalendarSyncProps {
   events: CalendarEvent[];
-  onEventsSynced: () => void;
+  onEventsSynced: (syncedEventIds: {localEventId: string, googleEventId: string}[]) => void;
 }
 
 export function GoogleCalendarSync({ events, onEventsSynced }: GoogleCalendarSyncProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [syncedEvents, setSyncedEvents] = useState<string[]>([]);
 
   useEffect(() => {
     // Check if we have a token in localStorage
@@ -38,10 +37,10 @@ export function GoogleCalendarSync({ events, onEventsSynced }: GoogleCalendarSyn
       setIsAuthenticated(true);
     }
     
-    // Handle OAuth redirect
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    const state = urlParams.get('state');
+    // Handle OAuth redirect (this runs when user is redirected back from Google)
+    const queryParams = new URLSearchParams(window.location.search);
+    const code = queryParams.get('code');
+    const state = queryParams.get('state');
     
     if (code && state === localStorage.getItem('oauth_state')) {
       exchangeCodeForToken(code);
@@ -63,53 +62,71 @@ export function GoogleCalendarSync({ events, onEventsSynced }: GoogleCalendarSyn
       });
       
       if (!response.ok) {
-        throw new Error('Error exchanging code for token');
+        const errorData = await response.json();
+        console.error('Token exchange error:', errorData);
+        throw new Error(`Error exchanging code for token: ${errorData.error || 'Unknown error'}`);
       }
       
       const data = await response.json();
-      const { access_token, expires_in } = data;
+      const { access_token, expires_in, refresh_token } = data;
       
       // Calculate expiry time and store token in localStorage
-      const expiryTime = new Date().getTime() + (expires_in * 1000);
+      const expiryTime = new Date().getTime() + ((expires_in || 3600) * 1000);
       localStorage.setItem('google_access_token', access_token);
       localStorage.setItem('google_token_expiry', expiryTime.toString());
       
+      // Store refresh token if available (for future implementation)
+      if (refresh_token) {
+        localStorage.setItem('google_refresh_token', refresh_token);
+      }
+      
       setAccessToken(access_token);
       setIsAuthenticated(true);
-      toast.success('Conectado a Google Calendar');
+      toast.success('Conectado a Google Calendar correctamente');
     } catch (error) {
       console.error('Error exchanging code for token:', error);
-      toast.error('Error al conectar con Google Calendar');
+      toast.error(`Error al conectar con Google Calendar: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleGoogleSignIn = () => {
+  const handleGoogleSignIn = async () => {
     setIsLoading(true);
     
-    // Generate a random state value for CSRF protection
-    const state = Math.random().toString(36).substring(2);
-    localStorage.setItem('oauth_state', state);
-    
-    // Redirect the user to the authorization URL
-    const authUrl = `${AUTH_URL}/authorize?state=${state}`;
-    
-    // Redirect the user to the authorization URL
-    window.location.href = authUrl;
+    try {
+      // Generate a random state value for CSRF protection
+      const state = Math.random().toString(36).substring(2);
+      localStorage.setItem('oauth_state', state);
+      
+      // Get authorization URL from our Edge Function
+      const response = await fetch(`${AUTH_URL}/authorize?state=${state}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Error getting authorization URL: ${errorData.error || 'Unknown error'}`);
+      }
+      
+      const { authUrl } = await response.json();
+      
+      // Redirect the user to the Google authorization page
+      window.location.href = authUrl;
+    } catch (error) {
+      console.error('Error initiating Google sign-in:', error);
+      toast.error(`Error al iniciar sesión con Google: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleSignOut = () => {
-    setIsLoading(true);
-    
     // Clear tokens from localStorage
     localStorage.removeItem('google_access_token');
     localStorage.removeItem('google_token_expiry');
+    localStorage.removeItem('google_refresh_token');
     localStorage.removeItem('oauth_state');
     
     setAccessToken(null);
     setIsAuthenticated(false);
-    setIsLoading(false);
     toast.success('Desconectado de Google Calendar');
   };
 
@@ -142,20 +159,28 @@ export function GoogleCalendarSync({ events, onEventsSynced }: GoogleCalendarSyn
       });
       
       if (!response.ok) {
-        throw new Error('Error syncing events');
+        const errorData = await response.json();
+        throw new Error(`Error synchronizing events: ${errorData.error || 'Unknown error'}`);
       }
       
       const data = await response.json();
-      const syncedEventIds = data.syncedEvents.map((e: any) => e.localEventId);
       
-      // Update UI with synced events
-      setSyncedEvents(prev => [...prev, ...syncedEventIds]);
+      // Call the callback with the synced events
+      if (data.syncedEvents && data.syncedEvents.length > 0) {
+        onEventsSynced(data.syncedEvents);
+        toast.success(`Se han sincronizado ${data.syncedEvents.length} eventos con Google Calendar`);
+      } else {
+        toast.info("No se han sincronizado eventos");
+      }
       
-      toast.success(`Se han sincronizado ${unsyncedEvents.length} eventos con Google Calendar`);
-      onEventsSynced();
+      // Log errors if any
+      if (data.errorEvents && data.errorEvents.length > 0) {
+        console.error('Some events failed to sync:', data.errorEvents);
+        toast.error(`Hubo errores al sincronizar ${data.errorEvents.length} eventos`);
+      }
     } catch (error) {
       console.error("Error syncing events to Google Calendar", error);
-      toast.error("Error al sincronizar eventos con Google Calendar");
+      toast.error(`Error al sincronizar eventos: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
       setIsLoading(false);
     }
@@ -175,7 +200,7 @@ export function GoogleCalendarSync({ events, onEventsSynced }: GoogleCalendarSyn
           disabled={isLoading}
         >
           <Globe className="mr-2 h-4 w-4" />
-          Iniciar sesión con Google
+          {isLoading ? 'Conectando...' : 'Iniciar sesión con Google'}
         </Button>
       ) : (
         <div className="space-y-4">
@@ -197,7 +222,7 @@ export function GoogleCalendarSync({ events, onEventsSynced }: GoogleCalendarSyn
             disabled={isLoading}
           >
             <Calendar className="mr-2 h-4 w-4" />
-            Sincronizar eventos con Google
+            {isLoading ? 'Sincronizando...' : 'Sincronizar eventos con Google'}
           </Button>
         </div>
       )}

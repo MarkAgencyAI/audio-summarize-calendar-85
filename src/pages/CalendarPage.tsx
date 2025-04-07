@@ -139,24 +139,23 @@ export default function CalendarPage() {
     });
   };
 
-  const updateEventWithGoogleId = (eventId: string, googleEventId: string) => {
+  const handleEventsSynced = (syncedEvents: {localEventId: string, googleEventId: string}[]) => {
+    // Update events with Google Calendar IDs
     setEvents(prev => {
-      const updatedEvents = prev.map(event => 
-        event.id === eventId 
-          ? { ...event, googleEventId } 
-          : event
-      );
+      const updatedEvents = prev.map(event => {
+        const syncedEvent = syncedEvents.find(se => se.localEventId === event.id);
+        if (syncedEvent) {
+          return { 
+            ...event, 
+            googleEventId: syncedEvent.googleEventId 
+          };
+        }
+        return event;
+      });
+      
       saveToStorage("calendarEvents", updatedEvents);
       return updatedEvents;
     });
-  };
-
-  const handleEventsSynced = () => {
-    // This function will be called after events are synced with Google Calendar
-    toast.success("Eventos sincronizados con Google Calendar");
-    
-    // We might update Google event IDs here if needed
-    // This would be implemented if we want to track which events are already synced
   };
 
   return (
@@ -171,7 +170,6 @@ export default function CalendarPage() {
               onAddEvent={handleAddEvent} 
               onDeleteEvent={handleDeleteEvent} 
               onEventsSynced={handleEventsSynced}
-              updateEventWithGoogleId={updateEventWithGoogleId}
             />
           </div>
         </div>

@@ -1,8 +1,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// Get environment variables
+// Get environment variables from Supabase Secrets
 const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID') || '';
 const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET') || '';
 const SCOPES = 'https://www.googleapis.com/auth/calendar';
@@ -26,7 +25,7 @@ serve(async (req) => {
     
     // Handle authorization request
     if (path === 'authorize') {
-      const params = url.searchParams;
+      const params = new URLSearchParams(url.search);
       const state = params.get('state');
       
       if (!state) {
@@ -43,6 +42,7 @@ serve(async (req) => {
       googleAuthUrl.searchParams.append('response_type', 'code');
       googleAuthUrl.searchParams.append('scope', SCOPES);
       googleAuthUrl.searchParams.append('access_type', 'offline');
+      googleAuthUrl.searchParams.append('prompt', 'consent');
       googleAuthUrl.searchParams.append('state', state);
       
       return new Response(
@@ -62,7 +62,7 @@ serve(async (req) => {
         );
       }
       
-      // Exchange the authorization code for an access token using fixed redirect URI
+      // Exchange the authorization code for an access token
       const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
         headers: {
@@ -80,8 +80,12 @@ serve(async (req) => {
       const tokenData = await tokenResponse.json();
       
       if (tokenData.error) {
+        console.error('Token exchange error:', tokenData);
         return new Response(
-          JSON.stringify({ error: tokenData.error_description || 'Error obtaining access token' }), 
+          JSON.stringify({ 
+            error: tokenData.error_description || 'Error obtaining access token',
+            details: tokenData 
+          }), 
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -99,6 +103,7 @@ serve(async (req) => {
     );
     
   } catch (error) {
+    console.error('Google Calendar Auth Error:', error);
     return new Response(
       JSON.stringify({ error: error.message }), 
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
