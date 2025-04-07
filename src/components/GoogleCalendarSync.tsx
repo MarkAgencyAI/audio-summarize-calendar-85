@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar, Globe } from "lucide-react";
@@ -6,8 +5,8 @@ import { toast } from "sonner";
 import { CalendarEvent } from "@/components/Calendar";
 
 // Google API client ID (this is a public key that can be safely included in client-side code)
-const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID";
-const GOOGLE_API_KEY = "YOUR_GOOGLE_API_KEY";
+const GOOGLE_CLIENT_ID = "694467530438-n4v9g32o6bqqv0phs52qciq09urceogo.apps.googleusercontent.com";
+const GOOGLE_API_KEY = ""; // You may want to add an API key if needed
 const SCOPES = "https://www.googleapis.com/auth/calendar";
 
 interface GoogleCalendarSyncProps {
