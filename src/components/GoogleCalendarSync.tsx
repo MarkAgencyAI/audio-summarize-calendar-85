@@ -4,141 +4,58 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { CalendarEvent } from "@/components/Calendar";
-
-// Define base URL for our Supabase Edge Functions - using the current domain as base
-const BASE_URL = window.location.origin;
-
-// Define URLs for our Supabase Edge Functions
-const AUTH_URL = `${BASE_URL}/functions/v1/google-calendar-auth`;
-const SYNC_URL = `${BASE_URL}/functions/v1/google-calendar-sync`;
-
-// Fixed redirect URI that should match what's in the Edge Function and Google Cloud Console
-const REDIRECT_URI = `${BASE_URL}/calendar`;
+import { googleCalendarService } from "@/services/GoogleCalendarService";
 
 interface GoogleCalendarSyncProps {
   events: CalendarEvent[];
-  onEventsSynced: (syncedEvents: {localEventId: string, googleEventId: string}[]) => void;
+  onEventsSynced: (syncedEvents: {localEventId: string, googleEventId: string, htmlLink?: string}[]) => void;
 }
 
 export function GoogleCalendarSync({ events, onEventsSynced }: GoogleCalendarSyncProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
-    console.log("Current BASE_URL:", BASE_URL);
-    console.log("Redirect URI:", REDIRECT_URI);
-    
-    // Check if we have a token in localStorage
-    const token = localStorage.getItem('google_access_token');
-    const expiryTime = localStorage.getItem('google_token_expiry');
-    
-    if (token && expiryTime && new Date().getTime() < parseInt(expiryTime)) {
-      setAccessToken(token);
-      setIsAuthenticated(true);
-    }
-    
-    // Handle OAuth redirect (this runs when user is redirected back from Google)
-    const queryParams = new URLSearchParams(window.location.search);
-    const code = queryParams.get('code');
-    const state = queryParams.get('state');
-    
-    if (code && state === localStorage.getItem('oauth_state')) {
-      console.log("Received authorization code from Google redirect");
-      exchangeCodeForToken(code);
-      // Clean URL without refreshing the page
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
+    const initializeGoogleCalendar = async () => {
+      try {
+        setIsInitializing(true);
+        await googleCalendarService.init();
+        setIsAuthenticated(googleCalendarService.isSignedIn());
+      } catch (error) {
+        console.error("Error initializing Google Calendar", error);
+        toast.error(`Error initializing Google Calendar: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+
+    initializeGoogleCalendar();
   }, []);
-  
-  // Exchange the authorization code for an access token
-  const exchangeCodeForToken = async (code: string) => {
-    setIsLoading(true);
-    try {
-      console.log(`Exchanging code for token at ${AUTH_URL}/token`);
-      const response = await fetch(`${AUTH_URL}/token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ code, redirectUri: REDIRECT_URI })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Token exchange error:', errorData);
-        throw new Error(`Error exchanging code for token: ${errorData.error || 'Unknown error'}`);
-      }
-      
-      const data = await response.json();
-      const { access_token, expires_in, refresh_token } = data;
-      
-      // Calculate expiry time and store token in localStorage
-      const expiryTime = new Date().getTime() + ((expires_in || 3600) * 1000);
-      localStorage.setItem('google_access_token', access_token);
-      localStorage.setItem('google_token_expiry', expiryTime.toString());
-      
-      // Store refresh token if available (for future implementation)
-      if (refresh_token) {
-        localStorage.setItem('google_refresh_token', refresh_token);
-      }
-      
-      setAccessToken(access_token);
-      setIsAuthenticated(true);
-      toast.success('Conectado a Google Calendar correctamente');
-    } catch (error) {
-      console.error('Error exchanging code for token:', error);
-      toast.error(`Error al conectar con Google Calendar: ${error instanceof Error ? error.message : 'Error desconocido'}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     
     try {
-      // Generate a random state value for CSRF protection
-      const state = Math.random().toString(36).substring(2);
-      localStorage.setItem('oauth_state', state);
-      
-      console.log(`Getting authorization URL from ${AUTH_URL}/authorize?state=${state}&redirectUri=${encodeURIComponent(REDIRECT_URI)}`);
-      
-      // Get authorization URL from our Edge Function
-      const response = await fetch(`${AUTH_URL}/authorize?state=${state}&redirectUri=${encodeURIComponent(REDIRECT_URI)}`);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Error getting authorization URL:', errorData);
-        throw new Error(`Error getting authorization URL: ${errorData.error || 'Unknown error'}`);
-      }
-      
-      const { authUrl } = await response.json();
-      console.log("Received auth URL:", authUrl);
-      
-      // Redirect the user to the Google authorization page
-      window.location.href = authUrl;
+      await googleCalendarService.signIn();
+      setIsAuthenticated(true);
+      toast.success('Conectado a Google Calendar correctamente');
     } catch (error) {
-      console.error('Error initiating Google sign-in:', error);
+      console.error('Error signing in with Google:', error);
       toast.error(`Error al iniciar sesión con Google: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    } finally {
       setIsLoading(false);
     }
   };
 
   const handleGoogleSignOut = () => {
-    // Clear tokens from localStorage
-    localStorage.removeItem('google_access_token');
-    localStorage.removeItem('google_token_expiry');
-    localStorage.removeItem('google_refresh_token');
-    localStorage.removeItem('oauth_state');
-    
-    setAccessToken(null);
+    googleCalendarService.signOut();
     setIsAuthenticated(false);
     toast.success('Desconectado de Google Calendar');
   };
 
   const syncEventsToGoogleCalendar = async () => {
-    if (!isAuthenticated || !accessToken) {
+    if (!isAuthenticated) {
       toast.error("Por favor, inicia sesión con Google para sincronizar eventos");
       return;
     }
@@ -155,41 +72,17 @@ export function GoogleCalendarSync({ events, onEventsSynced }: GoogleCalendarSyn
         return;
       }
       
-      console.log(`Syncing ${unsyncedEvents.length} events to Google Calendar at ${SYNC_URL}`);
+      console.log(`Syncing ${unsyncedEvents.length} events to Google Calendar`);
       
-      // Call our secure Edge Function to sync events
-      const response = await fetch(SYNC_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({ 
-          events: unsyncedEvents,
-          redirectUri: REDIRECT_URI
-        })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Error syncing events:', errorData);
-        throw new Error(`Error synchronizing events: ${errorData.error || 'Unknown error'}`);
-      }
-      
-      const data = await response.json();
+      // Call our service to sync events
+      const syncedEvents = await googleCalendarService.syncEvents(unsyncedEvents);
       
       // Call the callback with the synced events
-      if (data.syncedEvents && data.syncedEvents.length > 0) {
-        onEventsSynced(data.syncedEvents);
-        toast.success(`Se han sincronizado ${data.syncedEvents.length} eventos con Google Calendar`);
+      if (syncedEvents.length > 0) {
+        onEventsSynced(syncedEvents);
+        toast.success(`Se han sincronizado ${syncedEvents.length} eventos con Google Calendar`);
       } else {
         toast.info("No se han sincronizado eventos");
-      }
-      
-      // Log errors if any
-      if (data.errorEvents && data.errorEvents.length > 0) {
-        console.error('Some events failed to sync:', data.errorEvents);
-        toast.error(`Hubo errores al sincronizar ${data.errorEvents.length} eventos`);
       }
     } catch (error) {
       console.error("Error syncing events to Google Calendar", error);
@@ -198,6 +91,19 @@ export function GoogleCalendarSync({ events, onEventsSynced }: GoogleCalendarSyn
       setIsLoading(false);
     }
   };
+
+  if (isInitializing) {
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Cargando Google Calendar...
+        </p>
+        <div className="w-full flex justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

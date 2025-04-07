@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { RecordingsProvider } from "@/context/RecordingsContext";
+import { useEffect } from "react";
 
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -32,6 +33,13 @@ const queryClient = new QueryClient({
 function App() {
   // Set the app name in the document title
   document.title = "CALI - Asistente de clases";
+  
+  // Add Google API type definition
+  useEffect(() => {
+    // Declare gapi and google types
+    window.gapi = window.gapi || {};
+    window.google = window.google || {};
+  }, []);
   
   return (
     <QueryClientProvider client={queryClient}>

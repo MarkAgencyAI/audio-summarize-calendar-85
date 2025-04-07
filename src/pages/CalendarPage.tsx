@@ -139,7 +139,7 @@ export default function CalendarPage() {
     });
   };
 
-  const handleEventsSynced = (syncedEvents: {localEventId: string, googleEventId: string}[]) => {
+  const handleEventsSynced = (syncedEvents: {localEventId: string, googleEventId: string, htmlLink?: string}[]) => {
     // Update events with Google Calendar IDs
     setEvents(prev => {
       const updatedEvents = prev.map(event => {
