@@ -41,20 +41,20 @@ export function ImageUploader() {
 
     setIsUploading(true);
     try {
-      // Using the imgur API to upload the image and get a public URL
+      // Using ImgBB API to upload the image and get a public URL
       const formData = new FormData();
       formData.append("image", selectedFile);
       
-      // First, upload the image to get a URL
-      // Using ImgBB as the hosting service (client ID included)
-      const uploadResponse = await fetch("https://api.imgbb.com/1/upload?key=c02f37c95c54c77ec0746a21aea7f17c", {
+      // Upload to ImgBB with the new API key
+      const uploadResponse = await fetch("https://api.imgbb.com/1/upload?key=64830e69bc992ce600bf9f50588eeaa9", {
         method: "POST",
         body: formData,
       });
       
       if (!uploadResponse.ok) {
-        console.error("Error response:", await uploadResponse.text());
-        throw new Error("Error al subir la imagen al servicio de alojamiento");
+        const errorText = await uploadResponse.text();
+        console.error("Error response:", errorText);
+        throw new Error(`Error al subir la imagen: ${errorText}`);
       }
       
       const uploadData = await uploadResponse.json();
@@ -67,7 +67,7 @@ export function ImageUploader() {
       const imageUrl = uploadData.data.url;
       console.log("Imagen subida exitosamente a:", imageUrl);
       
-      // Now send the URL to the webhook
+      // Send the URL to the webhook
       await sendToWebhook("https://sswebhookss.maettiai.tech/webhook/68842cd0-b48e-4cb1-8050-43338dd79f8d", {
         description: description,
         imageUrl: imageUrl
@@ -175,3 +175,4 @@ export function ImageUploader() {
     </>
   );
 }
+
