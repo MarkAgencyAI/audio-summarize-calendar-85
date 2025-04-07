@@ -139,25 +139,6 @@ export default function CalendarPage() {
     });
   };
 
-  const handleEventsSynced = (syncedEvents: {localEventId: string, googleEventId: string, htmlLink?: string}[]) => {
-    // Update events with Google Calendar IDs
-    setEvents(prev => {
-      const updatedEvents = prev.map(event => {
-        const syncedEvent = syncedEvents.find(se => se.localEventId === event.id);
-        if (syncedEvent) {
-          return { 
-            ...event, 
-            googleEventId: syncedEvent.googleEventId 
-          };
-        }
-        return event;
-      });
-      
-      saveToStorage("calendarEvents", updatedEvents);
-      return updatedEvents;
-    });
-  };
-
   return (
     <Layout>
       <div className="space-y-6 max-w-full">
@@ -169,7 +150,6 @@ export default function CalendarPage() {
               events={events} 
               onAddEvent={handleAddEvent} 
               onDeleteEvent={handleDeleteEvent} 
-              onEventsSynced={handleEventsSynced}
             />
           </div>
         </div>

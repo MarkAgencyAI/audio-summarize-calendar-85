@@ -1,7 +1,8 @@
+
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, format, isSameMonth, isSameDay, addDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Plus, FolderPlus, Calendar as CalendarIcon, Globe } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, FolderPlus, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRecordings } from "@/context/RecordingsContext";
-import { GoogleCalendarSync } from "@/components/GoogleCalendarSync";
 
 export interface CalendarEvent {
   id: string;
@@ -22,23 +22,18 @@ export interface CalendarEvent {
   color?: string;
   folderId?: string;
   eventType?: string;
-  googleEventId?: string;
 }
 
 interface CalendarProps {
   events: CalendarEvent[];
   onAddEvent: (event: Omit<CalendarEvent, "id">) => void;
   onDeleteEvent: (id: string) => void;
-  onEventsSynced: (syncedEvents: {localEventId: string, googleEventId: string}[]) => void;
-  updateEventWithGoogleId?: (eventId: string, googleEventId: string) => void;
 }
 
 export function Calendar({
   events,
   onAddEvent,
   onDeleteEvent,
-  onEventsSynced,
-  updateEventWithGoogleId = () => {}
 }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -54,7 +49,6 @@ export function Calendar({
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [newFolderColor, setNewFolderColor] = useState("#3b82f6");
-  const [googleSyncOpen, setGoogleSyncOpen] = useState(false);
 
   const isMobile = useIsMobile();
   const { folders, addFolder } = useRecordings();
@@ -178,11 +172,6 @@ export function Calendar({
     setShowNewFolderDialog(false);
   };
 
-  const handleGoogleSyncSuccess = (syncedEvents: {localEventId: string, googleEventId: string}[]) => {
-    setGoogleSyncOpen(false);
-    onEventsSynced(syncedEvents);
-  };
-
   const getDayNames = () => {
     if (isMobile) {
       return ["D", "L", "M", "X", "J", "V", "S"];
@@ -205,14 +194,6 @@ export function Calendar({
           })}
         </h2>
         <div className="flex items-center space-x-2">
-          <Button 
-            variant="outline" 
-            className="flex items-center gap-2"
-            onClick={() => setGoogleSyncOpen(true)}
-          >
-            <Globe className="h-4 w-4" />
-            <span className="hidden md:inline">Sincronizar con Google</span>
-          </Button>
           <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
             <ChevronLeft className="h-5 w-5" />
           </Button>
@@ -472,20 +453,6 @@ export function Calendar({
             </DialogFooter>
           </DialogContent>
         }
-      </Dialog>
-      
-      <Dialog open={googleSyncOpen} onOpenChange={setGoogleSyncOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[450px]">
-          <DialogHeader>
-            <DialogTitle>Sincronizar con Google Calendar</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <GoogleCalendarSync 
-              events={events} 
-              onEventsSynced={handleGoogleSyncSuccess} 
-            />
-          </div>
-        </DialogContent>
       </Dialog>
     </div>
   );

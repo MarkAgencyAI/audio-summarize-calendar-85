@@ -6,7 +6,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { RecordingsProvider } from "@/context/RecordingsContext";
-import { useEffect } from "react";
 
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -33,36 +32,7 @@ const queryClient = new QueryClient({
 function App() {
   // Set the app name in the document title
   document.title = "CALI - Asistente de clases";
-  
-  // Initialize Google API objects
-  useEffect(() => {
-    // Initialize empty objects for TypeScript
-    if (typeof window !== 'undefined') {
-      window.gapi = window.gapi || {};
-      
-      // Initialize the google object if it doesn't exist
-      if (!window.google) {
-        window.google = {} as typeof window.google;
-      }
-      
-      // Create the accounts object if it doesn't exist
-      if (!window.google.accounts) {
-        window.google.accounts = {
-          oauth2: {
-            initTokenClient: (config: any) => {
-              console.warn('Google API not yet loaded');
-              return {} as google.accounts.oauth2.TokenClient;
-            },
-            revoke: (token: string, callback?: () => void) => {
-              console.warn('Google API not yet loaded');
-              if (callback) callback();
-            }
-          }
-        };
-      }
-    }
-  }, []);
-  
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
