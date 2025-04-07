@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Layout } from "@/components/Layout";
@@ -150,6 +151,14 @@ export default function CalendarPage() {
     });
   };
 
+  const handleEventsSynced = () => {
+    // This function will be called after events are synced with Google Calendar
+    toast.success("Eventos sincronizados con Google Calendar");
+    
+    // We might update Google event IDs here if needed
+    // This would be implemented if we want to track which events are already synced
+  };
+
   return (
     <Layout>
       <div className="space-y-6 max-w-full">
@@ -161,6 +170,8 @@ export default function CalendarPage() {
               events={events} 
               onAddEvent={handleAddEvent} 
               onDeleteEvent={handleDeleteEvent} 
+              onEventsSynced={handleEventsSynced}
+              updateEventWithGoogleId={updateEventWithGoogleId}
             />
           </div>
         </div>

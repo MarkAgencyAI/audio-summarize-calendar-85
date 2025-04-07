@@ -1,4 +1,3 @@
-
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, format, isSameMonth, isSameDay, addDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -30,12 +29,16 @@ interface CalendarProps {
   events: CalendarEvent[];
   onAddEvent: (event: Omit<CalendarEvent, "id">) => void;
   onDeleteEvent: (id: string) => void;
+  onEventsSynced?: () => void;
+  updateEventWithGoogleId?: (eventId: string, googleEventId: string) => void;
 }
 
 export function Calendar({
   events,
   onAddEvent,
-  onDeleteEvent
+  onDeleteEvent,
+  onEventsSynced = () => {},
+  updateEventWithGoogleId = () => {}
 }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -173,6 +176,11 @@ export function Calendar({
     setNewFolderName("");
     setNewFolderColor("#3b82f6");
     setShowNewFolderDialog(false);
+  };
+
+  const handleGoogleSyncSuccess = () => {
+    setGoogleSyncOpen(false);
+    onEventsSynced();
   };
 
   const getDayNames = () => {
@@ -472,10 +480,10 @@ export function Calendar({
             <DialogTitle>Sincronizar con Google Calendar</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <GoogleCalendarSync events={events} onEventsSynced={() => {
-              setGoogleSyncOpen(false);
-              toast.success("Eventos sincronizados con Google Calendar");
-            }} />
+            <GoogleCalendarSync 
+              events={events} 
+              onEventsSynced={handleGoogleSyncSuccess} 
+            />
           </div>
         </DialogContent>
       </Dialog>
