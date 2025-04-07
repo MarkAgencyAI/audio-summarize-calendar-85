@@ -1,416 +1,247 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useRecordings, Folder } from "@/context/RecordingsContext";
-import { toast } from "sonner";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useRecordings, type Folder } from "@/context/RecordingsContext";
 import { 
-  Book, 
-  FlaskConical, 
-  Atom, 
-  GraduationCap, 
-  Microscope, 
-  Pencil,
-  Briefcase, 
-  Gavel, 
-  Computer, 
-  BarChart, 
-  Map, 
-  Building,
-  Music, 
-  Film,
-  Languages,
-  Folder as FolderIcon,
-  Edit,
-  Trash,
-  Plus,
-  ChevronRight,
-  FileText,
-  BookOpen
+  Folder as FolderIcon, 
+  Plus, 
+  MoreVertical, 
+  Pencil, 
+  Trash2, 
+  Check, 
+  X 
 } from "lucide-react";
 import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
+  Dialog, 
+  DialogContent, 
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
-interface IconOption {
-  name: string;
-  component: React.ReactNode;
-  label: string;
-  area: string;
-}
-
-const academicIcons: IconOption[] = [
-  { name: "folder", component: <FolderIcon />, label: "General", area: "General" },
-  { name: "book", component: <Book />, label: "Libro", area: "General académico" },
-  { name: "flask-conical", component: <FlaskConical />, label: "Matraz", area: "Química, Biología" },
-  { name: "atom", component: <Atom />, label: "Átomo", area: "Física, Química" },
-  { name: "graduation-cap", component: <GraduationCap />, label: "Birrete", area: "Educación" },
-  { name: "microscope", component: <Microscope />, label: "Microscopio", area: "Biología, Medicina" },
-  { name: "pencil", component: <Pencil />, label: "Lápiz", area: "Humanidades" },
-  { name: "briefcase", component: <Briefcase />, label: "Maletín", area: "Negocios, Economía" },
-  { name: "gavel", component: <Gavel />, label: "Martillo", area: "Derecho" },
-  { name: "computer", component: <Computer />, label: "Computadora", area: "Informática" },
-  { name: "bar-chart", component: <BarChart />, label: "Gráfico", area: "Estadística, Economía" },
-  { name: "map", component: <Map />, label: "Mapa", area: "Geografía, Historia" },
-  { name: "building", component: <Building />, label: "Edificio", area: "Arquitectura, Ingeniería" },
-  { name: "music", component: <Music />, label: "Música", area: "Música" },
-  { name: "film", component: <Film />, label: "Cine", area: "Cine" },
-  { name: "languages", component: <Languages />, label: "Idiomas", area: "Lingüística" },
+const FOLDER_COLORS = [
+  "#4f46e5", // Indigo
+  "#10b981", // Emerald
+  "#f59e0b", // Amber
+  "#ef4444", // Red
+  "#ec4899", // Pink
+  "#8b5cf6", // Violet
+  "#06b6d4", // Cyan
 ];
 
-const renderIcon = (iconName: string, color: string): JSX.Element => {
-  const icon = academicIcons.find(i => i.name === iconName);
-  if (!icon) return <FolderIcon color={color} />;
-  
-  const IconComponent = React.cloneElement(icon.component as React.ReactElement, {
-    color: color,
-    size: 24
-  });
-  
-  return IconComponent;
+const ColorPicker = ({ 
+  selectedColor, 
+  onSelectColor 
+}: { 
+  selectedColor: string; 
+  onSelectColor: (color: string) => void 
+}) => {
+  return (
+    <div className="flex flex-wrap gap-2 mt-2">
+      {FOLDER_COLORS.map((color) => (
+        <button
+          key={color}
+          type="button"
+          className={cn(
+            "w-6 h-6 rounded-full transition-all",
+            selectedColor === color ? "ring-2 ring-offset-2 ring-black dark:ring-white" : ""
+          )}
+          style={{ backgroundColor: color }}
+          onClick={() => onSelectColor(color)}
+          aria-label={`Select color ${color}`}
+        />
+      ))}
+    </div>
+  );
 };
 
 export function FolderSystem() {
   const navigate = useNavigate();
-  const {
-    folders,
-    addFolder,
-    updateFolder,
-    deleteFolder,
-    calculateFolderAverage,
-    recordings,
-    notes,
-  } = useRecordings();
-  const [showAddFolderDialog, setShowAddFolderDialog] = useState(false);
-  const [showEditFolderDialog, setShowEditFolderDialog] = useState(false);
-  const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
-  const [folderName, setFolderName] = useState("");
-  const [folderColor, setFolderColor] = useState("#3b82f6");
-  const [folderIcon, setFolderIcon] = useState("folder");
-
-  const handleAddFolder = () => {
-    if (!folderName.trim()) {
-      toast.error("El nombre de la materia es obligatorio");
+  const { folders, addFolder, updateFolder, deleteFolder } = useRecordings();
+  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+  const [newFolderName, setNewFolderName] = useState<string>("");
+  const [selectedColor, setSelectedColor] = useState<string>(FOLDER_COLORS[0]);
+  const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
+  const [editingFolderName, setEditingFolderName] = useState<string>("");
+  
+  const handleCreateFolder = () => {
+    if (newFolderName.trim() === "") {
+      toast.error("El nombre de la carpeta no puede estar vacío");
       return;
     }
-    addFolder(folderName, folderColor, folderIcon);
-    toast.success("Materia creada");
-    setFolderName("");
-    setFolderIcon("folder");
-    setShowAddFolderDialog(false);
+    
+    addFolder(newFolderName.trim(), selectedColor);
+    
+    setIsDialogOpen(false);
+    setNewFolderName("");
+    setSelectedColor(FOLDER_COLORS[0]);
+    
+    toast.success(`Carpeta "${newFolderName}" creada correctamente`);
   };
-
-  const handleEditFolder = () => {
-    if (!selectedFolder) return;
-    if (!folderName.trim()) {
-      toast.error("El nombre de la materia es obligatorio");
+  
+  const handleUpdateFolder = (id: string) => {
+    if (editingFolderName.trim() === "") {
+      toast.error("El nombre de la carpeta no puede estar vacío");
       return;
     }
-    updateFolder(selectedFolder.id, {
-      name: folderName,
-      color: folderColor,
-      icon: folderIcon
-    });
-    toast.success("Materia actualizada");
-    setSelectedFolder(null);
-    setShowEditFolderDialog(false);
+    
+    updateFolder(id, { name: editingFolderName });
+    setEditingFolderId(null);
+    toast.success("Carpeta actualizada correctamente");
   };
-
-  const handleDeleteFolder = (folder: Folder) => {
-    if (folder.id === "default") {
-      toast.error("No puedes eliminar la materia predeterminada");
+  
+  const handleDeleteFolder = (id: string) => {
+    const folder = folders.find(f => f.id === id);
+    if (id === "default") {
+      toast.error("No puedes eliminar la carpeta predeterminada");
       return;
     }
-    deleteFolder(folder.id);
-    toast.success("Materia eliminada");
+    
+    if (confirm(`¿Estás seguro de que quieres eliminar la carpeta "${folder?.name}"?`)) {
+      deleteFolder(id);
+      toast.success("Carpeta eliminada correctamente");
+    }
   };
-
-  const openEditDialog = (folder: Folder, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedFolder(folder);
-    setFolderName(folder.name);
-    setFolderColor(folder.color);
-    setFolderIcon(folder.icon || "folder");
-    setShowEditFolderDialog(true);
+  
+  const handleFolderClick = (id: string) => {
+    navigate(`/folder/${id}`);
   };
-
-  const navigateToFolder = (folderId: string) => {
-    navigate(`/folder/${folderId}`);
+  
+  const startEditingFolder = (folder: Folder) => {
+    setEditingFolderId(folder.id);
+    setEditingFolderName(folder.name);
   };
-
-  const getRecordingsCount = (folderId: string) => {
-    return recordings.filter(recording => recording.folderId === folderId).length;
-  };
-
-  const getNotesCount = (folderId: string) => {
-    return notes.filter(note => note.folderId === folderId).length;
-  };
-
+  
   return (
-    <div className="p-2 md:p-4 flex-1">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold text-emerald-800 dark:text-emerald-400">Materias</h2>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold">Mis Carpetas</h2>
         <Button 
-          onClick={() => {
-            setFolderName("");
-            setFolderColor("#3b82f6");
-            setFolderIcon("folder");
-            setShowAddFolderDialog(true);
-          }}
-          className="bg-gray-100 dark:bg-gray-800 text-black dark:text-white"
+          onClick={() => setIsDialogOpen(true)}
+          size="sm"
+          className="flex items-center gap-1"
         >
-          Nueva materia
+          <Plus className="h-4 w-4" /> Nueva carpeta
         </Button>
       </div>
       
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {folders.map(folder => {
-          const average = calculateFolderAverage(folder.id);
-          const recordingsCount = getRecordingsCount(folder.id);
-          const notesCount = getNotesCount(folder.id);
-          
-          return (
-            <Card 
-              key={folder.id} 
-              className="w-full border border-gray-300 dark:border-gray-600 overflow-hidden cursor-pointer hover:shadow-md transition-shadow" 
-              style={{
-                backgroundColor: `${folder.color}10`
-              }}
-              onClick={() => navigateToFolder(folder.id)}
-            >
-              <CardHeader className="p-4 pb-3">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center flex-1">
-                    <div 
-                      className="h-10 w-10 rounded flex justify-center items-center flex-shrink-0" 
-                      style={{
-                        backgroundColor: folder.color
-                      }}
-                    >
-                      {renderIcon(folder.icon || "folder", "#ffffff")}
-                    </div>
-                    <div className="ml-3 overflow-hidden">
-                      <CardTitle className="text-lg font-medium text-black dark:text-white truncate">{folder.name}</CardTitle>
-                      {average > 0 && (
-                        <span className={`text-sm font-semibold ${average >= 6 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                          Promedio: {average.toFixed(1)}
-                        </span>
-                      )}
-                    </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {folders.map((folder) => (
+          <div 
+            key={folder.id}
+            className="border rounded-lg p-4 hover:bg-accent/50 transition-colors cursor-pointer"
+          >
+            {editingFolderId === folder.id ? (
+              <div className="flex items-center justify-between">
+                <Input 
+                  value={editingFolderName}
+                  onChange={(e) => setEditingFolderName(e.target.value)}
+                  className="mr-2"
+                  autoFocus
+                />
+                <div className="flex items-center">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => handleUpdateFolder(folder.id)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setEditingFolderId(null)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div 
+                  className="flex items-center gap-2 flex-1 overflow-hidden"
+                  onClick={() => handleFolderClick(folder.id)}
+                >
+                  <div 
+                    className="h-8 w-8 rounded flex items-center justify-center flex-shrink-0" 
+                    style={{ backgroundColor: folder.color }}
+                  >
+                    <FolderIcon className="h-4 w-4 text-white" />
                   </div>
-                  
-                  <div className="flex ml-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-blue-500 dark:text-blue-400 disabled:opacity-50 p-1" 
-                      onClick={(e) => openEditDialog(folder, e)} 
+                  <span className="font-medium truncate">{folder.name}</span>
+                </div>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <MoreVertical className="h-4 w-4" />
+                      <span className="sr-only">Opciones</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => startEditingFolder(folder)}>
+                      <Pencil className="h-4 w-4 mr-2" /> Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => handleDeleteFolder(folder.id)}
+                      className="text-destructive"
                       disabled={folder.id === "default"}
                     >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-red-500 dark:text-red-400 disabled:opacity-50 p-1" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteFolder(folder);
-                      }} 
-                      disabled={folder.id === "default"}
-                    >
-                      <Trash className="h-4 w-4" />
-                    </Button>
-                    
-                    <ChevronRight className="h-4 w-4 text-gray-400 ml-1" />
-                  </div>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="px-4 pb-3 pt-0">
-                <div className="flex gap-2 mt-1">
-                  {recordingsCount > 0 && (
-                    <Badge variant="outline" className="flex items-center gap-1 bg-green-100 dark:bg-green-900/20">
-                      <FileText className="h-3 w-3" />
-                      <span>{recordingsCount}</span>
-                    </Badge>
-                  )}
-                  
-                  {notesCount > 0 && (
-                    <Badge variant="outline" className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900/20">
-                      <BookOpen className="h-3 w-3" />
-                      <span>{notesCount}</span>
-                    </Badge>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                      <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
       
-      <Dialog open={showAddFolderDialog} onOpenChange={setShowAddFolderDialog}>
-        <DialogContent className="max-w-[95vw] w-[450px]">
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Nueva materia</DialogTitle>
+            <DialogTitle>Nueva carpeta</DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-4 py-4">
-            <div className="mb-4">
-              <label className="block mb-2 text-sm font-medium">Nombre</label>
-              <Input 
-                value={folderName} 
-                onChange={e => setFolderName(e.target.value)} 
-                className="w-full" 
+          <div className="space-y-4 my-2">
+            <div className="space-y-2">
+              <Label htmlFor="folder-name">Nombre de la carpeta</Label>
+              <Input
+                id="folder-name"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                placeholder="Ej: Física, Química, etc."
               />
             </div>
             
-            <div className="mb-4">
-              <label className="block mb-2 text-sm font-medium">Icono</label>
-              <Select value={folderIcon} onValueChange={setFolderIcon}>
-                <SelectTrigger className="w-full mb-2">
-                  <SelectValue placeholder="Seleccionar icono" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[300px] overflow-y-auto">
-                  <ScrollArea className="h-[200px]">
-                    {academicIcons.map((icon) => (
-                      <SelectItem key={icon.name} value={icon.name} className="flex items-center py-2">
-                        <div className="flex items-center">
-                          <span className="mr-2">
-                            {React.cloneElement(icon.component as React.ReactElement, { size: 20 })}
-                          </span>
-                          <span>{icon.label}</span>
-                          <span className="ml-2 text-xs text-gray-500">({icon.area})</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </ScrollArea>
-                </SelectContent>
-              </Select>
-              
-              <div className="flex items-center mt-2 bg-gray-100 dark:bg-gray-800 p-2 rounded">
-                <div className="mr-2">Icono seleccionado:</div>
-                <div className="flex items-center justify-center w-8 h-8 bg-blue-500 rounded">
-                  {renderIcon(folderIcon, "#ffffff")}
-                </div>
-              </div>
-            </div>
-            
-            <div className="mb-4">
-              <label className="block mb-2 text-sm font-medium">Color</label>
-              <div className="flex items-center">
-                <input 
-                  type="color"
-                  className="border border-gray-300 dark:border-gray-700 p-2 rounded w-16 h-10" 
-                  value={folderColor} 
-                  onChange={e => setFolderColor(e.target.value)} 
-                />
-                <div 
-                  className="w-10 h-10 ml-2 rounded flex items-center justify-center" 
-                  style={{
-                    backgroundColor: folderColor
-                  }} 
-                >
-                  {renderIcon(folderIcon, "#ffffff")}
-                </div>
-              </div>
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <ColorPicker 
+                selectedColor={selectedColor}
+                onSelectColor={setSelectedColor}
+              />
             </div>
           </div>
           
           <DialogFooter>
-            <Button 
-              className="w-full sm:w-auto" 
-              onClick={handleAddFolder}
-            >
-              Crear materia
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancelar
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={showEditFolderDialog} onOpenChange={setShowEditFolderDialog}>
-        <DialogContent className="max-w-[95vw] w-[450px]">
-          <DialogHeader>
-            <DialogTitle>Editar materia</DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="mb-4">
-              <label className="block mb-2 text-sm font-medium">Nombre</label>
-              <Input 
-                className="w-full" 
-                value={folderName} 
-                onChange={e => setFolderName(e.target.value)} 
-              />
-            </div>
-            
-            <div className="mb-4">
-              <label className="block mb-2 text-sm font-medium">Icono</label>
-              <Select value={folderIcon} onValueChange={setFolderIcon}>
-                <SelectTrigger className="w-full mb-2">
-                  <SelectValue placeholder="Seleccionar icono" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[300px] overflow-y-auto">
-                  <ScrollArea className="h-[200px]">
-                    {academicIcons.map((icon) => (
-                      <SelectItem key={icon.name} value={icon.name} className="flex items-center py-2">
-                        <div className="flex items-center">
-                          <span className="mr-2">
-                            {React.cloneElement(icon.component as React.ReactElement, { size: 20 })}
-                          </span>
-                          <span>{icon.label}</span>
-                          <span className="ml-2 text-xs text-gray-500">({icon.area})</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </ScrollArea>
-                </SelectContent>
-              </Select>
-              
-              <div className="flex items-center mt-2 bg-gray-100 dark:bg-gray-800 p-2 rounded">
-                <div className="mr-2">Icono seleccionado:</div>
-                <div className="flex items-center justify-center w-8 h-8 bg-blue-500 rounded">
-                  {renderIcon(folderIcon, "#ffffff")}
-                </div>
-              </div>
-            </div>
-            
-            <div className="mb-4">
-              <label className="block mb-2 text-sm font-medium">Color</label>
-              <div className="flex items-center">
-                <input 
-                  type="color"
-                  className="border border-gray-300 dark:border-gray-700 p-2 rounded w-16 h-10" 
-                  value={folderColor} 
-                  onChange={e => setFolderColor(e.target.value)} 
-                />
-                <div 
-                  className="w-10 h-10 ml-2 rounded flex items-center justify-center" 
-                  style={{
-                    backgroundColor: folderColor
-                  }} 
-                >
-                  {renderIcon(folderIcon, "#ffffff")}
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button 
-              className="w-full sm:w-auto" 
-              onClick={handleEditFolder}
-            >
-              Guardar cambios
+            <Button onClick={handleCreateFolder}>
+              Crear
             </Button>
           </DialogFooter>
         </DialogContent>
