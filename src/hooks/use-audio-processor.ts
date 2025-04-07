@@ -108,7 +108,8 @@ export function useAudioProcessor() {
   const processAudioFile = async (
     audioBlob: Blob,
     subject?: string,
-    onTranscriptionProgress?: (data: any) => void
+    onTranscriptionProgress?: (data: any) => void,
+    speakerMode: 'single' | 'multiple' = 'single'
   ) => {
     setIsProcessing(true);
     setProgress(0);
@@ -131,8 +132,8 @@ export function useAudioProcessor() {
         }, 500);
       }
 
-      // Transcribe the audio with Groq
-      const transcriptionResult = await transcribeAudio(audioBlob, subject);
+      // Transcribe the audio with Groq, passing the speaker mode
+      const transcriptionResult = await transcribeAudio(audioBlob, subject, speakerMode);
       
       if (progressInterval) {
         clearInterval(progressInterval);
@@ -145,6 +146,7 @@ export function useAudioProcessor() {
         transcript: transcriptionResult.transcript,
         language: transcriptionResult.language || "es",
         subject: subject || "Sin materia",
+        speakerMode: speakerMode,
         processed: true
       };
       

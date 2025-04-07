@@ -1,3 +1,4 @@
+
 import { sendToWebhook } from "./webhook";
 import { useState, useCallback } from "react";
 
@@ -14,6 +15,7 @@ interface TranscriptionResult {
   language?: string;
   subject?: string;
   translation?: string;
+  speakerMode?: 'single' | 'multiple';
   suggestedEvents?: Array<{
     title: string;
     description: string;
@@ -39,9 +41,9 @@ interface GroqAudioResponse {
  * Process audio for noise reduction and voice isolation
  * Note: This is a client-side preprocessing before sending to GROQ
  */
-async function preprocessAudio(audioBlob: Blob): Promise<Blob> {
+async function preprocessAudio(audioBlob: Blob, speakerMode: 'single' | 'multiple' = 'single'): Promise<Blob> {
   try {
-    console.log("Preprocessing audio for noise reduction and voice isolation...");
+    console.log(`Preprocessing audio for ${speakerMode} speaker mode...`);
     
     // Convert blob to AudioBuffer for processing
     const arrayBuffer = await audioBlob.arrayBuffer();
@@ -59,22 +61,40 @@ async function preprocessAudio(audioBlob: Blob): Promise<Blob> {
     const source = offlineContext.createBufferSource();
     source.buffer = audioBuffer;
     
-    // Create filters for noise reduction
+    // Create filters based on speaker mode
     const lowPassFilter = offlineContext.createBiquadFilter();
-    lowPassFilter.type = "lowpass";
-    lowPassFilter.frequency.value = 5000; // Adjust frequency to focus on voice range
-    
     const highPassFilter = offlineContext.createBiquadFilter();
-    highPassFilter.type = "highpass";
-    highPassFilter.frequency.value = 85; // Remove very low frequency noise
-    
-    // Create compressor to enhance voice
     const compressor = offlineContext.createDynamicsCompressor();
-    compressor.threshold.value = -50;
-    compressor.knee.value = 40;
-    compressor.ratio.value = 12;
-    compressor.attack.value = 0;
-    compressor.release.value = 0.25;
+    
+    if (speakerMode === 'single') {
+      // For single speaker: Focus more on the main voice frequency range
+      lowPassFilter.type = "lowpass";
+      lowPassFilter.frequency.value = 4500; // Slightly narrower frequency band for single speaker
+      
+      highPassFilter.type = "highpass";
+      highPassFilter.frequency.value = 100; // Higher threshold to reduce background noise
+      
+      // More aggressive compression for single speaker to enhance the main voice
+      compressor.threshold.value = -45;
+      compressor.knee.value = 35;
+      compressor.ratio.value = 12;
+      compressor.attack.value = 0;
+      compressor.release.value = 0.2;
+    } else {
+      // For multiple speakers: Wider frequency range and less compression
+      lowPassFilter.type = "lowpass";
+      lowPassFilter.frequency.value = 6000; // Wider frequency range to capture different voices
+      
+      highPassFilter.type = "highpass";
+      highPassFilter.frequency.value = 70; // Lower threshold to include more varied voices
+      
+      // Less aggressive compression for multiple speakers
+      compressor.threshold.value = -55;
+      compressor.knee.value = 40;
+      compressor.ratio.value = 8;
+      compressor.attack.value = 0.003;
+      compressor.release.value = 0.25;
+    }
     
     // Connect the audio processing graph
     source.connect(highPassFilter);
@@ -91,7 +111,7 @@ async function preprocessAudio(audioBlob: Blob): Promise<Blob> {
     // Convert buffer back to blob
     const processedWav = await audioBufferToWav(renderedBuffer);
     
-    console.log("Audio preprocessing completed");
+    console.log(`Audio preprocessing completed for ${speakerMode} speaker mode`);
     return new Blob([processedWav], { type: 'audio/wav' });
   } catch (error) {
     console.error("Error preprocessing audio:", error);
@@ -175,12 +195,16 @@ function audioBufferToWav(buffer: AudioBuffer): Promise<ArrayBuffer> {
 /**
  * Transcribe audio using GROQ API - focus on exact transcription
  */
-export async function transcribeAudio(audioBlob: Blob, subject?: string): Promise<TranscriptionResult> {
+export async function transcribeAudio(
+  audioBlob: Blob, 
+  subject?: string, 
+  speakerMode: 'single' | 'multiple' = 'single'
+): Promise<TranscriptionResult> {
   try {
-    console.log("Procesando audio con GROQ API...");
+    console.log(`Procesando audio con GROQ API en modo: ${speakerMode}...`);
     
-    // Preprocess audio to reduce noise and isolate voice
-    const processedAudio = await preprocessAudio(audioBlob);
+    // Preprocess audio with the specified speaker mode
+    const processedAudio = await preprocessAudio(audioBlob, speakerMode);
     
     // Analyze audio to check if it contains actual content
     const audioBuffer = await processedAudio.arrayBuffer();
@@ -201,11 +225,21 @@ export async function transcribeAudio(audioBlob: Blob, subject?: string): Promis
     formData.append("model", "whisper-large-v3-turbo");
     formData.append("response_format", "verbose_json");
     
-    if (subject) {
-      formData.append("prompt", `This is related to ${subject}. Specify context or spelling.`);
+    // Create a prompt based on the speaker mode
+    let prompt = "";
+    if (speakerMode === 'single') {
+      prompt = `Esta es una grabación con un solo orador principal, enfócate en capturar claramente la voz predominante`;
+      if (subject) {
+        prompt += ` sobre la materia ${subject}. Prioriza la claridad del discurso principal.`;
+      }
     } else {
-      formData.append("prompt", "Specify context or spelling.");
+      prompt = `Esta es una grabación con múltiples oradores, intenta distinguir entre las diferentes voces`;
+      if (subject) {
+        prompt += ` que hablan sobre ${subject}. Identifica cuando cambia la persona que habla si es posible.`;
+      }
     }
+    
+    formData.append("prompt", prompt);
     
     // Set language explicitly to Spanish
     formData.append("language", "es");
@@ -238,19 +272,20 @@ export async function transcribeAudio(audioBlob: Blob, subject?: string): Promis
     // Always set language to Spanish for this particular use case
     const language = "es"; 
     
-    // Step 3: Send the transcript to the webhook with subject metadata
+    // Step 3: Send the transcript to the webhook with subject metadata and speaker mode
     await sendToWebhook(WEBHOOK_URL, {
       transcript: transcript,
       language: language,
       subject: subject || "No subject specified",
+      speakerMode: speakerMode,
       processed: true
     });
     
-    // Step 4: Generate a minimal summary and key points based on the transcript
+    // Step 4: Generate a summary and key points based on the transcript and speaker mode
     let analysisResult = { summary: "", keyPoints: [], suggestedEvents: [] };
     
     try {
-      analysisResult = await generateAnalysis(transcript, language);
+      analysisResult = await generateAnalysis(transcript, language, speakerMode);
     } catch (error) {
       console.error("Error generating analysis, returning only transcript:", error);
       // Continue even if analysis fails - transcript is what matters
@@ -262,7 +297,8 @@ export async function transcribeAudio(audioBlob: Blob, subject?: string): Promis
       keyPoints: analysisResult.keyPoints,
       suggestedEvents: analysisResult.suggestedEvents,
       language,
-      subject
+      subject,
+      speakerMode
     };
   } catch (error) {
     console.error("Error in transcribeAudio:", error);
@@ -372,7 +408,11 @@ async function detectLanguage(text: string): Promise<string> {
 /**
  * Generate a summary and key points from the transcript
  */
-async function generateAnalysis(transcript: string, language: string): Promise<{
+async function generateAnalysis(
+  transcript: string, 
+  language: string,
+  speakerMode: 'single' | 'multiple' = 'single'
+): Promise<{
   summary: string;
   keyPoints: string[];
   suggestedEvents: Array<{
@@ -382,10 +422,13 @@ async function generateAnalysis(transcript: string, language: string): Promise<{
   }>;
 }> {
   try {
-    // Adjust the system prompt based on detected language
-    const systemPrompt = language === "en" 
-      ? `You are an AI assistant that helps summarize educational content.
-         Analyze the following transcript from an educational audio recording.
+    // Adjust the system prompt based on detected language and speaker mode
+    let systemPrompt = "";
+    
+    if (language === "en") {
+      systemPrompt = `You are an AI assistant that helps summarize educational content.
+         Analyze the following transcript from an educational audio recording ${speakerMode === 'multiple' ? 'with multiple speakers' : 'with a single main speaker'}.
+         ${speakerMode === 'multiple' ? 'Try to identify key points from different speakers if possible.' : 'Focus on the main speaker\'s key messages.'}
          Return your response as plain JSON with the following schema:
          {
            "summary": "detailed summary here (2-3 paragraphs)",
@@ -397,9 +440,11 @@ async function generateAnalysis(transcript: string, language: string): Promise<{
                "date": "Date if mentioned (optional)"
              }
            ]
-         }`
-      : `Eres un asistente de IA que ayuda a resumir contenido educativo.
-         Analiza la siguiente transcripción de una grabación de audio educativa.
+         }`;
+    } else {
+      systemPrompt = `Eres un asistente de IA que ayuda a resumir contenido educativo.
+         Analiza la siguiente transcripción de una grabación de audio educativa ${speakerMode === 'multiple' ? 'con múltiples oradores' : 'con un solo orador principal'}.
+         ${speakerMode === 'multiple' ? 'Intenta identificar puntos clave de los diferentes oradores si es posible.' : 'Concéntrate en los mensajes clave del orador principal.'}
          Devuelve tu respuesta como JSON plano con el siguiente esquema:
          {
            "summary": "resumen detallado aquí (2-3 párrafos)",
@@ -412,6 +457,7 @@ async function generateAnalysis(transcript: string, language: string): Promise<{
              }
            ]
          }`;
+    }
 
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",

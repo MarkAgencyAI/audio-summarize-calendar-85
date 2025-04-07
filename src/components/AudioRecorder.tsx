@@ -1,16 +1,19 @@
+
 import { useState, useRef, useEffect } from "react";
-import { Mic, X, Play, Pause, Loader2, Square } from "lucide-react";
+import { Mic, X, Play, Pause, Loader2, Square, User, Users } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
 import { transcribeAudio, blobToBase64 } from "@/lib/groq";
 import { useAudioProcessor } from "@/hooks/use-audio-processor";
 
 type RecordingState = "idle" | "recording" | "paused";
+type SpeakerMode = "single" | "multiple";
 
 export function AudioRecorder() {
   const { addRecording, folders } = useRecordings();
@@ -28,14 +31,20 @@ export function AudioRecorder() {
   const [subject, setSubject] = useState("");
   const [hasPermission, setHasPermission] = useState(false);
   const [webhookOutput, setWebhookOutput] = useState("");
+  const [speakerMode, setSpeakerMode] = useState<SpeakerMode>("single");
   
   const subjectRef = useRef(subject);
   const audioUrlRef = useRef<string | null>(null);
   const audioDataRef = useRef<string | null>(null);
+  const speakerModeRef = useRef(speakerMode);
   
   useEffect(() => {
     subjectRef.current = subject;
   }, [subject]);
+  
+  useEffect(() => {
+    speakerModeRef.current = speakerMode;
+  }, [speakerMode]);
   
   useEffect(() => {
     const checkPermissions = async () => {
@@ -87,6 +96,7 @@ export function AudioRecorder() {
       folderId: selectedFolder,
       duration: recordingDuration,
       subject: subjectRef.current || "Sin materia especificada",
+      speakerMode: speakerModeRef.current,
       suggestedEvents: []
     });
     
@@ -235,7 +245,8 @@ export function AudioRecorder() {
         transcriptionResult = await processAudioFile(
           audioBlob, 
           subjectRef.current,
-          (progressData) => dispatchTranscriptionUpdate(progressData)
+          (progressData) => dispatchTranscriptionUpdate(progressData),
+          speakerModeRef.current
         );
         
         toast.success("Audio transcrito correctamente");
@@ -272,20 +283,53 @@ export function AudioRecorder() {
       
       <div className="space-y-4">
         {recordingState === "idle" && (
-          <div className="space-y-2">
-            <Label htmlFor="subject" className="text-custom-text">Materia *</Label>
-            <Input
-              id="subject"
-              placeholder="Ingresa la materia (ej: Matemáticas, Historia, etc.)"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
-              required
-            />
-            {recordingState === "idle" && !subject.trim() && (
-              <p className="text-xs text-amber-500">Debes ingresar la materia antes de grabar</p>
-            )}
-          </div>
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="subject" className="text-custom-text">Materia *</Label>
+              <Input
+                id="subject"
+                placeholder="Ingresa la materia (ej: Matemáticas, Historia, etc.)"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
+                required
+              />
+              {recordingState === "idle" && !subject.trim() && (
+                <p className="text-xs text-amber-500">Debes ingresar la materia antes de grabar</p>
+              )}
+            </div>
+
+            {/* Speaker Mode Selection */}
+            <div className="space-y-2">
+              <Label className="text-custom-text">Modo de grabación</Label>
+              <RadioGroup 
+                value={speakerMode}
+                onValueChange={(value) => setSpeakerMode(value as SpeakerMode)}
+                className="flex flex-col space-y-2"
+              >
+                <div className="flex items-center space-x-2 p-2 rounded-md hover:bg-secondary/50">
+                  <RadioGroupItem value="single" id="single-speaker" />
+                  <Label htmlFor="single-speaker" className="flex items-center cursor-pointer">
+                    <User className="h-4 w-4 mr-2" />
+                    <div>
+                      <span className="font-medium">Un solo orador (Modo Clase)</span>
+                      <p className="text-xs text-muted-foreground">Para captar principalmente la voz del profesor</p>
+                    </div>
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 p-2 rounded-md hover:bg-secondary/50">
+                  <RadioGroupItem value="multiple" id="multiple-speaker" />
+                  <Label htmlFor="multiple-speaker" className="flex items-center cursor-pointer">
+                    <Users className="h-4 w-4 mr-2" />
+                    <div>
+                      <span className="font-medium">Múltiples oradores (Debates)</span>
+                      <p className="text-xs text-muted-foreground">Para captar la información de varias personas</p>
+                    </div>
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+          </>
         )}
         
         <div className="flex items-center justify-between">

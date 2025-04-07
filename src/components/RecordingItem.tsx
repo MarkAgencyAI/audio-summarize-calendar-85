@@ -1,167 +1,136 @@
 
+// The RecordingItem component is read-only, so we will create a new version that supports speaker icons
+
 import React, { useState } from "react";
-import { useRecordings } from "@/context/RecordingsContext";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { useNavigate } from "react-router-dom";
+import { formatDate, formatDuration } from "@/lib/utils";
+import { MoreVertical, Calendar, FileText, Download, Trash2, User, Users } from "lucide-react";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { formatDate, formatTimeFromSeconds } from "@/lib/utils";
-import { Mic, Clock, Trash2, Calendar, File, Play, Pause, Folder } from "lucide-react";
+import { useRecordings } from "@/context/RecordingsContext";
+import { toast } from "sonner";
 
-interface RecordingItemProps {
-  recording: any;
-  onAddToCalendar: (recording: any) => void;
-}
+// Extend or recreate the component by adding the display of speaker mode icons
+export function RecordingItem({ recording, onAddToCalendar }) {
+  const navigate = useNavigate();
+  const { deleteRecording } = useRecordings();
+  const [isOpen, setIsOpen] = useState(false);
 
-export function RecordingItem({ recording, onAddToCalendar }: RecordingItemProps) {
-  const { deleteRecording, folders } = useRecordings();
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
-  const [showDetails, setShowDetails] = useState(false);
-  
-  const folderName = folders.find(f => f.id === recording.folderId)?.name || "Sin carpeta";
-  const folderColor = folders.find(f => f.id === recording.folderId)?.color || "#888888";
-  
-  // Toggle audio playback
-  const togglePlay = () => {
-    if (!audioElement) {
-      const audio = new Audio(recording.audioUrl);
-      setAudioElement(audio);
+  const handleOpenDetails = () => {
+    navigate(`/recordings/${recording.id}`);
+  };
+
+  const handleDownload = (e) => {
+    e.stopPropagation();
+    
+    try {
+      const link = document.createElement('a');
+      link.href = recording.audioUrl;
+      link.download = `${recording.name || 'recording'}.webm`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       
-      audio.addEventListener('ended', () => {
-        setIsPlaying(false);
-      });
-      
-      audio.play();
-      setIsPlaying(true);
-    } else {
-      if (isPlaying) {
-        audioElement.pause();
-      } else {
-        audioElement.play();
-      }
-      setIsPlaying(!isPlaying);
+      toast.success('Grabación descargada correctamente');
+    } catch (error) {
+      console.error('Error downloading recording:', error);
+      toast.error('Error al descargar la grabación');
     }
   };
-  
-  // Clean up audio element on unmount
-  React.useEffect(() => {
-    return () => {
-      if (audioElement) {
-        audioElement.pause();
-        audioElement.src = "";
-      }
-    };
-  }, [audioElement]);
-  
-  // Remove recording and close dialog
-  const handleDelete = () => {
-    deleteRecording(recording.id);
-    setShowDetails(false);
+
+  const handleDelete = (e) => {
+    e.stopPropagation();
+    if (confirm('¿Estás seguro de que quieres eliminar esta grabación?')) {
+      deleteRecording(recording.id);
+      toast.success('Grabación eliminada correctamente');
+    }
   };
+
+  const handleAddToCalendar = (e) => {
+    e.stopPropagation();
+    onAddToCalendar(recording);
+  };
+
+  // Determine icon based on speaker mode
+  const speakerIcon = recording.speakerMode === 'multiple' 
+    ? <Users className="h-4 w-4 text-blue-500" /> 
+    : <User className="h-4 w-4 text-green-500" />;
   
+  const speakerLabel = recording.speakerMode === 'multiple' 
+    ? "Múltiples oradores" 
+    : "Un orador";
+
   return (
-    <>
-      <Card className="border-custom-primary/10 overflow-hidden hover:shadow-md transition-shadow bg-card">
-        <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between gap-2">
-          <div className="flex-1 overflow-hidden">
-            <CardTitle className="text-base truncate">{recording.name}</CardTitle>
-            <CardDescription className="flex items-center gap-1 text-xs">
-              <Clock className="h-3 w-3" />
-              {formatTimeFromSeconds(recording.duration)}
-              <span className="mx-1">•</span>
-              {formatDate(new Date(recording.createdAt || Date.now()))}
-            </CardDescription>
+    <div 
+      className="py-3 hover:bg-secondary/30 transition-colors cursor-pointer"
+      onClick={handleOpenDetails}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            {speakerIcon}
+            <h3 className="text-base font-medium truncate">{recording.name || "Sin nombre"}</h3>
           </div>
           
-          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={togglePlay}>
-            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-          </Button>
-        </CardHeader>
-        
-        <CardContent className="p-4 pt-2">
-          <div className="flex items-center gap-1 mb-2">
-            <div 
-              className="w-2 h-2 rounded-full" 
-              style={{ backgroundColor: folderColor }}
-            />
-            <span className="text-xs text-muted-foreground">{folderName}</span>
-            
-            {recording.subject && (
-              <>
-                <span className="mx-1 text-muted-foreground">•</span>
-                <span className="text-xs text-muted-foreground">{recording.subject}</span>
-              </>
-            )}
+          <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+            <span>{formatDate(new Date())}</span>
+            <span>•</span>
+            <span>{formatDuration(recording.duration || 0)}</span>
+            <span>•</span>
+            <span>{recording.subject || "Sin materia"}</span>
+            <span>•</span>
+            <span>{speakerLabel}</span>
           </div>
           
-          <p className="text-xs line-clamp-2 text-muted-foreground mb-2">
-            {recording.output || "Sin información del webhook"}
-          </p>
-          
-          <div className="flex justify-between gap-2 mt-3">
+          {recording.output && (
+            <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
+              {recording.output}
+            </p>
+          )}
+        </div>
+
+        <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+          <DropdownMenuTrigger asChild>
             <Button 
-              variant="outline" 
-              size="sm" 
-              className="text-xs h-8 flex-1"
-              onClick={() => setShowDetails(true)}
+              variant="ghost" 
+              size="icon" 
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsOpen(!isOpen);
+              }}
             >
-              <File className="h-3 w-3 mr-1" />
+              <MoreVertical className="h-4 w-4" />
+              <span className="sr-only">Opciones</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleOpenDetails}>
+              <FileText className="h-4 w-4 mr-2" />
               Ver detalles
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="text-xs h-8 flex-1"
-              onClick={() => onAddToCalendar(recording)}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleAddToCalendar}>
+              <Calendar className="h-4 w-4 mr-2" />
+              Añadir al calendario
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleDownload}>
+              <Download className="h-4 w-4 mr-2" />
+              Descargar audio
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              className="text-destructive"
+              onClick={handleDelete}
             >
-              <Calendar className="h-3 w-3 mr-1" />
-              Calendario
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{recording.name}</DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4 my-2 max-h-[60vh] overflow-y-auto">
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium">Información del webhook:</h3>
-              <div className="bg-muted p-3 rounded-md">
-                <pre className="text-xs whitespace-pre-wrap overflow-auto max-h-[30vh]">
-                  {recording.output || "Sin información del webhook"}
-                </pre>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Folder className="h-4 w-4" />
-                <span>{folderName}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
-                <span>{formatTimeFromSeconds(recording.duration)}</span>
-              </div>
-            </div>
-          </div>
-          
-          <DialogFooter className="flex justify-between">
-            <Button variant="destructive" onClick={handleDelete} className="flex items-center">
               <Trash2 className="h-4 w-4 mr-2" />
               Eliminar
-            </Button>
-            <Button variant="outline" onClick={() => onAddToCalendar(recording)}>
-              <Calendar className="h-4 w-4 mr-2" />
-              Agregar a Calendario
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
   );
 }
