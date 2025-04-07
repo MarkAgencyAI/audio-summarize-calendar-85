@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { sendToWebhook } from "@/lib/webhook";
+import { useRecordings } from "@/context/RecordingsContext";
 
 export function ImageUploader() {
   const [isUploading, setIsUploading] = useState(false);
@@ -17,6 +18,7 @@ export function ImageUploader() {
   const [showDialog, setShowDialog] = useState(false);
   const [isWaitingForWebhook, setIsWaitingForWebhook] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { addNote } = useRecordings();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -45,13 +47,26 @@ export function ImageUploader() {
         webhookData.content = customEvent.detail.data.content;
         localStorage.setItem("lastWebhookData", JSON.stringify(webhookData));
         
+        // Create note directly here instead of relying on NotesSection to pick it up
+        if (webhookData.description && webhookData.imageUrl && webhookData.content) {
+          addNote({
+            title: webhookData.description,
+            content: webhookData.content,
+            folderId: "default",
+            imageUrl: webhookData.imageUrl
+          });
+          
+          // Clear the data from localStorage after creating the note
+          localStorage.removeItem("lastWebhookData");
+          
+          // Notify the user
+          toast.success("Apunte creado correctamente");
+        }
+        
         // Indicate that we've received webhook response
         setIsWaitingForWebhook(false);
         
-        // Notify the user
-        toast.success("Análisis de imagen recibido correctamente");
-        
-        // Close the dialog if it's still open
+        // Close the dialog
         setShowDialog(false);
       }
     };
@@ -60,7 +75,7 @@ export function ImageUploader() {
     return () => {
       window.removeEventListener('webhookMessage', handleWebhookMessage);
     };
-  }, []);
+  }, [addNote]);
 
   const handleSubmit = async () => {
     if (!selectedFile || !description.trim()) {
@@ -120,12 +135,11 @@ export function ImageUploader() {
         }
       }));
       
-      // Reset the form
+      // Reset the form fields but do not close dialog yet
       setSelectedFile(null);
       setPreviewUrl(null);
       setDescription("");
       
-      // Keep dialog open while waiting for webhook response
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }

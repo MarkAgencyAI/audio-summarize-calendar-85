@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useRecordings, Note } from "@/context/RecordingsContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,42 +33,6 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
     : notes.filter(note => 
         note.title.toLowerCase().includes(searchQuery.toLowerCase())
       );
-  
-  // Check for webhook data from local storage with improved polling
-  useEffect(() => {
-    const checkForWebhookData = () => {
-      const lastWebhookData = localStorage.getItem("lastWebhookData");
-      if (lastWebhookData) {
-        try {
-          const parsedData = JSON.parse(lastWebhookData);
-          // Only proceed if we have both the image data AND the content from webhook response
-          if (parsedData.description && parsedData.imageUrl && parsedData.content) {
-            console.log("Webhook data found with content:", parsedData);
-            setWebhookData(parsedData);
-            localStorage.removeItem("lastWebhookData"); // Clear data once retrieved
-            
-            // Auto-open the add note dialog with the webhook data
-            setNewNoteTitle(parsedData.description);
-            // Use the content from webhook
-            setNewNoteContent(parsedData.content);
-            setShowAddNoteDialog(true);
-            
-            // Show toast to confirm
-            toast.success("Contenido procesado correctamente. Creando apunte...");
-          }
-        } catch (error) {
-          console.error("Error parsing webhook data:", error);
-        }
-      }
-    };
-    
-    checkForWebhookData();
-    
-    // Set up an interval to check for new data
-    const intervalId = setInterval(checkForWebhookData, 2000);
-    
-    return () => clearInterval(intervalId);
-  }, []);
   
   const handleAddNote = () => {
     if (!newNoteTitle.trim()) {
