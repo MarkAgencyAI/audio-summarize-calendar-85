@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -198,7 +199,8 @@ export default function Dashboard() {
     return () => clearInterval(intervalId);
   }, []);
 
-  const showTranscriptionOptions = isRecording || isTranscribing || transcriptionOutput;
+  // Fix: Only treat non-empty transcriptionOutput as truthy
+  const showTranscriptionOptions = isRecording || isTranscribing || !!transcriptionOutput;
 
   return (
     <Layout>
