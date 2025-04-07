@@ -7,7 +7,7 @@ import { CalendarEvent } from "@/components/Calendar";
 
 // Google API client ID (this is a public key that can be safely included in client-side code)
 const GOOGLE_CLIENT_ID = "694467530438-n4v9g32o6bqqv0phs52qciq09urceogo.apps.googleusercontent.com";
-const REDIRECT_URI = "https://cali-asistente.lovable.ai/calendar";
+const SCOPES = "https://www.googleapis.com/auth/calendar";
 
 // Define URLs for our Supabase Edge Functions
 const AUTH_URL = import.meta.env.VITE_SUPABASE_URL ? 
@@ -60,7 +60,7 @@ export function GoogleCalendarSync({ events, onEventsSynced }: GoogleCalendarSyn
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ code })
+        body: JSON.stringify({ code, redirect_uri: window.location.origin + window.location.pathname })
       });
       
       if (!response.ok) {
@@ -93,8 +93,9 @@ export function GoogleCalendarSync({ events, onEventsSynced }: GoogleCalendarSyn
     const state = Math.random().toString(36).substring(2);
     localStorage.setItem('oauth_state', state);
     
-    // Redirect the user to the authorization URL
-    const authUrl = `${AUTH_URL}/authorize?state=${state}`;
+    // Construct the Google OAuth URL
+    const redirectUri = window.location.origin + window.location.pathname;
+    const authUrl = `${AUTH_URL}/authorize?redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
     
     // Redirect the user to the authorization URL
     window.location.href = authUrl;
