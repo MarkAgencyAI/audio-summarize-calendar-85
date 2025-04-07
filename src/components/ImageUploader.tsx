@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +15,7 @@ export function ImageUploader() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [description, setDescription] = useState("");
   const [showDialog, setShowDialog] = useState(false);
+  const [isWaitingForWebhook, setIsWaitingForWebhook] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -39,10 +39,20 @@ export function ImageUploader() {
       const customEvent = event as CustomEvent;
       if (customEvent.detail?.type === 'webhook_analysis' && 
           customEvent.detail?.data?.content) {
+        
         // Store the content for creating a note
         const webhookData = JSON.parse(localStorage.getItem("lastWebhookData") || "{}");
         webhookData.content = customEvent.detail.data.content;
         localStorage.setItem("lastWebhookData", JSON.stringify(webhookData));
+        
+        // Indicate that we've received webhook response
+        setIsWaitingForWebhook(false);
+        
+        // Notify the user
+        toast.success("Análisis de imagen recibido correctamente");
+        
+        // Close the dialog if it's still open
+        setShowDialog(false);
       }
     };
     
@@ -59,6 +69,8 @@ export function ImageUploader() {
     }
 
     setIsUploading(true);
+    setIsWaitingForWebhook(true);
+    
     try {
       // Using ImgBB API to upload the image and get a public URL
       const formData = new FormData();
@@ -94,10 +106,11 @@ export function ImageUploader() {
       // Store initial data before sending to webhook
       localStorage.setItem("lastWebhookData", JSON.stringify(webhookData));
       
-      // Send the URL to the webhook
+      // Send the URL to the webhook and notify the user we're waiting for analysis
+      toast.loading("Analizando imagen...", { id: "analyzing-image" });
       await sendToWebhook("https://sswebhookss.maettiai.tech/webhook/68842cd0-b48e-4cb1-8050-43338dd79f8d", webhookData);
       
-      toast.success("Imagen subida correctamente");
+      toast.success("Imagen subida correctamente", { id: "analyzing-image" });
       
       // Dispatch a custom event that will be caught by the Dashboard component
       window.dispatchEvent(new CustomEvent('webhookResponse', {
@@ -111,13 +124,16 @@ export function ImageUploader() {
       setSelectedFile(null);
       setPreviewUrl(null);
       setDescription("");
-      setShowDialog(false);
+      
+      // Keep dialog open while waiting for webhook response
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
     } catch (error) {
       console.error("Error uploading image:", error);
       toast.error("Error al subir la imagen: " + (error instanceof Error ? error.message : "Error desconocido"));
+      setIsWaitingForWebhook(false);
+      setShowDialog(false);
     } finally {
       setIsUploading(false);
     }
@@ -153,7 +169,14 @@ export function ImageUploader() {
         </CardContent>
       </Card>
 
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+      <Dialog open={showDialog} onOpenChange={(open) => {
+        // Don't allow closing the dialog if we're still waiting for webhook
+        if (!open && isWaitingForWebhook) {
+          toast.info("Esperando respuesta del análisis...");
+          return;
+        }
+        setShowDialog(open);
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>¿Qué estás subiendo?</DialogTitle>
@@ -188,18 +211,24 @@ export function ImageUploader() {
             <Button 
               variant="outline" 
               onClick={() => {
-                setShowDialog(false);
-                setSelectedFile(null);
-                setPreviewUrl(null);
+                // Only allow cancellation if not waiting for webhook
+                if (!isWaitingForWebhook) {
+                  setShowDialog(false);
+                  setSelectedFile(null);
+                  setPreviewUrl(null);
+                } else {
+                  toast.info("Esperando respuesta del análisis...");
+                }
               }}
+              disabled={isWaitingForWebhook}
             >
               Cancelar
             </Button>
             <Button 
               onClick={handleSubmit} 
-              disabled={isUploading}
+              disabled={isUploading || isWaitingForWebhook}
             >
-              {isUploading ? "Subiendo..." : "Subir"}
+              {isUploading ? "Subiendo..." : isWaitingForWebhook ? "Analizando..." : "Subir"}
             </Button>
           </DialogFooter>
         </DialogContent>
