@@ -4,9 +4,11 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Mic, Calendar, Folder, User, LogOut, Menu, X, ChevronLeft, ChevronRight, FileText, LayoutGrid } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/AuthContext";
+
 interface LayoutProps {
   children: ReactNode;
 }
+
 export function Layout({
   children
 }: LayoutProps) {
@@ -49,6 +51,7 @@ export function Layout({
     icon: <User className="h-5 w-5" />,
     label: "Perfil"
   }];
+
   return <div className="flex min-h-screen bg-background text-foreground antialiased">
       {/* Mobile Top Navbar */}
       {isMobile && <div className="fixed top-0 left-0 right-0 z-50 bg-card dark:bg-card border-b border-border dark:border-border h-14 flex items-center justify-between px-4">
@@ -90,7 +93,11 @@ export function Layout({
         </div>}
       
       {/* Sidebar Toggle Button */}
-      {!isMobile && <button onClick={toggleSidebar} className={`fixed z-50 top-4 ${sidebarOpen ? 'left-[260px] md:left-[252px]' : 'left-4'} bg-card dark:bg-card rounded-full h-8 w-8 flex items-center justify-center shadow-md border border-border dark:border-border transition-all duration-300 text-foreground dark:text-foreground`}>
+      {!isMobile && <button 
+        onClick={toggleSidebar} 
+        className={`fixed z-50 top-4 bg-card dark:bg-card rounded-full h-8 w-8 flex items-center justify-center shadow-md border border-border dark:border-border transition-all duration-300 text-foreground dark:text-foreground 
+        ${sidebarOpen ? 'left-[64px] md:left-[252px]' : 'left-4'}`}
+      >
           {sidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         </button>}
       
@@ -105,7 +112,7 @@ export function Layout({
         </div>}
       
       {/* Main Content */}
-      <div className={`flex-1 flex flex-col transition-all duration-300 ${isMobile ? "pt-14 pb-16" /* Add top padding for mobile navbar */ : sidebarOpen ? "pl-16 md:pl-64" : "pl-0"}`}>
+      <div className={`flex-1 flex flex-col transition-all duration-300 ${isMobile ? "pt-14 pb-16" : sidebarOpen ? "pl-16 md:pl-64" : "pl-0"}`}>
         <main className="flex-1 p-3 md:p-6 animate-fade-in overflow-x-hidden">
           {children}
         </main>
