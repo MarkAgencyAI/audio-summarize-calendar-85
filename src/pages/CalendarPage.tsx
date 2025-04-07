@@ -36,7 +36,7 @@ export default function CalendarPage() {
         const dialog = document.createElement("dialog");
         dialog.className = "fixed inset-0 flex items-center justify-center bg-black/50 z-50";
         dialog.innerHTML = `
-          <div class="bg-background dark:bg-custom-secondary/20 dark:border-custom-secondary/40 dark:text-white rounded-lg p-6 max-w-md w-full">
+          <div class="bg-background dark:bg-custom-secondary/20 dark:border-custom-secondary/40 dark:text-white rounded-lg p-4 sm:p-6 max-w-md w-full mx-4">
             <h2 class="text-xl font-bold mb-4 dark:text-white">Eventos sugeridos</h2>
             <p class="text-sm text-muted-foreground dark:text-white/60 mb-4">
               Se encontraron los siguientes eventos en la grabación. 
@@ -65,13 +65,13 @@ export default function CalendarPage() {
           eventEl.innerHTML = `
             <input type="checkbox" id="event-${index}" class="h-4 w-4" checked />
             <label for="event-${index}" class="flex-1 dark:text-white">
-              <div class="font-medium">${point}</div>
+              <div class="font-medium text-sm break-words">${point}</div>
               <div class="text-xs text-muted-foreground dark:text-white/60">
                 ${format(eventDate, "PPP")}
               </div>
             </label>
           `;
-          suggestedEventsContainer.appendChild(eventEl);
+          suggestedEventsContainer?.appendChild(eventEl);
         });
 
         const cancelButton = dialog.querySelector("#cancel-button");
@@ -141,11 +141,13 @@ export default function CalendarPage() {
 
   return (
     <Layout>
-      <div className="space-y-6 max-w-full">
-        <h1 className="text-2xl md:text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">Calendario</h1>
+      <div className="space-y-4 sm:space-y-6 w-full">
+        <h1 className="text-2xl md:text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">
+          Calendario
+        </h1>
         
-        <div className="glassmorphism rounded-xl p-3 md:p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40 w-full">
-          <div className="w-full overflow-hidden">
+        <div className="glassmorphism rounded-xl p-3 md:p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40 w-full overflow-hidden">
+          <div className="w-full overflow-x-auto">
             <Calendar 
               events={events} 
               onAddEvent={handleAddEvent} 

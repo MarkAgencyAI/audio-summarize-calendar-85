@@ -15,8 +15,8 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center max-w-md p-6">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="text-center max-w-md p-4 sm:p-6">
         <h1 className="text-4xl font-bold mb-4">404</h1>
         <p className="text-xl text-muted-foreground mb-6">
           Lo sentimos, no pudimos encontrar esta página
@@ -25,7 +25,7 @@ const NotFound = () => {
           La página que estás buscando no existe o ha sido movida.
         </p>
         <Button asChild>
-          <Link to="/" className="flex items-center">
+          <Link to="/" className="flex items-center justify-center">
             <Home className="mr-2 h-4 w-4" />
             Regresar al Inicio
           </Link>

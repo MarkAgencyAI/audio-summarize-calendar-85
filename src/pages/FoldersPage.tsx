@@ -18,10 +18,10 @@ export default function FoldersPage() {
   
   return (
     <Layout>
-      <div className="space-y-4 md:space-y-8 max-w-full mx-auto">
+      <div className="space-y-4 md:space-y-8 w-full">
         <h1 className="text-2xl md:text-3xl font-bold text-foreground">Materias</h1>
         
-        <div className="glassmorphism rounded-xl p-3 md:p-6 shadow-lg w-full overflow-hidden">
+        <div className="glassmorphism rounded-xl p-3 md:p-6 shadow-lg w-full">
           <div className="w-full overflow-x-auto">
             <FolderSystem />
           </div>

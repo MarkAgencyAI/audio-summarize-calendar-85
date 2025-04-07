@@ -86,19 +86,25 @@
 @layer base {
   * {
     @apply border-border;
+    box-sizing: border-box;
   }
 
   html, body {
-    @apply overflow-x-hidden max-w-full; /* Prevent horizontal scrolling */
+    @apply overflow-x-hidden max-w-full;
+    height: 100%;
+    margin: 0;
+    padding: 0;
   }
 
   body {
     @apply bg-background text-foreground antialiased font-sans;
+    position: relative;
   }
 
   /* Updated heading styles to use dark text in light mode and light text in dark mode */
   h1, h2, h3, h4, h5, h6 {
-    @apply font-medium tracking-tight text-foreground;
+    @apply font-medium tracking-tight text-foreground break-words;
+    max-width: 100%;
   }
 
   h1 {
@@ -115,6 +121,11 @@
 
   h4 {
     @apply text-xl;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
   }
 
   .glassmorphism {
@@ -156,6 +167,12 @@
   .theme-transition {
     @apply transition-colors duration-300;
   }
+
+  /* Fix for dialogs and modals */
+  dialog {
+    max-width: 100vw;
+    max-height: 100vh;
+  }
 }
 
 @layer components {
@@ -183,6 +200,11 @@
     @apply bg-background border border-input rounded-lg px-4 py-2 
     focus:outline-none focus:ring-2 focus:ring-ring;
   }
+
+  /* Responsive container for content */
+  .responsive-container {
+    @apply w-full max-w-full overflow-hidden px-4 md:px-6;
+  }
 }
 
 @layer utilities {
@@ -207,6 +229,24 @@
   /* Add responsive width controls for dialogs */
   .responsive-dialog {
     @apply max-w-[95vw] w-full sm:max-w-md md:max-w-lg;
+  }
+
+  /* Utilities for truncating text */
+  .truncate-1 {
+    @apply truncate;
+  }
+
+  .truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .break-anywhere {
+    overflow-wrap: anywhere;
+    word-wrap: break-word;
+    word-break: break-word;
   }
 }
 
@@ -235,4 +275,13 @@
 /* Ensure scroll areas are properly responsive */
 .scrollbar-responsive {
   @apply max-w-full overflow-x-auto md:overflow-x-hidden; 
+}
+
+/* Fix for modal and dialogs */
+.modal-container {
+  @apply fixed inset-0 z-50 flex items-center justify-center px-4;
+}
+
+.modal-content {
+  @apply w-full max-w-md rounded-lg p-4 relative;
 }

@@ -16,15 +16,17 @@ export default function Register() {
   }, [user, navigate]);
   
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-primary/20 dark:from-background dark:to-primary/10">
-      <div className="mb-8">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-primary/20 dark:from-background dark:to-primary/10 px-4">
+      <div className="mb-8 max-w-full">
         <img 
           src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" 
           alt="Cali Logo" 
-          className="h-24 w-auto"
+          className="h-16 sm:h-24 w-auto"
         />
       </div>
-      <Authentication type="register" />
+      <div className="w-full max-w-md">
+        <Authentication type="register" />
+      </div>
     </div>
   );
 }
