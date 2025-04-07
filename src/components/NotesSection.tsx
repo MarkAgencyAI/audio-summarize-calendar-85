@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useRecordings, Note } from "@/context/RecordingsContext";
 import { Button } from "@/components/ui/button";
@@ -146,32 +147,31 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
               />
             </div>
             
-            {!folderId && (
-              <div className="space-y-2">
-                <Label htmlFor="new-note-folder">Carpeta</Label>
-                <Select
-                  value={selectedFolder}
-                  onValueChange={setSelectedFolder}
-                >
-                  <SelectTrigger id="new-note-folder">
-                    <SelectValue placeholder="Seleccionar carpeta" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {folders.map(folder => (
-                      <SelectItem key={folder.id} value={folder.id}>
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="h-3 w-3 rounded-full" 
-                            style={{ backgroundColor: folder.color }}
-                          />
-                          <span>{folder.name}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            {/* Always show folder selection regardless of folderId */}
+            <div className="space-y-2">
+              <Label htmlFor="new-note-folder">Materia</Label>
+              <Select
+                value={selectedFolder}
+                onValueChange={setSelectedFolder}
+              >
+                <SelectTrigger id="new-note-folder">
+                  <SelectValue placeholder="Seleccionar materia" />
+                </SelectTrigger>
+                <SelectContent>
+                  {folders.map(folder => (
+                    <SelectItem key={folder.id} value={folder.id}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="h-3 w-3 rounded-full" 
+                          style={{ backgroundColor: folder.color }}
+                        />
+                        <span>{folder.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             
             {webhookData?.imageUrl && (
               <div className="space-y-2">

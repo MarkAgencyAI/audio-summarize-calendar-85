@@ -25,7 +25,7 @@ export function NoteItem({ note }: NoteItemProps) {
   const [editedContent, setEditedContent] = useState(note.content);
   const [selectedFolder, setSelectedFolder] = useState(note.folderId);
   
-  const folderName = folders.find(f => f.id === note.folderId)?.name || "Sin carpeta";
+  const folderName = folders.find(f => f.id === note.folderId)?.name || "Sin materia";
   const folderColor = folders.find(f => f.id === note.folderId)?.color || "#888888";
   
   const handleSave = () => {
@@ -135,13 +135,13 @@ export function NoteItem({ note }: NoteItemProps) {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="note-folder">Carpeta</Label>
+                <Label htmlFor="note-folder">Materia</Label>
                 <Select
                   value={selectedFolder}
                   onValueChange={setSelectedFolder}
                 >
                   <SelectTrigger id="note-folder">
-                    <SelectValue placeholder="Seleccionar carpeta" />
+                    <SelectValue placeholder="Seleccionar materia" />
                   </SelectTrigger>
                   <SelectContent>
                     {folders.map(folder => (
