@@ -43,17 +43,19 @@ function App() {
       // Initialize the google object with the required structure
       window.google = window.google || {};
       
+      // Create the accounts object if it doesn't exist
       if (!window.google.accounts) {
-        window.google.accounts = {
+        // Using type assertion to fix TypeScript error
+        (window.google as any).accounts = {
           oauth2: {
-            initTokenClient: ((config) => {
+            initTokenClient: (config: any) => {
               console.warn('Google API not yet loaded');
               return {} as google.accounts.oauth2.TokenClient;
-            }),
-            revoke: ((token, callback) => {
+            },
+            revoke: (token: string, callback?: () => void) => {
               console.warn('Google API not yet loaded');
               if (callback) callback();
-            })
+            }
           }
         };
       }
