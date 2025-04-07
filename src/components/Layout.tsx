@@ -53,7 +53,7 @@ export function Layout({
       {/* Mobile Top Navbar */}
       {isMobile && <div className="fixed top-0 left-0 right-0 z-50 bg-card dark:bg-card border-b border-border dark:border-border h-14 flex items-center justify-between px-4">
           <div onClick={() => navigate("/dashboard")} className="cursor-pointer flex items-center justify-center h-full">
-            <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="h-8 w-auto object-contain" />
+            <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="h-24 w-auto object-contain" />
           </div>
           <ThemeToggle />
         </div>}
