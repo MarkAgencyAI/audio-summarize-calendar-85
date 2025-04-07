@@ -1,22 +1,19 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRecordings } from "@/context/RecordingsContext";
 import { useAuth } from "@/context/AuthContext";
 import { Layout } from "@/components/Layout";
-import { PdfUploader } from "@/components/PdfUploader";
-import { AudioRecorder } from "@/components/AudioRecorder";
 import { RecordingItem } from "@/components/RecordingItem";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Folder, Mic, FileText, Search, Calendar, Bell } from "lucide-react";
-import { LiveTranscriptionSheet } from "@/components/LiveTranscriptionSheet";
 import { toast } from "sonner";
 import { parseISO, format, isWithinInterval, addDays } from "date-fns";
 import { es } from "date-fns/locale";
-import { loadFromStorage, saveToStorage } from "@/lib/storage";
+import { loadFromStorage } from "@/lib/storage";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ToolsCarousel } from "@/components/ToolsCarousel";
 
 interface CalendarEvent {
   id: string;
@@ -77,92 +74,6 @@ function UpcomingEvents({ events }: { events: CalendarEvent[] }) {
   );
 }
 
-function ToolsCard() {
-  const { recordings, addRecording } = useRecordings();
-  const [isRecording, setIsRecording] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [transcriptionOutput, setTranscriptionOutput] = useState("");
-  const [transcriptionOpen, setTranscriptionOpen] = useState(false);
-  const { user } = useAuth();
-
-  useEffect(() => {
-    const handleAudioRecorderMessage = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      if (customEvent.detail?.type === 'recordingStarted') {
-        setIsRecording(true);
-      } else if (customEvent.detail?.type === 'recordingStopped') {
-        setIsRecording(false);
-      } else if (customEvent.detail?.type === 'transcriptionStarted') {
-        setIsTranscribing(true);
-        setTranscriptionOutput("");
-      } else if (customEvent.detail?.type === 'transcriptionComplete' || 
-                customEvent.detail?.type === 'transcriptionStopped') {
-        setIsTranscribing(false);
-        setTimeout(() => {
-          if (!isRecording) {
-            setTranscriptionOutput("");
-          }
-        }, 30000);
-      } else if (customEvent.detail?.type === 'transcriptionUpdate') {
-        setTranscriptionOutput(customEvent.detail.data || "");
-      }
-    };
-
-    window.addEventListener('audioRecorderMessage', handleAudioRecorderMessage);
-    
-    return () => {
-      window.removeEventListener('audioRecorderMessage', handleAudioRecorderMessage);
-    };
-  }, [isRecording]);
-
-  const handleFileUpload = (file: File) => {
-    addRecording({
-      name: file.name,
-      audioUrl: URL.createObjectURL(file),
-      audioData: "",
-      output: "Transcribiendo...",
-      folderId: "default",
-      duration: 0
-    });
-    toast.success("Archivo subido correctamente!");
-  };
-
-  const showTranscriptionOptions = isRecording || isTranscribing || transcriptionOutput;
-
-  return (
-    <Card className="h-auto">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Folder className="h-5 w-5 text-blue-500" />
-          Herramientas
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {user?.role === "teacher" && <PdfUploader />}
-        <AudioRecorder />
-        
-        {showTranscriptionOptions && (
-          <Button 
-            variant="outline" 
-            className="w-full" 
-            onClick={() => setTranscriptionOpen(true)}
-          >
-            <FileText className="mr-2 h-4 w-4" />
-            {isTranscribing ? "Ver transcripción en vivo" : "Ver transcripción"}
-          </Button>
-        )}
-        
-        <LiveTranscriptionSheet
-          isTranscribing={isTranscribing}
-          output={transcriptionOutput}
-          open={transcriptionOpen}
-          onOpenChange={setTranscriptionOpen}
-        />
-      </CardContent>
-    </Card>
-  );
-}
-
 function Transcriptions() {
   const { recordings, deleteRecording } = useRecordings();
   const [searchQuery, setSearchQuery] = useState("");
@@ -216,9 +127,45 @@ function Transcriptions() {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { recordings, addRecording } = useRecordings();
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [transcriptionOutput, setTranscriptionOutput] = useState("");
+  const [transcriptionOpen, setTranscriptionOpen] = useState(false);
+
+  useEffect(() => {
+    const handleAudioRecorderMessage = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail?.type === 'recordingStarted') {
+        setIsRecording(true);
+      } else if (customEvent.detail?.type === 'recordingStopped') {
+        setIsRecording(false);
+      } else if (customEvent.detail?.type === 'transcriptionStarted') {
+        setIsTranscribing(true);
+        setTranscriptionOutput("");
+      } else if (customEvent.detail?.type === 'transcriptionComplete' || 
+                customEvent.detail?.type === 'transcriptionStopped') {
+        setIsTranscribing(false);
+        setTimeout(() => {
+          if (!isRecording) {
+            setTranscriptionOutput("");
+          }
+        }, 30000);
+      } else if (customEvent.detail?.type === 'transcriptionUpdate') {
+        setTranscriptionOutput(customEvent.detail.data || "");
+      }
+    };
+
+    window.addEventListener('audioRecorderMessage', handleAudioRecorderMessage);
+    
+    return () => {
+      window.removeEventListener('audioRecorderMessage', handleAudioRecorderMessage);
+    };
+  }, [isRecording]);
 
   useEffect(() => {
     const loadEvents = () => {
@@ -251,6 +198,8 @@ export default function Dashboard() {
     return () => clearInterval(intervalId);
   }, []);
 
+  const showTranscriptionOptions = isRecording || isTranscribing || transcriptionOutput;
+
   return (
     <Layout>
       <div className="space-y-6 max-w-full">
@@ -268,7 +217,13 @@ export default function Dashboard() {
         {isMobile && (
           <div className="grid grid-cols-1 gap-4">
             <UpcomingEvents events={upcomingEvents} />
-            <ToolsCard />
+            <ToolsCarousel 
+              showTranscriptionOptions={showTranscriptionOptions}
+              isTranscribing={isTranscribing}
+              transcriptionOutput={transcriptionOutput}
+              transcriptionOpen={transcriptionOpen}
+              setTranscriptionOpen={setTranscriptionOpen}
+            />
             <Transcriptions />
           </div>
         )}
@@ -276,7 +231,13 @@ export default function Dashboard() {
         {!isMobile && (
           <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
             <div className="md:col-span-4 space-y-6">
-              <ToolsCard />
+              <ToolsCarousel 
+                showTranscriptionOptions={showTranscriptionOptions}
+                isTranscribing={isTranscribing}
+                transcriptionOutput={transcriptionOutput}
+                transcriptionOpen={transcriptionOpen}
+                setTranscriptionOpen={setTranscriptionOpen}
+              />
               <UpcomingEvents events={upcomingEvents} />
             </div>
             <div className="md:col-span-2">

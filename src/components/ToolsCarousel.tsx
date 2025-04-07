@@ -1,0 +1,104 @@
+
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Folder } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { AudioRecorder } from "@/components/AudioRecorder";
+import { PdfUploader } from "@/components/PdfUploader";
+import { ImageUploader } from "@/components/ImageUploader";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { Button } from "@/components/ui/button";
+import { LiveTranscriptionSheet } from "@/components/LiveTranscriptionSheet";
+
+interface ToolsCarouselProps {
+  showTranscriptionOptions: boolean;
+  isTranscribing: boolean;
+  transcriptionOutput: string;
+  transcriptionOpen: boolean;
+  setTranscriptionOpen: (open: boolean) => void;
+}
+
+export function ToolsCarousel({
+  showTranscriptionOptions,
+  isTranscribing,
+  transcriptionOutput,
+  transcriptionOpen,
+  setTranscriptionOpen
+}: ToolsCarouselProps) {
+  const { user } = useAuth();
+
+  return (
+    <Card className="h-auto">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Folder className="h-5 w-5 text-blue-500" />
+          Herramientas
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Carousel
+          opts={{
+            align: "start",
+            loop: true,
+          }}
+          className="w-full"
+        >
+          <CarouselContent>
+            {/* Herramienta: Grabación de Audio */}
+            <CarouselItem className="basis-full">
+              <div className="p-1">
+                <div className="text-center mb-2">
+                  <span className="text-sm font-medium">Grabación</span>
+                </div>
+                <AudioRecorder />
+                
+                {showTranscriptionOptions && (
+                  <Button 
+                    variant="outline" 
+                    className="w-full mt-2" 
+                    onClick={() => setTranscriptionOpen(true)}
+                  >
+                    {isTranscribing ? "Ver transcripción en vivo" : "Ver transcripción"}
+                  </Button>
+                )}
+                
+                <LiveTranscriptionSheet
+                  isTranscribing={isTranscribing}
+                  output={transcriptionOutput}
+                  open={transcriptionOpen}
+                  onOpenChange={setTranscriptionOpen}
+                />
+              </div>
+            </CarouselItem>
+            
+            {/* Herramienta: Subir Imágenes */}
+            <CarouselItem className="basis-full">
+              <div className="p-1">
+                <div className="text-center mb-2">
+                  <span className="text-sm font-medium">Subir Imagen</span>
+                </div>
+                <ImageUploader />
+              </div>
+            </CarouselItem>
+            
+            {/* Herramienta: Subir PDF (solo para profesores) */}
+            {user?.role === "teacher" && (
+              <CarouselItem className="basis-full">
+                <div className="p-1">
+                  <div className="text-center mb-2">
+                    <span className="text-sm font-medium">Subir PDF</span>
+                  </div>
+                  <PdfUploader />
+                </div>
+              </CarouselItem>
+            )}
+          </CarouselContent>
+          <div className="flex justify-center mt-2">
+            <CarouselPrevious className="static translate-y-0 -translate-x-4" />
+            <CarouselNext className="static translate-y-0 translate-x-4" />
+          </div>
+        </Carousel>
+      </CardContent>
+    </Card>
+  );
+}
