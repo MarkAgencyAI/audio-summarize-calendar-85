@@ -29,7 +29,7 @@ interface CalendarProps {
   events: CalendarEvent[];
   onAddEvent: (event: Omit<CalendarEvent, "id">) => void;
   onDeleteEvent: (id: string) => void;
-  onEventsSynced?: () => void;
+  onEventsSynced: (syncedEvents: {localEventId: string, googleEventId: string}[]) => void;
   updateEventWithGoogleId?: (eventId: string, googleEventId: string) => void;
 }
 
@@ -37,7 +37,7 @@ export function Calendar({
   events,
   onAddEvent,
   onDeleteEvent,
-  onEventsSynced = () => {},
+  onEventsSynced,
   updateEventWithGoogleId = () => {}
 }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -178,9 +178,9 @@ export function Calendar({
     setShowNewFolderDialog(false);
   };
 
-  const handleGoogleSyncSuccess = () => {
+  const handleGoogleSyncSuccess = (syncedEvents: {localEventId: string, googleEventId: string}[]) => {
     setGoogleSyncOpen(false);
-    onEventsSynced();
+    onEventsSynced(syncedEvents);
   };
 
   const getDayNames = () => {

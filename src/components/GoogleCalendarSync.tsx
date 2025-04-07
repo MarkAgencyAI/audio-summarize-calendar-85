@@ -19,7 +19,7 @@ const REDIRECT_URI = 'https://cali-asistente.lovable.ai/calendar';
 
 interface GoogleCalendarSyncProps {
   events: CalendarEvent[];
-  onEventsSynced: (syncedEventIds: {localEventId: string, googleEventId: string}[]) => void;
+  onEventsSynced: (syncedEvents: {localEventId: string, googleEventId: string}[]) => void;
 }
 
 export function GoogleCalendarSync({ events, onEventsSynced }: GoogleCalendarSyncProps) {
