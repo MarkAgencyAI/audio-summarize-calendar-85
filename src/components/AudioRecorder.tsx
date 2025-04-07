@@ -1,6 +1,5 @@
-
 import { useState, useRef, useEffect } from "react";
-import { Mic, X, Play, Pause, Loader2, Square, User, Users } from "lucide-react";
+import { Mic, X, Play, Pause, Loader2, User, Users } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -299,7 +298,6 @@ export function AudioRecorder() {
               )}
             </div>
 
-            {/* Speaker Mode Selection */}
             <div className="space-y-2">
               <Label className="text-custom-text">Modo de grabación</Label>
               <RadioGroup 
@@ -307,7 +305,7 @@ export function AudioRecorder() {
                 onValueChange={(value) => setSpeakerMode(value as SpeakerMode)}
                 className="flex flex-col space-y-2"
               >
-                <div className="flex items-center space-x-2 p-2 rounded-md hover:bg-secondary/50">
+                <div className="flex items-center space-x-2 p-2 rounded-md">
                   <RadioGroupItem value="single" id="single-speaker" />
                   <Label htmlFor="single-speaker" className="flex items-center cursor-pointer">
                     <User className="h-4 w-4 mr-2" />
@@ -317,7 +315,7 @@ export function AudioRecorder() {
                     </div>
                   </Label>
                 </div>
-                <div className="flex items-center space-x-2 p-2 rounded-md hover:bg-secondary/50">
+                <div className="flex items-center space-x-2 p-2 rounded-md">
                   <RadioGroupItem value="multiple" id="multiple-speaker" />
                   <Label htmlFor="multiple-speaker" className="flex items-center cursor-pointer">
                     <Users className="h-4 w-4 mr-2" />
