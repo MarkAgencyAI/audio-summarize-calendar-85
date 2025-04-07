@@ -24,7 +24,7 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
   const [newNoteTitle, setNewNoteTitle] = useState("");
   const [newNoteContent, setNewNoteContent] = useState("");
   const [selectedFolder, setSelectedFolder] = useState(folderId || "default");
-  const [webhookData, setWebhookData] = useState<{description: string, imageUrl: string} | null>(null);
+  const [webhookData, setWebhookData] = useState<{description: string, imageUrl: string, content?: string} | null>(null);
   
   // Get filtered notes based on the folderId prop (if provided)
   const filteredNotes = folderId 
@@ -48,7 +48,8 @@ export function NotesSection({ folderId, sectionTitle = "Apuntes" }: NotesSectio
             
             // Auto-open the add note dialog with the webhook data
             setNewNoteTitle(parsedData.description);
-            setNewNoteContent("Apunte creado desde la imagen subida");
+            // Use the content from webhook if available, otherwise use a default
+            setNewNoteContent(parsedData.content || "Apunte creado desde la imagen subida");
             setShowAddNoteDialog(true);
           }
         } catch (error) {

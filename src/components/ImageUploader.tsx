@@ -33,6 +33,25 @@ export function ImageUploader() {
     }
   };
 
+  // Listen for webhook response with content
+  useEffect(() => {
+    const handleWebhookMessage = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail?.type === 'webhook_analysis' && 
+          customEvent.detail?.data?.content) {
+        // Store the content for creating a note
+        const webhookData = JSON.parse(localStorage.getItem("lastWebhookData") || "{}");
+        webhookData.content = customEvent.detail.data.content;
+        localStorage.setItem("lastWebhookData", JSON.stringify(webhookData));
+      }
+    };
+    
+    window.addEventListener('webhookMessage', handleWebhookMessage);
+    return () => {
+      window.removeEventListener('webhookMessage', handleWebhookMessage);
+    };
+  }, []);
+
   const handleSubmit = async () => {
     if (!selectedFile || !description.trim()) {
       toast.error("Por favor, agrega una descripción de lo que estás subiendo");
@@ -72,13 +91,13 @@ export function ImageUploader() {
         imageUrl: imageUrl
       };
       
+      // Store initial data before sending to webhook
+      localStorage.setItem("lastWebhookData", JSON.stringify(webhookData));
+      
       // Send the URL to the webhook
-      const webhookResponse = await sendToWebhook("https://sswebhookss.maettiai.tech/webhook/68842cd0-b48e-4cb1-8050-43338dd79f8d", webhookData);
+      await sendToWebhook("https://sswebhookss.maettiai.tech/webhook/68842cd0-b48e-4cb1-8050-43338dd79f8d", webhookData);
       
       toast.success("Imagen subida correctamente");
-      
-      // Store the data for creating a note
-      localStorage.setItem("lastWebhookData", JSON.stringify(webhookData));
       
       // Dispatch a custom event that will be caught by the Dashboard component
       window.dispatchEvent(new CustomEvent('webhookResponse', {

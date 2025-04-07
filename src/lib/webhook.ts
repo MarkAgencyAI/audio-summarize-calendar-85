@@ -40,53 +40,33 @@ export async function sendToWebhook(url: string, data: any): Promise<void> {
           console.log("Usando primer elemento del array:", rawData);
         }
         
-        // Buscar el campo output en la respuesta y usarlo tal cual
-        if (rawData && rawData.output) {
-          console.log("Se encontró output en la respuesta:", rawData.output);
-          
-          // Disparar evento con el output exacto del webhook
-          const analysisEvent = new CustomEvent('webhookMessage', {
-            detail: {
-              type: 'webhook_analysis',
-              data: {
-                output: rawData.output
-              }
-            }
-          });
-          
-          window.dispatchEvent(analysisEvent);
-          toast.success("Datos recibidos del webhook correctamente");
-          return;
+        // Check if there's content field or if we should use output
+        let noteContent = "";
+        if (rawData && rawData.content) {
+          noteContent = rawData.content;
+          console.log("Se encontró content en la respuesta:", noteContent);
+        } else if (rawData && rawData.output) {
+          noteContent = rawData.output;
+          console.log("Se encontró output en la respuesta:", noteContent);
+        } else if (rawData && rawData.message) {
+          noteContent = rawData.message;
+          console.log("Se encontró message en la respuesta:", noteContent);
         }
         
-        // Si no hay output pero hay un mensaje, usarlo como output
-        if (rawData && rawData.message) {
-          console.log("Se encontró message en la respuesta:", rawData.message);
-          
-          const analysisEvent = new CustomEvent('webhookMessage', {
-            detail: {
-              type: 'webhook_analysis',
-              data: {
-                output: rawData.message
-              }
-            }
-          });
-          
-          window.dispatchEvent(analysisEvent);
-          toast.success("Datos recibidos del webhook correctamente");
-          return;
-        }
-        
-        // Si no hay output, mostramos un mensaje
-        toast.warning("La respuesta del webhook no contiene campo 'output'");
-        const errorEvent = new CustomEvent('webhookMessage', {
+        // Disparar evento con el output exacto del webhook
+        const analysisEvent = new CustomEvent('webhookMessage', {
           detail: {
             type: 'webhook_analysis',
-            data: null,
-            error: "La respuesta del webhook no contiene campo 'output'"
+            data: {
+              output: rawData.output || "",
+              content: noteContent
+            }
           }
         });
-        window.dispatchEvent(errorEvent);
+        
+        window.dispatchEvent(analysisEvent);
+        toast.success("Datos recibidos del webhook correctamente");
+        return;
       } catch (jsonError) {
         console.error("Error al parsear respuesta como JSON:", jsonError);
         
@@ -95,7 +75,8 @@ export async function sendToWebhook(url: string, data: any): Promise<void> {
           detail: {
             type: 'webhook_analysis',
             data: {
-              output: responseText
+              output: responseText,
+              content: responseText
             }
           }
         });
