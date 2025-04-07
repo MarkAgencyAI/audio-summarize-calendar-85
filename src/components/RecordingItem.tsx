@@ -1,9 +1,7 @@
 
-// The RecordingItem component is read-only, so we will create a new version that supports speaker icons
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { formatDate, formatDuration } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { MoreVertical, Calendar, FileText, Download, Trash2, User, Users } from "lucide-react";
 import { 
   DropdownMenu, 
@@ -14,6 +12,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { useRecordings } from "@/context/RecordingsContext";
 import { toast } from "sonner";
+
+// Helper function for formatting duration
+const formatDuration = (seconds) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
 
 // Extend or recreate the component by adding the display of speaker mode icons
 export function RecordingItem({ recording, onAddToCalendar }) {
@@ -67,7 +72,7 @@ export function RecordingItem({ recording, onAddToCalendar }) {
 
   return (
     <div 
-      className="py-3 hover:bg-secondary/30 transition-colors cursor-pointer"
+      className="py-3 hover:bg-secondary/10 transition-colors cursor-pointer"
       onClick={handleOpenDetails}
     >
       <div className="flex items-start justify-between">

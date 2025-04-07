@@ -16,6 +16,7 @@ import FoldersPage from "./pages/FoldersPage";
 import FolderDetailsPage from "./pages/FolderDetailsPage";
 import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
+import RecordingDetailsPage from "./pages/RecordingDetailsPage";
 
 // Create a client outside the component
 const queryClient = new QueryClient({
@@ -49,6 +50,7 @@ function App() {
                 <Route path="/folders" element={<FoldersPage />} />
                 <Route path="/folder/:folderId" element={<FolderDetailsPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/recordings/:recordingId" element={<RecordingDetailsPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

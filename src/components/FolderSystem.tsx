@@ -140,7 +140,7 @@ export function FolderSystem() {
         {folders.map((folder) => (
           <div 
             key={folder.id}
-            className="border rounded-lg p-4 hover:bg-accent/50 transition-colors cursor-pointer"
+            className="border rounded-lg p-4 hover:bg-accent/10 transition-colors cursor-pointer"
           >
             {editingFolderId === folder.id ? (
               <div className="flex items-center justify-between">
