@@ -39,19 +39,21 @@ function App() {
     // Initialize empty objects for TypeScript
     if (typeof window !== 'undefined') {
       window.gapi = window.gapi || {};
+      
+      // Initialize the google object with the required structure
       window.google = window.google || {};
       
-      // Ensure google.accounts exists to prevent TypeScript errors
       if (!window.google.accounts) {
         window.google.accounts = {
           oauth2: {
-            initTokenClient: (() => {
+            initTokenClient: ((config) => {
               console.warn('Google API not yet loaded');
               return {} as google.accounts.oauth2.TokenClient;
-            }) as any,
-            revoke: (() => {
+            }),
+            revoke: ((token, callback) => {
               console.warn('Google API not yet loaded');
-            }) as any
+              if (callback) callback();
+            })
           }
         };
       }

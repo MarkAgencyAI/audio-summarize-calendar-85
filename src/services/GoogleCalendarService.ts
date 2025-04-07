@@ -1,7 +1,7 @@
 
 // Constants
-const CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID"; // Replace with your actual Google Client ID
-const API_KEY = "YOUR_GOOGLE_API_KEY"; // Replace with your actual Google API Key
+const CLIENT_ID = "694467530438-n4v9g32o6bqqv0phs52qciq09urceogo.apps.googleusercontent.com";
+const API_KEY = "AIzaSyAwdRYD9ivoT205xwUy7TSDwshFyu3G4ow";
 const SCOPES = "https://www.googleapis.com/auth/calendar";
 const DISCOVERY_DOC = "https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest";
 
@@ -32,7 +32,7 @@ export class GoogleCalendarService {
     return new Promise((resolve, reject) => {
       console.log("Initializing Google Calendar Service...");
       
-      // Check if gapi is defined
+      // Load gapi if not already loaded
       if (typeof window.gapi === 'undefined' || !window.gapi) {
         this.loadScript('https://apis.google.com/js/api.js')
           .then(() => this.initGapi())
@@ -40,6 +40,7 @@ export class GoogleCalendarService {
             if (typeof window.google === 'undefined' || !window.google || !window.google.accounts) {
               return this.loadScript('https://accounts.google.com/gsi/client');
             }
+            return Promise.resolve();
           })
           .then(() => this.initTokenClient())
           .then(() => {
@@ -102,18 +103,34 @@ export class GoogleCalendarService {
         return;
       }
 
-      this.tokenClient = window.google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID,
-        scope: SCOPES,
-        callback: () => {
-          this.gisInitialized = true;
-          resolve();
-        },
-        error_callback: (error) => {
-          console.error("Token client error", error);
-          resolve(); // Resolve anyway to avoid hanging
-        }
-      });
+      try {
+        this.tokenClient = window.google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: SCOPES,
+          callback: (response) => {
+            if (response.access_token) {
+              // Store the token when received
+              localStorage.setItem('google_access_token', response.access_token);
+              const expiryTime = new Date().getTime() + ((response.expires_in || 3600) * 1000);
+              localStorage.setItem('google_token_expiry', expiryTime.toString());
+              
+              // Set gapi token to ensure it's available for API calls
+              if (window.gapi && window.gapi.client) {
+                window.gapi.client.setToken({ access_token: response.access_token });
+              }
+            }
+            this.gisInitialized = true;
+            resolve();
+          },
+          error_callback: (error) => {
+            console.error("Token client error", error);
+            resolve(); // Resolve anyway to avoid hanging
+          }
+        });
+      } catch (error) {
+        console.error("Error initializing token client", error);
+        resolve(); // Resolve anyway to avoid hanging
+      }
       
       // If the callback doesn't fire for some reason, resolve anyway after a timeout
       setTimeout(() => {
