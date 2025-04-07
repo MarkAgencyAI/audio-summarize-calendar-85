@@ -4,11 +4,9 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Mic, Calendar, Folder, User, LogOut, Menu, X, ChevronLeft, ChevronRight, FileText, LayoutGrid } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/context/AuthContext";
-
 interface LayoutProps {
   children: ReactNode;
 }
-
 export function Layout({
   children
 }: LayoutProps) {
@@ -20,26 +18,20 @@ export function Layout({
     logout
   } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  
   const isActive = (path: string) => location.pathname === path;
-  
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
-  
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
-  
   const getDashboardIcon = () => {
     return <LayoutGrid className="h-5 w-5" />;
   };
-  
   const getDashboardLabel = () => {
     return user?.role === "teacher" ? "Transcripciones" : "Grabaciones";
   };
-  
   const navItems = [{
     path: "/dashboard",
     icon: getDashboardIcon(),
@@ -57,7 +49,6 @@ export function Layout({
     icon: <User className="h-5 w-5" />,
     label: "Perfil"
   }];
-  
   return <div className="flex min-h-screen bg-background text-foreground antialiased">
       {/* Mobile Top Navbar */}
       {isMobile && <div className="fixed top-0 left-0 right-0 z-50 bg-card dark:bg-card border-b border-border dark:border-border h-14 flex items-center justify-between px-4">
@@ -71,7 +62,7 @@ export function Layout({
       {!isMobile && <div className={`fixed h-full z-40 bg-sidebar-background dark:bg-sidebar-background border-r border-sidebar-border dark:border-sidebar-border flex flex-col transition-all duration-300 ease-in-out shadow-sm ${sidebarOpen ? 'left-0 w-16 md:w-64' : 'left-[-64px] md:left-[-256px] w-16 md:w-64'}`}>
           <div className=" border-b border-sidebar-border dark:border-sidebar-border flex items-center justify-between">
             <div className={`${sidebarOpen ? 'hidden md:block' : 'hidden'} flex items-center justify-center`}>
-              <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="max-h-24 max-w-24 object-contain" />
+              <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="max-h-24 max-w-24 object-contain ml-3" />
             </div>
             <div className={`${sidebarOpen ? 'block md:hidden' : 'hidden'} flex items-center justify-center`}>
               <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="max-h-8 max-w-8 object-contain" />
