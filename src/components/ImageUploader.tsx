@@ -41,13 +41,36 @@ export function ImageUploader() {
 
     setIsUploading(true);
     try {
-      // Convert the file to base64 for sending directly
-      const base64Data = await fileToBase64(selectedFile);
+      // Using the imgur API to upload the image and get a public URL
+      const formData = new FormData();
+      formData.append("image", selectedFile);
       
-      // Send the data directly to the webhook
+      // First, upload the image to get a URL
+      // Using ImgBB as the hosting service (client ID included)
+      const uploadResponse = await fetch("https://api.imgbb.com/1/upload?key=c02f37c95c54c77ec0746a21aea7f17c", {
+        method: "POST",
+        body: formData,
+      });
+      
+      if (!uploadResponse.ok) {
+        console.error("Error response:", await uploadResponse.text());
+        throw new Error("Error al subir la imagen al servicio de alojamiento");
+      }
+      
+      const uploadData = await uploadResponse.json();
+      
+      if (!uploadData.success) {
+        console.error("Upload failed:", uploadData);
+        throw new Error("Error en la respuesta del servicio de alojamiento de imágenes");
+      }
+      
+      const imageUrl = uploadData.data.url;
+      console.log("Imagen subida exitosamente a:", imageUrl);
+      
+      // Now send the URL to the webhook
       await sendToWebhook("https://sswebhookss.maettiai.tech/webhook/68842cd0-b48e-4cb1-8050-43338dd79f8d", {
         description: description,
-        imageData: base64Data
+        imageUrl: imageUrl
       });
       
       toast.success("Imagen subida correctamente");
@@ -62,20 +85,10 @@ export function ImageUploader() {
       }
     } catch (error) {
       console.error("Error uploading image:", error);
-      toast.error("Error al subir la imagen");
+      toast.error("Error al subir la imagen: " + (error instanceof Error ? error.message : "Error desconocido"));
     } finally {
       setIsUploading(false);
     }
-  };
-
-  // Helper function to convert File to base64
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
-    });
   };
 
   const triggerFileInput = () => {
