@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "lucide-react";
+import { Calendar, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { CalendarEvent } from "@/components/Calendar";
 
@@ -166,7 +166,7 @@ export function GoogleCalendarSync({ events, onEventsSynced }: GoogleCalendarSyn
           onClick={handleGoogleSignIn}
           disabled={isLoading}
         >
-          <Calendar className="mr-2 h-4 w-4" />
+          <Globe className="mr-2 h-4 w-4" />
           Iniciar sesión con Google
         </Button>
       ) : (

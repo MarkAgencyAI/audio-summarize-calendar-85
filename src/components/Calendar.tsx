@@ -1,7 +1,8 @@
+
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, format, isSameMonth, isSameDay, addDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Plus, FolderPlus, Calendar as CalendarIcon, Google } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, FolderPlus, Calendar as CalendarIcon, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -201,7 +202,7 @@ export function Calendar({
             className="flex items-center gap-2"
             onClick={() => setGoogleSyncOpen(true)}
           >
-            <Google className="h-4 w-4" />
+            <Globe className="h-4 w-4" />
             <span className="hidden md:inline">Sincronizar con Google</span>
           </Button>
           <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
