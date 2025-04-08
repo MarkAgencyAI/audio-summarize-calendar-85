@@ -77,29 +77,35 @@ export function MathScanner() {
       
       // Send the URL to the webhook for math analysis
       toast.loading("Analizando expresión matemática...", { id: "analyzing-math" });
-      const webhookResponse = await sendToWebhook("https://sswebhookss.maettiai.tech/webhook/a517fa5f-7575-41aa-8a03-823ad23fa55f", webhookData);
       
-      toast.success("Análisis completado", { id: "analyzing-math" });
-      
-      // Listen for the webhook response event
+      // Set up the event listener BEFORE sending the webhook request
       const handleWebhookMessage = (event: Event) => {
         const customEvent = event as CustomEvent;
         if (customEvent.detail?.type === 'webhook_analysis') {
+          console.log("Received webhook response:", customEvent.detail);
+          
           // Extract content or output from the response
           const content = customEvent.detail?.data?.content || customEvent.detail?.data?.output || "No se pudo analizar la expresión matemática";
           setMathResult(content);
           
-          // Close the upload dialog and show the results dialog
+          // Close the upload dialog and show the results dialog immediately
           setShowDialog(false);
           setShowResult(true);
           
+          // Complete the loading toast
+          toast.success("Análisis completado", { id: "analyzing-math" });
+          
+          // Clean up the event listener
           window.removeEventListener('webhookMessage', handleWebhookMessage);
         }
       };
       
       window.addEventListener('webhookMessage', handleWebhookMessage);
       
-      // Reset file selection
+      // Now send the webhook request
+      const webhookResponse = await sendToWebhook("https://sswebhookss.maettiai.tech/webhook/a517fa5f-7575-41aa-8a03-823ad23fa55f", webhookData);
+      
+      // Reset file selection - but don't close the dialog yet, the event listener will do that
       setSelectedFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
