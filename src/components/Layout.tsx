@@ -88,21 +88,18 @@ export function Layout({
                 <li key={item.path}>
                   <button 
                     onClick={() => navigate(item.path)} 
-                    className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+                    className={`w-full flex items-center justify-center md:justify-start px-3 py-3 rounded-lg transition-colors ${
                       isActive(item.path) 
-                        ? "bg-[#008C8520] dark:bg-[#008C8530] light:bg-[#008C8515] text-[#00b8ae] dark:text-[#00b8aecc] light:text-[#008C85]" 
-                        : "text-gray-400 dark:text-gray-300 light:text-gray-600 hover:text-[#00b8ae] dark:hover:text-[#00b8aecc] light:hover:text-[#008C85] hover:bg-[#2a2a2a20] dark:hover:bg-[#2a2a2a40] light:hover:bg-[#2a2a2a10]"
+                        ? "bg-[#008C8518] dark:bg-[#008C8520] light:bg-[#008C8510] text-[#00b8ae] dark:text-[#00b8aeee] light:text-[#008C85]" 
+                        : "text-gray-400 dark:text-gray-300 light:text-gray-600 hover:text-[#00b8ae] dark:hover:text-[#00b8aeee] light:hover:text-[#008C85] hover:bg-[#2a2a2a15] dark:hover:bg-[#2a2a2a30] light:hover:bg-[#2a2a2a08]"
                     }`}
                   >
                     <div className="flex-shrink-0">
                       {item.icon}
                     </div>
-                    <span className={`${sidebarOpen ? 'hidden md:inline' : 'hidden'} font-medium`}>
+                    <span className={`${sidebarOpen ? 'hidden md:inline' : 'hidden'} font-medium ml-3`}>
                       {item.label}
                     </span>
-                    {isActive(item.path) && sidebarOpen && (
-                      <div className="ml-auto w-1.5 h-8 bg-[#00b8ae80] dark:bg-[#00b8aecc] light:bg-[#008C85] rounded-full md:block hidden"></div>
-                    )}
                   </button>
                 </li>
               ))}
@@ -112,7 +109,7 @@ export function Layout({
           <div className="p-4 border-t border-[#2e2e2e20] dark:border-[#2e2e2e40] light:border-[#e0e0e0] flex items-center justify-between">
             <button 
               onClick={handleLogout} 
-              className="flex items-center space-x-2 text-gray-400 dark:text-gray-300 light:text-gray-600 hover:text-[#00b8ae] dark:hover:text-[#00b8aecc] light:hover:text-[#008C85] transition-colors"
+              className="flex items-center space-x-2 text-gray-400 dark:text-gray-300 light:text-gray-600 hover:text-[#00b8ae] dark:hover:text-[#00b8aeee] light:hover:text-[#008C85] transition-colors"
             >
               <LogOut className="h-5 w-5" />
               <span className={`${sidebarOpen ? 'hidden md:inline' : 'hidden'}`}>
@@ -145,7 +142,7 @@ export function Layout({
                 onClick={() => navigate(item.path)} 
                 className={`flex flex-col items-center justify-center h-full px-1 ${
                   isActive(item.path) 
-                    ? "bg-[#008C8520] dark:bg-[#008C8530] light:bg-[#008C8515] text-[#00b8ae] dark:text-[#00b8aecc] light:text-[#008C85]" 
+                    ? "bg-[#008C8518] dark:bg-[#008C8520] light:bg-[#008C8510] text-[#00b8ae] dark:text-[#00b8aeee] light:text-[#008C85]" 
                     : "text-gray-400 dark:text-gray-300 light:text-gray-600"
                 }`}
               >

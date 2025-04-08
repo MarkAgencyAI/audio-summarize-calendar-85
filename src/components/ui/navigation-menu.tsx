@@ -46,8 +46,8 @@ const navigationMenuTriggerStyle = cva(
   {
     variants: {
       variant: {
-        default: "bg-transparent text-white hover:bg-[#2a2a2a20] hover:text-[#00b8ae] dark:hover:bg-[#2a2a2a40] dark:hover:text-[#00b8ae] data-[active]:bg-[#008C8520] data-[active]:text-[#00b8ae] data-[state=open]:bg-[#2a2a2a20] data-[state=open]:text-[#00b8ae] dark:data-[active]:bg-[#008C8530] dark:data-[active]:text-[#00b8aecc]",
-        dark: "bg-[#1a1a1a] text-white hover:bg-[#2a2a2a20] hover:text-[#00b8ae] dark:hover:bg-[#2a2a2a40] dark:hover:text-[#00b8ae] data-[active]:bg-[#008C8520] data-[active]:text-[#00b8ae] data-[state=open]:bg-[#2a2a2a20] data-[state=open]:text-[#00b8ae] dark:data-[active]:bg-[#008C8530] dark:data-[active]:text-[#00b8aecc]",
+        default: "bg-transparent text-white hover:bg-[#2a2a2a20] hover:text-[#00b8ae] dark:hover:bg-[#2a2a2a40] dark:hover:text-[#00b8aeee] light:hover:bg-[#2a2a2a10] light:hover:text-[#008C85] data-[active]:bg-[#008C8515] data-[active]:text-[#00b8ae] data-[state=open]:bg-[#2a2a2a20] data-[state=open]:text-[#00b8ae] dark:data-[active]:bg-[#008C8520] dark:data-[active]:text-[#00b8aeee] light:data-[active]:bg-[#008C8510] light:data-[active]:text-[#008C85]",
+        dark: "bg-[#1a1a1a] text-white hover:bg-[#2a2a2a20] hover:text-[#00b8ae] dark:hover:bg-[#2a2a2a40] dark:hover:text-[#00b8aeee] light:hover:bg-[#2a2a2a10] light:hover:text-[#008C85] data-[active]:bg-[#008C8515] data-[active]:text-[#00b8ae] data-[state=open]:bg-[#2a2a2a20] data-[state=open]:text-[#00b8ae] dark:data-[active]:bg-[#008C8520] dark:data-[active]:text-[#00b8aeee] light:data-[active]:bg-[#008C8510] light:data-[active]:text-[#008C85]",
       }
     },
     defaultVariants: {
@@ -69,7 +69,7 @@ const NavigationMenuTrigger = React.forwardRef<
   >
     {children}{" "}
     <ChevronDown
-      className="relative top-[1px] ml-1 h-3 w-3 transition duration-200 group-data-[state=open]:rotate-180 text-[#00b8ae]"
+      className="relative top-[1px] ml-1 h-3 w-3 transition duration-200 group-data-[state=open]:rotate-180 text-[#00b8ae] dark:text-[#00b8aeee] light:text-[#008C85]"
       aria-hidden="true"
     />
   </NavigationMenuPrimitive.Trigger>
@@ -100,7 +100,7 @@ const NavigationMenuViewport = React.forwardRef<
   <div className={cn("absolute left-0 top-full flex justify-center")}>
     <NavigationMenuPrimitive.Viewport
       className={cn(
-        "origin-top-center relative mt-1.5 h-[var(--radix-navigation-menu-viewport-height)] w-full overflow-hidden rounded-md border bg-[#1a1a1a] text-white shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-90 md:w-[var(--radix-navigation-menu-viewport-width)]",
+        "origin-top-center relative mt-1.5 h-[var(--radix-navigation-menu-viewport-height)] w-full overflow-hidden rounded-md border bg-[#1a1a1a] text-white dark:bg-[#1a1a1a] light:bg-[#f8f8f8] light:text-gray-800 shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-90 md:w-[var(--radix-navigation-menu-viewport-width)]",
         className
       )}
       ref={ref}
@@ -123,7 +123,7 @@ const NavigationMenuIndicator = React.forwardRef<
     )}
     {...props}
   >
-    <div className="relative top-[60%] h-2 w-2 rotate-45 rounded-tl-sm bg-[#1a1a1a] shadow-md" />
+    <div className="relative top-[60%] h-2 w-2 rotate-45 rounded-tl-sm bg-[#1a1a1a] dark:bg-[#1a1a1a] light:bg-[#f8f8f8] shadow-md" />
   </NavigationMenuPrimitive.Indicator>
 ))
 NavigationMenuIndicator.displayName =

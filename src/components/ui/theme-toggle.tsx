@@ -21,8 +21,10 @@ export function ThemeToggle() {
     
     if (theme === "dark") {
       root.classList.add("dark");
+      root.classList.remove("light");
     } else {
       root.classList.remove("dark");
+      root.classList.add("light");
     }
     
     localStorage.setItem("theme", theme);
@@ -44,13 +46,13 @@ export function ThemeToggle() {
       variant="ghost" 
       size="icon" 
       onClick={toggleTheme}
-      className="rounded-full h-8 w-8 hover:bg-[#2a2a2a10] dark:hover:bg-[#2a2a2a40] transition-colors"
+      className="rounded-full h-8 w-8 hover:bg-[#2a2a2a15] dark:hover:bg-[#2a2a2a30] light:hover:bg-[#2a2a2a08] transition-colors"
       aria-label="Cambiar tema"
     >
       {theme === "light" ? (
-        <Sun className="h-4 w-4 transition-all text-[#00b8ae]" />
+        <Sun className="h-4 w-4 transition-all text-[#00b8ae] dark:text-[#00b8aeee] light:text-[#008C85]" />
       ) : (
-        <Moon className="h-4 w-4 transition-all text-[#00b8ae]" />
+        <Moon className="h-4 w-4 transition-all text-[#00b8ae] dark:text-[#00b8aeee] light:text-[#008C85]" />
       )}
     </Button>
   );
