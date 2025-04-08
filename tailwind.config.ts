@@ -52,14 +52,6 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Sidebar specific colors
-        sidebar: {
-          background: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
-          border: "hsl(var(--sidebar-border))",
-          accent: "hsl(var(--sidebar-accent))",
-          ring: "hsl(var(--sidebar-ring))",
-        },
         // Custom colors kept as fallback
         custom: {
           // Update primary color to match the recording button's color
