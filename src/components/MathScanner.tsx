@@ -2,6 +2,7 @@
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileImage, Upload, ScanText } from "lucide-react";
 import { toast } from "sonner";
@@ -15,6 +16,7 @@ export function MathScanner() {
   const [showDialog, setShowDialog] = useState(false);
   const [mathResult, setMathResult] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
+  const [mathMethod, setMathMethod] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,7 +71,8 @@ export function MathScanner() {
       console.log("Imagen subida exitosamente a:", imageUrl);
       
       const webhookData = {
-        imageUrl: imageUrl
+        imageUrl: imageUrl,
+        mathMethod: mathMethod.trim() || "No especificado"
       };
       
       // Send the URL to the webhook for math analysis
@@ -156,6 +159,21 @@ export function MathScanner() {
             </div>
           )}
           
+          <div className="space-y-4 mb-4">
+            <div>
+              <label htmlFor="mathMethod" className="text-sm font-medium">
+                Método matemático utilizado (opcional)
+              </label>
+              <Textarea
+                id="mathMethod"
+                placeholder="Describe el método que estás utilizando para resolver este problema..."
+                value={mathMethod}
+                onChange={(e) => setMathMethod(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          </div>
+          
           <DialogFooter>
             <Button 
               variant="outline" 
@@ -163,6 +181,7 @@ export function MathScanner() {
                 setShowDialog(false);
                 setSelectedFile(null);
                 setPreviewUrl(null);
+                setMathMethod("");
               }}
             >
               Cancelar
