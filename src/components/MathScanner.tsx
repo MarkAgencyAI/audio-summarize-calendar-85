@@ -8,6 +8,7 @@ import { FileImage, Upload, ScanText } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { sendToWebhook } from "@/lib/webhook";
+import { MathRenderer } from "@/components/MathRenderer";
 
 export function MathScanner() {
   const [isUploading, setIsUploading] = useState(false);
@@ -217,7 +218,14 @@ export function MathScanner() {
           </DialogHeader>
           
           <div className="bg-secondary/50 p-4 rounded-md overflow-x-auto max-h-60">
-            <pre className="whitespace-pre-wrap break-words">{mathResult}</pre>
+            {mathResult ? (
+              <MathRenderer 
+                content={mathResult} 
+                className="whitespace-pre-wrap break-words"
+              />
+            ) : (
+              <p className="text-muted-foreground text-center">Cargando resultados...</p>
+            )}
           </div>
           
           <DialogFooter>

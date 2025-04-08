@@ -1,5 +1,5 @@
-
 import { toast } from "sonner";
+import { formatMathExpression } from "./math";
 
 export async function sendToWebhook(url: string, data: any): Promise<void> {
   try {
@@ -43,13 +43,13 @@ export async function sendToWebhook(url: string, data: any): Promise<void> {
         // Check if there's content field or if we should use output
         let noteContent = "";
         if (rawData && rawData.content) {
-          noteContent = rawData.content;
+          noteContent = formatMathExpression(rawData.content);
           console.log("Se encontró content en la respuesta:", noteContent);
         } else if (rawData && rawData.output) {
-          noteContent = rawData.output;
+          noteContent = formatMathExpression(rawData.output);
           console.log("Se encontró output en la respuesta:", noteContent);
         } else if (rawData && rawData.message) {
-          noteContent = rawData.message;
+          noteContent = formatMathExpression(rawData.message);
           console.log("Se encontró message en la respuesta:", noteContent);
         }
         
@@ -71,12 +71,13 @@ export async function sendToWebhook(url: string, data: any): Promise<void> {
         console.error("Error al parsear respuesta como JSON:", jsonError);
         
         // Si no se puede parsear como JSON, usamos el texto directamente
+        const formattedText = formatMathExpression(responseText);
         const analysisEvent = new CustomEvent('webhookMessage', {
           detail: {
             type: 'webhook_analysis',
             data: {
               output: responseText,
-              content: responseText
+              content: formattedText
             }
           }
         });
