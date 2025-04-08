@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { FileImage, Upload, ScanText } from "lucide-react";
+import { FileImage, Upload, ScanText, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { sendToWebhook } from "@/lib/webhook";
 import { MathRenderer } from "@/components/MathRenderer";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export function MathScanner() {
   const [isUploading, setIsUploading] = useState(false);
@@ -16,8 +17,10 @@ export function MathScanner() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [mathResult, setMathResult] = useState<string | null>(null);
+  const [mathExplanation, setMathExplanation] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [mathMethod, setMathMethod] = useState("");
+  const [isExplanationOpen, setIsExplanationOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -35,6 +38,32 @@ export function MathScanner() {
     }
   };
 
+  const extractResultAndExplanation = (content: string): { result: string, explanation: string | null } => {
+    // Check if content contains a result section and explanation section
+    if (!content) return { result: "No se pudo analizar la expresión matemática", explanation: null };
+
+    // Try to find "Resultado:" and split the content
+    const resultMatch = content.match(/Resultado:?\s*(.+?)(?:\n\n|\n(?=Explicaci[óo]n)|\n(?=Pasos)|\n(?=Calculando)|$)/is);
+    const result = resultMatch ? resultMatch[1].trim() : content;
+
+    // Try to find "Explicación:" or any explanation part after the result
+    let explanation = null;
+    const explanationMatch = content.match(/(?:Explicaci[óo]n|Pasos|Calculando)(?::|\s*\*\*|\s*:)?([\s\S]+)$/i);
+    
+    if (explanationMatch) {
+      explanation = explanationMatch[1].trim();
+    } else if (content.includes("\n\n")) {
+      // If there's no explicit "Explicación" keyword but there are multiple paragraphs,
+      // assume everything after the first paragraph might be the explanation
+      const paragraphs = content.split("\n\n");
+      if (paragraphs.length > 1) {
+        explanation = paragraphs.slice(1).join("\n\n").trim();
+      }
+    }
+    
+    return { result, explanation };
+  };
+
   const handleSubmit = async () => {
     if (!selectedFile) {
       toast.error("Por favor, selecciona una imagen");
@@ -43,6 +72,8 @@ export function MathScanner() {
 
     setIsUploading(true);
     setMathResult(null);
+    setMathExplanation(null);
+    setIsExplanationOpen(false);
     
     try {
       // Using ImgBB API to upload the image and get a public URL
@@ -87,7 +118,11 @@ export function MathScanner() {
           
           // Extract content or output from the response
           const content = customEvent.detail?.data?.content || customEvent.detail?.data?.output || "No se pudo analizar la expresión matemática";
-          setMathResult(content);
+          
+          // Split the content into result and explanation parts
+          const { result, explanation } = extractResultAndExplanation(content);
+          setMathResult(result);
+          setMathExplanation(explanation);
           
           // Close the upload dialog and show the results dialog immediately
           setShowDialog(false);
@@ -217,14 +252,48 @@ export function MathScanner() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="bg-secondary/50 p-4 rounded-md overflow-x-auto max-h-60">
-            {mathResult ? (
-              <MathRenderer 
-                content={mathResult} 
-                className="whitespace-pre-wrap break-words"
-              />
-            ) : (
-              <p className="text-muted-foreground text-center">Cargando resultados...</p>
+          <div className="space-y-4">
+            {/* Result Section */}
+            <div className="bg-secondary/50 p-4 rounded-md overflow-x-auto">
+              {mathResult ? (
+                <MathRenderer 
+                  content={mathResult} 
+                  className="whitespace-pre-wrap break-words font-medium text-lg"
+                />
+              ) : (
+                <p className="text-muted-foreground text-center">Cargando resultados...</p>
+              )}
+            </div>
+            
+            {/* Explanation Section (Collapsible) */}
+            {mathExplanation && (
+              <Collapsible
+                open={isExplanationOpen}
+                onOpenChange={setIsExplanationOpen}
+                className="border rounded-md"
+              >
+                <div className="px-4 py-3 flex items-center justify-between bg-muted/40">
+                  <h3 className="font-medium">Ver explicación detallada</h3>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="p-0 h-7 w-7">
+                      {isExplanationOpen ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                      <span className="sr-only">Toggle explanation</span>
+                    </Button>
+                  </CollapsibleTrigger>
+                </div>
+                <CollapsibleContent className="px-4 py-3 bg-secondary/30 border-t">
+                  <div className="max-h-64 overflow-y-auto">
+                    <MathRenderer
+                      content={mathExplanation}
+                      className="whitespace-pre-wrap break-words text-sm"
+                    />
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             )}
           </div>
           
