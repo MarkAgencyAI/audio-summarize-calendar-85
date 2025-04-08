@@ -1,86 +1,87 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* Light mode colors - using the new blue-slate color */
-    --background: 190 30% 94%;
-    --foreground: 190 100% 19%;
-    --primary: 190 100% 19%; /* Dark blue-slate color */
+    /* Light mode colors - using custom teal/green color scheme */
+    --background: 176 20% 97%;
+    --foreground: 176 70% 18%;
+    --primary: 176 50% 32%; /* Teal primary color */
     
-    --card: 0 0% 100%;
-    --card-foreground: 190 100% 19%;
+    --card: 176 20% 99%;
+    --card-foreground: 176 70% 19%;
     
-    --popover: 0 0% 100%;
-    --popover-foreground: 190 100% 19%;
+    --popover: 176 20% 99%;
+    --popover-foreground: 176 70% 19%;
     
-    --secondary: 192 100% 6%;
-    --secondary-foreground: 190 30% 94%;
+    --secondary: 176 70% 5%;
+    --secondary-foreground: 176 20% 96%;
     
-    --muted: 190 30% 94%;
-    --muted-foreground: 190 20% 45%;
+    --muted: 176 20% 94%;
+    --muted-foreground: 176 20% 45%;
     
-    --accent: 190 100% 27%;
-    --accent-foreground: 190 30% 94%;
+    --accent: 177 80% 30%;
+    --accent-foreground: 176 20% 96%;
     
     --destructive: 0 84% 51%;
-    --destructive-foreground: 190 30% 94%;
+    --destructive-foreground: 176 20% 96%;
     
-    --border: 190 10% 86%;
-    --input: 190 10% 86%;
-    --ring: 190 100% 19%;
+    --border: 176 15% 86%;
+    --input: 176 15% 86%;
+    --ring: 176 70% 18%;
     
     --radius: 0.75rem;
     
     /* Sidebar specific variables */
-    --sidebar-background: 190 30% 7%; /* Dark blue-slate */
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 190 100% 27%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 190 10% 16%; /* Darker blue-slate */
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 190 10% 16%; /* Darker blue-slate */
-    --sidebar-ring: 190 100% 27%;
+    --sidebar-background: 176 20% 100%; /* Light mode: white with a touch of teal */
+    --sidebar-foreground: 176 70% 20%;
+    --sidebar-primary: 176 100% 27%;
+    --sidebar-primary-foreground: 176 20% 100%;
+    --sidebar-accent: 176 20% 94%; /* Light teal accent */
+    --sidebar-accent-foreground: 176 70% 20%;
+    --sidebar-border: 176 20% 90%; /* Light teal border */
+    --sidebar-ring: 176 100% 27%;
   }
 
   .dark {
-    /* Dark mode colors - with new blue-slate colors */
-    --background: 192 100% 7%;
-    --foreground: 190 30% 94%;
-    --primary: 190 50% 42%; /* Slightly lighter blue-slate in dark mode */
+    /* Dark mode colors - with teal/green influence */
+    --background: 176 30% 8%;
+    --foreground: 176 20% 96%;
+    --primary: 176 50% 42%; /* Slightly lighter teal for dark mode */
     
-    --card: 192 100% 6%;
-    --card-foreground: 190 30% 94%;
+    --card: 176 30% 10%;
+    --card-foreground: 176 20% 96%;
     
-    --popover: 192 100% 6%;
-    --popover-foreground: 190 30% 94%;
+    --popover: 176 30% 10%;
+    --popover-foreground: 176 20% 96%;
     
-    --secondary: 192 100% 8%;
-    --secondary-foreground: 190 30% 94%;
+    --secondary: 176 30% 15%;
+    --secondary-foreground: 176 20% 96%;
     
-    --muted: 192 100% 10%;
-    --muted-foreground: 190 30% 80%;
+    --muted: 176 30% 15%;
+    --muted-foreground: 176 20% 80%;
     
-    --accent: 190 100% 27%;
-    --accent-foreground: 190 30% 94%;
+    --accent: 177 100% 27%;
+    --accent-foreground: 176 20% 96%;
     
     --destructive: 0 63% 31%;
-    --destructive-foreground: 190 30% 94%;
+    --destructive-foreground: 176 20% 96%;
     
-    --border: 192 100% 12%;
-    --input: 192 100% 12%;
-    --ring: 190 100% 27%;
+    --border: 176 30% 15%;
+    --input: 176 30% 15%;
+    --ring: 177 100% 27%;
     
     /* Sidebar specific variables */
-    --sidebar-background: 190 30% 7%; /* Dark blue-slate */
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 190 100% 27%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 190 10% 16%; /* Darker blue-slate */
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 190 10% 16%; /* Darker blue-slate */
-    --sidebar-ring: 190 100% 27%;
+    --sidebar-background: 176 30% 7%; /* Dark teal background */
+    --sidebar-foreground: 176 20% 100%;
+    --sidebar-primary: 176 100% 27%;
+    --sidebar-primary-foreground: 176 20% 100%;
+    --sidebar-accent: 176 30% 16%; /* Dark teal accent */
+    --sidebar-accent-foreground: 176 20% 100%;
+    --sidebar-border: 176 30% 16%; /* Dark teal border */
+    --sidebar-ring: 176 100% 27%;
   }
 }
 

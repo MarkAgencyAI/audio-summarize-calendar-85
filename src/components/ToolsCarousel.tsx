@@ -32,7 +32,7 @@ export function ToolsCarousel({
     <Card className="h-auto">
       <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center gap-2">
-          <Folder className="h-5 w-5 text-[#007a89]" />
+          <Folder className="h-5 w-5 text-blue-500" />
           Herramientas
         </CardTitle>
       </CardHeader>
