@@ -44,11 +44,11 @@ export default function ProfilePage() {
   return (
     <Layout>
       <div className="space-y-6 w-full max-w-full">
-        <h1 className="text-2xl md:text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">
+        <h1 className="text-2xl md:text-3xl font-bold text-primary dark:text-primary">
           Perfil
         </h1>
         
-        <div className="glassmorphism rounded-xl p-4 md:p-6 shadow-lg w-full max-w-md">
+        <div className="glassmorphism rounded-xl p-4 md:p-6 shadow-lg dark:bg-[#001d20]/30 dark:border-[#00242880] w-full max-w-md">
           <div className="space-y-6">
             <div className="space-y-4">
               <div className="space-y-2">

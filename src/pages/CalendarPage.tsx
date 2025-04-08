@@ -36,7 +36,7 @@ export default function CalendarPage() {
         const dialog = document.createElement("dialog");
         dialog.className = "fixed inset-0 flex items-center justify-center bg-black/50 z-50";
         dialog.innerHTML = `
-          <div class="bg-background dark:bg-custom-secondary/20 dark:border-custom-secondary/40 dark:text-white rounded-lg p-4 sm:p-6 max-w-md w-full mx-4">
+          <div class="bg-background dark:bg-[#001d20]/70 dark:border-[#00242880] dark:text-white rounded-lg p-4 sm:p-6 max-w-md w-full mx-4">
             <h2 class="text-xl font-bold mb-4 dark:text-white">Eventos sugeridos</h2>
             <p class="text-sm text-muted-foreground dark:text-white/60 mb-4">
               Se encontraron los siguientes eventos en la grabación. 
@@ -44,10 +44,10 @@ export default function CalendarPage() {
             </p>
             <div class="space-y-2 max-h-60 overflow-y-auto" id="suggested-events"></div>
             <div class="flex justify-end space-x-2 mt-6">
-              <button class="px-4 py-2 bg-secondary text-secondary-foreground dark:bg-custom-secondary/40 dark:text-white rounded-lg" id="cancel-button">
+              <button class="px-4 py-2 bg-secondary text-secondary-foreground dark:bg-[#001d20]/80 dark:text-white rounded-lg" id="cancel-button">
                 Cancelar
               </button>
-              <button class="px-4 py-2 bg-primary text-primary-foreground dark:bg-custom-accent dark:text-white rounded-lg" id="add-button">
+              <button class="px-4 py-2 bg-primary text-primary-foreground dark:bg-[#007a89] dark:text-white rounded-lg" id="add-button">
                 Agregar seleccionados
               </button>
             </div>
@@ -142,11 +142,11 @@ export default function CalendarPage() {
   return (
     <Layout>
       <div className="space-y-4 sm:space-y-6 w-full">
-        <h1 className="text-2xl md:text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">
+        <h1 className="text-2xl md:text-3xl font-bold text-primary dark:text-primary">
           Calendario
         </h1>
         
-        <div className="glassmorphism rounded-xl p-3 md:p-6 shadow-lg dark:bg-custom-secondary/20 dark:border-custom-secondary/40 w-full overflow-hidden">
+        <div className="glassmorphism rounded-xl p-3 md:p-6 shadow-lg dark:bg-[#001d20]/30 dark:border-[#00242880] w-full overflow-hidden">
           <div className="w-full overflow-x-auto">
             <Calendar 
               events={events} 

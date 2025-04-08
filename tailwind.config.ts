@@ -54,17 +54,17 @@ const config: Config = {
         },
         // Custom colors kept as fallback
         custom: {
-          // Update primary color to match the recording button's color
-          primary: "#008C85", // Teal-like color from the original design
-          secondary: "#001011",
-          accent: "#008C85",
-          background: "#f1f2f6",
-          text: "#005c5f",
-          muted: "#8aa6a7",
-          success: "#1B998B",
-          warning: "#FF9F1C",
-          error: "#E71D36",
-          info: "#2EC4B6",
+          // Update primary color using the dark blue/slate color from navbar
+          primary: "#005661", // Dark blue-slate color
+          secondary: "#001d20", // Darker version
+          accent: "#007a89", // Lighter version
+          background: "#e6f0f2", // Very light version
+          text: "#005661", // Same as primary for text
+          muted: "#7a9da3", // Muted blue-slate
+          success: "#1B8599", // Blue-slate success
+          warning: "#FF9F1C", // Keep original
+          error: "#E71D36", // Keep original
+          info: "#2EC4B6", // Keep original
         },
       },
       borderRadius: {
