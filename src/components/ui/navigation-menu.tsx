@@ -46,8 +46,8 @@ const navigationMenuTriggerStyle = cva(
   {
     variants: {
       variant: {
-        default: "bg-transparent text-white hover:bg-[#2a2a2a] hover:text-[#00b8ae] data-[active]:bg-[#008C85] data-[active]:text-white data-[state=open]:bg-[#2a2a2a] data-[state=open]:text-[#00b8ae]",
-        dark: "bg-[#1a1a1a] text-white hover:bg-[#2a2a2a] hover:text-[#00b8ae] data-[active]:bg-[#008C85] data-[active]:text-white data-[state=open]:bg-[#2a2a2a] data-[state=open]:text-[#00b8ae]",
+        default: "bg-transparent text-white hover:bg-[#2a2a2a20] hover:text-[#00b8ae] dark:hover:bg-[#2a2a2a40] dark:hover:text-[#00b8ae] data-[active]:bg-[#008C8520] data-[active]:text-[#00b8ae] data-[state=open]:bg-[#2a2a2a20] data-[state=open]:text-[#00b8ae] dark:data-[active]:bg-[#008C8530] dark:data-[active]:text-[#00b8aecc]",
+        dark: "bg-[#1a1a1a] text-white hover:bg-[#2a2a2a20] hover:text-[#00b8ae] dark:hover:bg-[#2a2a2a40] dark:hover:text-[#00b8ae] data-[active]:bg-[#008C8520] data-[active]:text-[#00b8ae] data-[state=open]:bg-[#2a2a2a20] data-[state=open]:text-[#00b8ae] dark:data-[active]:bg-[#008C8530] dark:data-[active]:text-[#00b8aecc]",
       }
     },
     defaultVariants: {

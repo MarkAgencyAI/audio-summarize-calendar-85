@@ -75,16 +75,10 @@ export function Layout({
       
       {/* Desktop Sidebar */}
       {!isMobile && (
-        <div className={`fixed h-full z-40 bg-[#1a1a1a] dark:bg-[#1a1a1a] border-r border-[#2e2e2e] dark:border-[#2e2e2e] flex flex-col transition-all duration-300 ease-in-out shadow-lg ${sidebarOpen ? 'left-0 w-16 md:w-64' : 'left-[-64px] md:left-[-256px] w-16 md:w-64'}`}>
-          <div className="border-b border-[#2e2e2e] dark:border-[#2e2e2e] flex items-center justify-between p-4 h-16">
-            <div className={`${sidebarOpen ? 'hidden md:flex' : 'hidden'} items-center justify-center`}>
+        <div className={`fixed h-full z-40 bg-[#1a1a1a] dark:bg-[#1a1a1a] light:bg-[#f8f8f8] border-r border-[#2e2e2e20] dark:border-[#2e2e2e40] light:border-[#e0e0e0] flex flex-col transition-all duration-300 ease-in-out shadow-lg ${sidebarOpen ? 'left-0 w-16 md:w-64' : 'left-[-64px] md:left-[-256px] w-16 md:w-64'}`}>
+          <div className="border-b border-[#2e2e2e20] dark:border-[#2e2e2e40] light:border-[#e0e0e0] flex items-center justify-center p-4 h-16">
+            <div className={`${sidebarOpen ? 'flex' : 'hidden'} items-center justify-center`}>
               <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="h-24 w-auto object-contain" />
-            </div>
-            <div className={`${sidebarOpen ? 'flex md:hidden' : 'hidden'} items-center justify-center`}>
-              <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="h-6 w-auto object-contain" />
-            </div>
-            <div className={`${sidebarOpen ? 'hidden md:block' : 'hidden'} text-white font-medium text-sm`}>
-              Main Menu
             </div>
           </div>
           
@@ -96,8 +90,8 @@ export function Layout({
                     onClick={() => navigate(item.path)} 
                     className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
                       isActive(item.path) 
-                        ? "bg-[#008C85] text-white" 
-                        : "text-gray-300 hover:text-white hover:bg-[#2a2a2a]"
+                        ? "bg-[#008C8520] dark:bg-[#008C8530] light:bg-[#008C8515] text-[#00b8ae] dark:text-[#00b8aecc] light:text-[#008C85]" 
+                        : "text-gray-400 dark:text-gray-300 light:text-gray-600 hover:text-[#00b8ae] dark:hover:text-[#00b8aecc] light:hover:text-[#008C85] hover:bg-[#2a2a2a20] dark:hover:bg-[#2a2a2a40] light:hover:bg-[#2a2a2a10]"
                     }`}
                   >
                     <div className="flex-shrink-0">
@@ -107,7 +101,7 @@ export function Layout({
                       {item.label}
                     </span>
                     {isActive(item.path) && sidebarOpen && (
-                      <div className="ml-auto w-1.5 h-8 bg-white rounded-full md:block hidden"></div>
+                      <div className="ml-auto w-1.5 h-8 bg-[#00b8ae80] dark:bg-[#00b8aecc] light:bg-[#008C85] rounded-full md:block hidden"></div>
                     )}
                   </button>
                 </li>
@@ -115,10 +109,10 @@ export function Layout({
             </ul>
           </nav>
           
-          <div className="p-4 border-t border-[#2e2e2e] dark:border-[#2e2e2e] flex items-center justify-between">
+          <div className="p-4 border-t border-[#2e2e2e20] dark:border-[#2e2e2e40] light:border-[#e0e0e0] flex items-center justify-between">
             <button 
               onClick={handleLogout} 
-              className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors"
+              className="flex items-center space-x-2 text-gray-400 dark:text-gray-300 light:text-gray-600 hover:text-[#00b8ae] dark:hover:text-[#00b8aecc] light:hover:text-[#008C85] transition-colors"
             >
               <LogOut className="h-5 w-5" />
               <span className={`${sidebarOpen ? 'hidden md:inline' : 'hidden'}`}>
@@ -134,7 +128,7 @@ export function Layout({
       {!isMobile && (
         <button 
           onClick={toggleSidebar} 
-          className={`fixed z-50 top-4 bg-[#2a2a2a] rounded-full h-8 w-8 flex items-center justify-center shadow-md border border-[#3a3a3a] transition-all duration-300 text-white 
+          className={`fixed z-50 top-4 bg-[#2a2a2a] dark:bg-[#2a2a2a] light:bg-[#f0f0f0] rounded-full h-8 w-8 flex items-center justify-center shadow-md border border-[#3a3a3a20] dark:border-[#3a3a3a40] light:border-[#d0d0d0] transition-all duration-300 text-[#00b8ae] 
             ${sidebarOpen ? 'left-[64px] md:left-[252px]' : 'left-4'}`}
         >
           {sidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -143,7 +137,7 @@ export function Layout({
       
       {/* Mobile Navigation */}
       {isMobile && (
-        <div className="fixed bottom-0 left-0 right-0 bg-[#1a1a1a] border-t border-[#2e2e2e] z-40 h-16">
+        <div className="fixed bottom-0 left-0 right-0 bg-[#1a1a1a] light:bg-[#f8f8f8] border-t border-[#2e2e2e20] dark:border-[#2e2e2e40] light:border-[#e0e0e0] z-40 h-16">
           <div className="grid grid-cols-4 h-full">
             {navItems.map(item => (
               <button 
@@ -151,8 +145,8 @@ export function Layout({
                 onClick={() => navigate(item.path)} 
                 className={`flex flex-col items-center justify-center h-full px-1 ${
                   isActive(item.path) 
-                    ? "bg-[#008C85] text-white" 
-                    : "text-gray-300"
+                    ? "bg-[#008C8520] dark:bg-[#008C8530] light:bg-[#008C8515] text-[#00b8ae] dark:text-[#00b8aecc] light:text-[#008C85]" 
+                    : "text-gray-400 dark:text-gray-300 light:text-gray-600"
                 }`}
               >
                 {item.icon}
