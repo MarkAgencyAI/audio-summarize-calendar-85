@@ -90,7 +90,7 @@ export function Layout({
                     onClick={() => navigate(item.path)} 
                     className={`w-full flex items-center justify-start px-3 py-3 rounded-lg transition-colors ${
                       isActive(item.path) 
-                        ? "dark:bg-[#008C8510] light:bg-[#008C8508] text-[#00b8ae] dark:text-[#00b8aeee] light:text-[#008C85]" 
+                        ? "dark:bg-[#008C8510] light:bg-[#008C8512] text-[#00b8ae] dark:text-[#00b8aeee] light:text-[#008C85]" 
                         : "dark:text-gray-300 light:text-gray-600 hover:text-[#00b8ae] dark:hover:text-[#00b8aeee] light:hover:text-[#008C85] dark:hover:bg-[#2a2a2a15] light:hover:bg-[#2a2a2a08]"
                     }`}
                   >
@@ -142,7 +142,7 @@ export function Layout({
                 onClick={() => navigate(item.path)} 
                 className={`flex flex-col items-center justify-center h-full px-1 ${
                   isActive(item.path) 
-                    ? "dark:bg-[#008C8510] light:bg-[#008C8508] text-[#00b8ae] dark:text-[#00b8aeee] light:text-[#008C85]" 
+                    ? "dark:bg-[#008C8510] light:bg-[#008C8512] text-[#00b8ae] dark:text-[#00b8aeee] light:text-[#008C85]" 
                     : "dark:text-gray-300 light:text-gray-600"
                 }`}
               >
@@ -167,3 +167,4 @@ export function Layout({
     </div>
   );
 }
+
