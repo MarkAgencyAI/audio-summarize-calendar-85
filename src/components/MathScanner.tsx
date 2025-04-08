@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +27,6 @@ export function MathScanner() {
       const file = e.target.files[0];
       setSelectedFile(file);
       
-      // Create a preview URL
       const fileReader = new FileReader();
       fileReader.onload = () => {
         setPreviewUrl(fileReader.result as string);
@@ -50,11 +48,9 @@ export function MathScanner() {
     setIsExplanationOpen(false);
     
     try {
-      // Using ImgBB API to upload the image and get a public URL
       const formData = new FormData();
       formData.append("image", selectedFile);
       
-      // Upload to ImgBB
       const uploadResponse = await fetch("https://api.imgbb.com/1/upload?key=64830e69bc992ce600bf9f50588eeaa9", {
         method: "POST",
         body: formData,
@@ -81,40 +77,32 @@ export function MathScanner() {
         mathMethod: mathMethod.trim() || "No especificado"
       };
       
-      // Send the URL to the webhook for math analysis
       toast.loading("Analizando expresión matemática...", { id: "analyzing-math" });
       
-      // Set up the event listener BEFORE sending the webhook request
       const handleWebhookMessage = (event: Event) => {
         const customEvent = event as CustomEvent;
         if (customEvent.detail?.type === 'webhook_analysis') {
           console.log("Received webhook response:", customEvent.detail);
           
-          // Get result and explanation directly from the response
-          const result = customEvent.detail?.data?.result || "No se pudo analizar la expresión matemática";
-          const explanation = customEvent.detail?.data?.explanation || null;
+          const result = customEvent.detail?.data?.result || "";
+          const explanation = customEvent.detail?.data?.explanation || "";
           
           setMathResult(result);
           setMathExplanation(explanation);
           
-          // Close the upload dialog and show the results dialog immediately
           setShowDialog(false);
           setShowResult(true);
           
-          // Complete the loading toast
           toast.success("Análisis completado", { id: "analyzing-math" });
           
-          // Clean up the event listener
           window.removeEventListener('webhookMessage', handleWebhookMessage);
         }
       };
       
       window.addEventListener('webhookMessage', handleWebhookMessage);
       
-      // Now send the webhook request
-      const webhookResponse = await sendToWebhook("https://sswebhookss.maettiai.tech/webhook/a517fa5f-7575-41aa-8a03-823ad23fa55f", webhookData);
+      await sendToWebhook("https://sswebhookss.maettiai.tech/webhook/a517fa5f-7575-41aa-8a03-823ad23fa55f", webhookData);
       
-      // Reset file selection - but don't close the dialog yet, the event listener will do that
       setSelectedFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -158,7 +146,6 @@ export function MathScanner() {
         </CardContent>
       </Card>
 
-      {/* Preview Dialog */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -215,7 +202,6 @@ export function MathScanner() {
         </DialogContent>
       </Dialog>
 
-      {/* Results Dialog */}
       <Dialog open={showResult} onOpenChange={setShowResult}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -226,7 +212,6 @@ export function MathScanner() {
           </DialogHeader>
           
           <div className="space-y-4">
-            {/* Result Section */}
             <div className="bg-secondary/50 p-4 rounded-md overflow-x-auto">
               {mathResult ? (
                 <MathRenderer 
@@ -238,7 +223,6 @@ export function MathScanner() {
               )}
             </div>
             
-            {/* Explanation Section (Collapsible) - only show if we have an explanation */}
             {mathExplanation && (
               <Collapsible
                 open={isExplanationOpen}

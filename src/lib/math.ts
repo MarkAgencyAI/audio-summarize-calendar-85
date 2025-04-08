@@ -6,8 +6,11 @@
 export function formatMathExpression(text: string): string {
   if (!text) return "";
   
+  // Ensure input is a string
+  const textStr = String(text);
+  
   // Replace multiple newlines with just two (for paragraph breaks)
-  let formatted = text.replace(/\n{3,}/g, "\n\n");
+  let formatted = textStr.replace(/\n{3,}/g, "\n\n");
   
   // Make sure fractions have proper spacing
   formatted = formatted.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, "\\frac{$1}{$2}");

@@ -45,28 +45,48 @@ export async function sendToWebhook(url: string, data: any): Promise<void> {
         let result = "";
         let explanation = "";
         
-        // Check if there's specific result and explanation fields
-        if (rawData && rawData.result) {
-          result = formatMathExpression(rawData.result);
+        // Handle specific structure with output.resultado and output.explicacion
+        if (rawData && rawData.output) {
+          if (rawData.output.resultado) {
+            result = String(rawData.output.resultado);
+            console.log("Se encontró resultado en la respuesta:", result);
+          }
+          
+          if (rawData.output.explicacion) {
+            explanation = String(rawData.output.explicacion);
+            console.log("Se encontró explicación en la respuesta:", explanation);
+          }
+        } 
+        // Fallback to check for other possible field names
+        else if (rawData && rawData.result) {
+          result = String(rawData.result);
           console.log("Se encontró result en la respuesta:", result);
         } else if (rawData && rawData.content) {
-          result = formatMathExpression(rawData.content);
+          result = String(rawData.content);
           console.log("Se encontró content en la respuesta:", result);
-        } else if (rawData && rawData.output) {
-          result = formatMathExpression(rawData.output);
-          console.log("Se encontró output en la respuesta:", result);
         } else if (rawData && rawData.message) {
-          result = formatMathExpression(rawData.message);
+          result = String(rawData.message);
           console.log("Se encontró message en la respuesta:", result);
         }
         
-        // Extract explanation separately
-        if (rawData && rawData.explanation) {
-          explanation = formatMathExpression(rawData.explanation);
-          console.log("Se encontró explanation en la respuesta:", explanation);
-        } else if (rawData && rawData.steps) {
-          explanation = formatMathExpression(rawData.steps);
-          console.log("Se encontró steps en la respuesta:", explanation);
+        // Fallback check for explanation in other fields
+        if (!explanation) {
+          if (rawData && rawData.explanation) {
+            explanation = String(rawData.explanation);
+            console.log("Se encontró explanation en la respuesta:", explanation);
+          } else if (rawData && rawData.steps) {
+            explanation = String(rawData.steps);
+            console.log("Se encontró steps en la respuesta:", explanation);
+          }
+        }
+        
+        // Format the math expressions
+        if (result) {
+          result = formatMathExpression(result);
+        }
+        
+        if (explanation) {
+          explanation = formatMathExpression(explanation);
         }
         
         // Disparar evento con el output exacto del webhook
@@ -88,7 +108,7 @@ export async function sendToWebhook(url: string, data: any): Promise<void> {
         console.error("Error al parsear respuesta como JSON:", jsonError);
         
         // Si no se puede parsear como JSON, usamos el texto directamente
-        const formattedText = formatMathExpression(responseText);
+        const formattedText = String(responseText);
         const analysisEvent = new CustomEvent('webhookMessage', {
           detail: {
             type: 'webhook_analysis',
