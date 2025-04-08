@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { AudioRecorder } from "@/components/AudioRecorder";
 import { PdfUploader } from "@/components/PdfUploader";
 import { ImageUploader } from "@/components/ImageUploader";
+import { MathScanner } from "@/components/MathScanner";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Button } from "@/components/ui/button";
 import { LiveTranscriptionSheet } from "@/components/LiveTranscriptionSheet";
@@ -68,6 +69,16 @@ export function ToolsCarousel({
                   open={transcriptionOpen}
                   onOpenChange={setTranscriptionOpen}
                 />
+              </div>
+            </CarouselItem>
+            
+            {/* Herramienta: Math Scanner (Nueva) */}
+            <CarouselItem className="basis-full">
+              <div className="p-1">
+                <div className="text-center mb-2">
+                  <span className="text-sm font-medium">Math Scan</span>
+                </div>
+                <MathScanner />
               </div>
             </CarouselItem>
             
