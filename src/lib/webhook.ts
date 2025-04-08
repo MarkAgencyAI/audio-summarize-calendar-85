@@ -41,17 +41,32 @@ export async function sendToWebhook(url: string, data: any): Promise<void> {
           console.log("Usando primer elemento del array:", rawData);
         }
         
-        // Check if there's content field or if we should use output
-        let noteContent = "";
-        if (rawData && rawData.content) {
-          noteContent = formatMathExpression(rawData.content);
-          console.log("Se encontró content en la respuesta:", noteContent);
+        // Extract result and explanation separately
+        let result = "";
+        let explanation = "";
+        
+        // Check if there's specific result and explanation fields
+        if (rawData && rawData.result) {
+          result = formatMathExpression(rawData.result);
+          console.log("Se encontró result en la respuesta:", result);
+        } else if (rawData && rawData.content) {
+          result = formatMathExpression(rawData.content);
+          console.log("Se encontró content en la respuesta:", result);
         } else if (rawData && rawData.output) {
-          noteContent = formatMathExpression(rawData.output);
-          console.log("Se encontró output en la respuesta:", noteContent);
+          result = formatMathExpression(rawData.output);
+          console.log("Se encontró output en la respuesta:", result);
         } else if (rawData && rawData.message) {
-          noteContent = formatMathExpression(rawData.message);
-          console.log("Se encontró message en la respuesta:", noteContent);
+          result = formatMathExpression(rawData.message);
+          console.log("Se encontró message en la respuesta:", result);
+        }
+        
+        // Extract explanation separately
+        if (rawData && rawData.explanation) {
+          explanation = formatMathExpression(rawData.explanation);
+          console.log("Se encontró explanation en la respuesta:", explanation);
+        } else if (rawData && rawData.steps) {
+          explanation = formatMathExpression(rawData.steps);
+          console.log("Se encontró steps en la respuesta:", explanation);
         }
         
         // Disparar evento con el output exacto del webhook
@@ -59,8 +74,9 @@ export async function sendToWebhook(url: string, data: any): Promise<void> {
           detail: {
             type: 'webhook_analysis',
             data: {
-              output: rawData.output || "",
-              content: noteContent
+              result: result,
+              explanation: explanation,
+              raw: rawData
             }
           }
         });
@@ -77,8 +93,9 @@ export async function sendToWebhook(url: string, data: any): Promise<void> {
           detail: {
             type: 'webhook_analysis',
             data: {
-              output: responseText,
-              content: formattedText
+              result: formattedText,
+              explanation: "",
+              raw: { text: responseText }
             }
           }
         });

@@ -38,32 +38,6 @@ export function MathScanner() {
     }
   };
 
-  const extractResultAndExplanation = (content: string): { result: string, explanation: string | null } => {
-    // Check if content contains a result section and explanation section
-    if (!content) return { result: "No se pudo analizar la expresión matemática", explanation: null };
-
-    // Try to find "Resultado:" and split the content
-    const resultMatch = content.match(/Resultado:?\s*(.+?)(?:\n\n|\n(?=Explicaci[óo]n)|\n(?=Pasos)|\n(?=Calculando)|$)/is);
-    const result = resultMatch ? resultMatch[1].trim() : content;
-
-    // Try to find "Explicación:" or any explanation part after the result
-    let explanation = null;
-    const explanationMatch = content.match(/(?:Explicaci[óo]n|Pasos|Calculando)(?::|\s*\*\*|\s*:)?([\s\S]+)$/i);
-    
-    if (explanationMatch) {
-      explanation = explanationMatch[1].trim();
-    } else if (content.includes("\n\n")) {
-      // If there's no explicit "Explicación" keyword but there are multiple paragraphs,
-      // assume everything after the first paragraph might be the explanation
-      const paragraphs = content.split("\n\n");
-      if (paragraphs.length > 1) {
-        explanation = paragraphs.slice(1).join("\n\n").trim();
-      }
-    }
-    
-    return { result, explanation };
-  };
-
   const handleSubmit = async () => {
     if (!selectedFile) {
       toast.error("Por favor, selecciona una imagen");
@@ -116,11 +90,10 @@ export function MathScanner() {
         if (customEvent.detail?.type === 'webhook_analysis') {
           console.log("Received webhook response:", customEvent.detail);
           
-          // Extract content or output from the response
-          const content = customEvent.detail?.data?.content || customEvent.detail?.data?.output || "No se pudo analizar la expresión matemática";
+          // Get result and explanation directly from the response
+          const result = customEvent.detail?.data?.result || "No se pudo analizar la expresión matemática";
+          const explanation = customEvent.detail?.data?.explanation || null;
           
-          // Split the content into result and explanation parts
-          const { result, explanation } = extractResultAndExplanation(content);
           setMathResult(result);
           setMathExplanation(explanation);
           
@@ -265,7 +238,7 @@ export function MathScanner() {
               )}
             </div>
             
-            {/* Explanation Section (Collapsible) */}
+            {/* Explanation Section (Collapsible) - only show if we have an explanation */}
             {mathExplanation && (
               <Collapsible
                 open={isExplanationOpen}
