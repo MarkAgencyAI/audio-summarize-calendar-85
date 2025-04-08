@@ -75,15 +75,15 @@ export function Layout({
       
       {/* Desktop Sidebar */}
       {!isMobile && (
-        <div className={`fixed h-full z-40 bg-[#121212] dark:bg-[#121212] border-r border-[#2a2a2a] dark:border-[#2a2a2a] flex flex-col transition-all duration-300 ease-in-out shadow-lg ${sidebarOpen ? 'left-0 w-16 md:w-64' : 'left-[-64px] md:left-[-256px] w-16 md:w-64'}`}>
-          <div className="border-b border-[#2a2a2a] dark:border-[#2a2a2a] flex items-center justify-between p-4 h-16">
+        <div className={`fixed h-full z-40 bg-[#1a1a1a] dark:bg-[#1a1a1a] border-r border-[#2e2e2e] dark:border-[#2e2e2e] flex flex-col transition-all duration-300 ease-in-out shadow-lg ${sidebarOpen ? 'left-0 w-16 md:w-64' : 'left-[-64px] md:left-[-256px] w-16 md:w-64'}`}>
+          <div className="border-b border-[#2e2e2e] dark:border-[#2e2e2e] flex items-center justify-between p-4 h-16">
             <div className={`${sidebarOpen ? 'hidden md:flex' : 'hidden'} items-center justify-center`}>
               <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="h-24 w-auto object-contain" />
             </div>
             <div className={`${sidebarOpen ? 'flex md:hidden' : 'hidden'} items-center justify-center`}>
               <img src="/lovable-uploads/e871068b-d83e-4ef9-ad4d-aada735de0e2.png" alt="Cali Logo" className="h-6 w-auto object-contain" />
             </div>
-            <div className={`${sidebarOpen ? 'hidden md:block' : 'hidden'} text-gray-200 font-medium text-sm`}>
+            <div className={`${sidebarOpen ? 'hidden md:block' : 'hidden'} text-white font-medium text-sm`}>
               Main Menu
             </div>
           </div>
@@ -97,7 +97,7 @@ export function Layout({
                     className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
                       isActive(item.path) 
                         ? "bg-[#008C85] text-white" 
-                        : "text-gray-400 hover:text-white hover:bg-[#2a2a2a]"
+                        : "text-gray-300 hover:text-white hover:bg-[#2a2a2a]"
                     }`}
                   >
                     <div className="flex-shrink-0">
@@ -115,10 +115,10 @@ export function Layout({
             </ul>
           </nav>
           
-          <div className="p-4 border-t border-[#2a2a2a] dark:border-[#2a2a2a] flex items-center justify-between">
+          <div className="p-4 border-t border-[#2e2e2e] dark:border-[#2e2e2e] flex items-center justify-between">
             <button 
               onClick={handleLogout} 
-              className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
+              className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors"
             >
               <LogOut className="h-5 w-5" />
               <span className={`${sidebarOpen ? 'hidden md:inline' : 'hidden'}`}>
@@ -143,7 +143,7 @@ export function Layout({
       
       {/* Mobile Navigation */}
       {isMobile && (
-        <div className="fixed bottom-0 left-0 right-0 bg-[#121212] border-t border-[#2a2a2a] z-40 h-16">
+        <div className="fixed bottom-0 left-0 right-0 bg-[#1a1a1a] border-t border-[#2e2e2e] z-40 h-16">
           <div className="grid grid-cols-4 h-full">
             {navItems.map(item => (
               <button 
@@ -152,7 +152,7 @@ export function Layout({
                 className={`flex flex-col items-center justify-center h-full px-1 ${
                   isActive(item.path) 
                     ? "bg-[#008C85] text-white" 
-                    : "text-gray-400"
+                    : "text-gray-300"
                 }`}
               >
                 {item.icon}

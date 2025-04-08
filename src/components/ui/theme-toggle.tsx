@@ -44,13 +44,13 @@ export function ThemeToggle() {
       variant="ghost" 
       size="icon" 
       onClick={toggleTheme}
-      className="rounded-full h-8 w-8 hover:bg-[#2a2a2a] dark:hover:bg-[#2a2a2a] text-gray-400 hover:text-white transition-colors"
+      className="rounded-full h-8 w-8 hover:bg-[#2a2a2a] dark:hover:bg-[#2a2a2a] text-white transition-colors"
       aria-label="Cambiar tema"
     >
       {theme === "light" ? (
-        <Sun className="h-4 w-4 transition-all" />
+        <Sun className="h-4 w-4 transition-all text-[#00b8ae]" />
       ) : (
-        <Moon className="h-4 w-4 transition-all" />
+        <Moon className="h-4 w-4 transition-all text-[#00b8ae]" />
       )}
     </Button>
   );

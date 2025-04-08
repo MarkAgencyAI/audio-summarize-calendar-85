@@ -46,8 +46,8 @@ const navigationMenuTriggerStyle = cva(
   {
     variants: {
       variant: {
-        default: "bg-transparent text-gray-400 hover:bg-[#2a2a2a] hover:text-white data-[active]:bg-[#008C85] data-[active]:text-white data-[state=open]:bg-[#2a2a2a] data-[state=open]:text-white",
-        dark: "bg-[#121212] text-gray-400 hover:bg-[#2a2a2a] hover:text-white data-[active]:bg-[#008C85] data-[active]:text-white data-[state=open]:bg-[#2a2a2a] data-[state=open]:text-white",
+        default: "bg-transparent text-white hover:bg-[#2a2a2a] hover:text-[#00b8ae] data-[active]:bg-[#008C85] data-[active]:text-white data-[state=open]:bg-[#2a2a2a] data-[state=open]:text-[#00b8ae]",
+        dark: "bg-[#1a1a1a] text-white hover:bg-[#2a2a2a] hover:text-[#00b8ae] data-[active]:bg-[#008C85] data-[active]:text-white data-[state=open]:bg-[#2a2a2a] data-[state=open]:text-[#00b8ae]",
       }
     },
     defaultVariants: {
@@ -69,7 +69,7 @@ const NavigationMenuTrigger = React.forwardRef<
   >
     {children}{" "}
     <ChevronDown
-      className="relative top-[1px] ml-1 h-3 w-3 transition duration-200 group-data-[state=open]:rotate-180"
+      className="relative top-[1px] ml-1 h-3 w-3 transition duration-200 group-data-[state=open]:rotate-180 text-[#00b8ae]"
       aria-hidden="true"
     />
   </NavigationMenuPrimitive.Trigger>
