@@ -88,7 +88,11 @@ export function MathScanner() {
           // Extract content or output from the response
           const content = customEvent.detail?.data?.content || customEvent.detail?.data?.output || "No se pudo analizar la expresión matemática";
           setMathResult(content);
+          
+          // Close the upload dialog and show the results dialog
+          setShowDialog(false);
           setShowResult(true);
+          
           window.removeEventListener('webhookMessage', handleWebhookMessage);
         }
       };
