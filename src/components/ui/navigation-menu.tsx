@@ -42,12 +42,12 @@ NavigationMenuList.displayName = NavigationMenuPrimitive.List.displayName
 const NavigationMenuItem = NavigationMenuPrimitive.Item
 
 const navigationMenuTriggerStyle = cva(
-  "group inline-flex h-10 w-max items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/50 data-[state=open]:bg-accent/50",
+  "group inline-flex h-10 w-max items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus:outline-none disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
-        default: "bg-transparent dark:text-white light:text-gray-800 hover:bg-[#2a2a2a20] hover:text-[#00b8ae] dark:hover:bg-[#2a2a2a40] dark:hover:text-[#00b8aeee] light:hover:bg-[#2a2a2a10] light:hover:text-[#008C85] data-[active]:bg-[#008C8515] data-[active]:text-[#00b8ae] data-[state=open]:bg-[#2a2a2a20] data-[state=open]:text-[#00b8ae] dark:data-[active]:bg-[#008C8520] dark:data-[active]:text-[#00b8aeee] light:data-[active]:bg-[#008C8510] light:data-[active]:text-[#008C85]",
-        dark: "bg-[#1a1a1a] dark:text-white light:text-gray-800 hover:bg-[#2a2a2a20] hover:text-[#00b8ae] dark:hover:bg-[#2a2a2a40] dark:hover:text-[#00b8aeee] light:hover:bg-[#2a2a2a10] light:hover:text-[#008C85] data-[active]:bg-[#008C8515] data-[active]:text-[#00b8ae] data-[state=open]:bg-[#2a2a2a20] data-[state=open]:text-[#00b8ae] dark:data-[active]:bg-[#008C8520] dark:data-[active]:text-[#00b8aeee] light:data-[active]:bg-[#008C8510] light:data-[active]:text-[#008C85]",
+        default: "bg-transparent hover:bg-[#2a2a2a15] hover:text-[#00b8ae] dark:hover:bg-[#2a2a2a25] dark:hover:text-[#00b8aeee] light:hover:bg-[#2a2a2a08] light:hover:text-[#008C85] data-[active]:bg-[#008C8508] data-[active]:text-[#00b8ae] data-[state=open]:bg-[#2a2a2a10] data-[state=open]:text-[#00b8ae] dark:data-[active]:bg-[#008C8510] dark:data-[active]:text-[#00b8aeee] light:data-[active]:bg-[#008C8505] light:data-[active]:text-[#008C85] dark:text-white light:text-gray-800",
+        dark: "bg-[#1a1a1a] hover:bg-[#2a2a2a20] hover:text-[#00b8ae] dark:hover:bg-[#2a2a2a25] dark:hover:text-[#00b8aeee] light:hover:bg-[#2a2a2a08] light:hover:text-[#008C85] data-[active]:bg-[#008C8508] data-[active]:text-[#00b8ae] data-[state=open]:bg-[#2a2a2a10] data-[state=open]:text-[#00b8ae] dark:data-[active]:bg-[#008C8510] dark:data-[active]:text-[#00b8aeee] light:data-[active]:bg-[#008C8505] light:data-[active]:text-[#008C85] dark:text-white light:text-gray-800",
       }
     },
     defaultVariants: {
@@ -100,7 +100,7 @@ const NavigationMenuViewport = React.forwardRef<
   <div className={cn("absolute left-0 top-full flex justify-center")}>
     <NavigationMenuPrimitive.Viewport
       className={cn(
-        "origin-top-center relative mt-1.5 h-[var(--radix-navigation-menu-viewport-height)] w-full overflow-hidden rounded-md border dark:bg-[#1a1a1a] dark:text-white light:bg-white light:text-gray-800 shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-90 md:w-[var(--radix-navigation-menu-viewport-width)]",
+        "origin-top-center relative mt-1.5 h-[var(--radix-navigation-menu-viewport-height)] w-full overflow-hidden rounded-md border dark:bg-[#1a1a1a] light:bg-white text-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-90 md:w-[var(--radix-navigation-menu-viewport-width)]",
         className
       )}
       ref={ref}
@@ -108,8 +108,7 @@ const NavigationMenuViewport = React.forwardRef<
     />
   </div>
 ))
-NavigationMenuViewport.displayName =
-  NavigationMenuPrimitive.Viewport.displayName
+NavigationMenuViewport.displayName = NavigationMenuPrimitive.Viewport.displayName
 
 const NavigationMenuIndicator = React.forwardRef<
   React.ElementRef<typeof NavigationMenuPrimitive.Indicator>,
@@ -126,8 +125,7 @@ const NavigationMenuIndicator = React.forwardRef<
     <div className="relative top-[60%] h-2 w-2 rotate-45 rounded-tl-sm dark:bg-[#1a1a1a] light:bg-white shadow-md" />
   </NavigationMenuPrimitive.Indicator>
 ))
-NavigationMenuIndicator.displayName =
-  NavigationMenuPrimitive.Indicator.displayName
+NavigationMenuIndicator.displayName = NavigationMenuPrimitive.Indicator.displayName
 
 export {
   navigationMenuTriggerStyle,
