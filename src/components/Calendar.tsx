@@ -1,6 +1,5 @@
-
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, format, isSameMonth, isSameDay, addDays, parseISO } from "date-fns";
+import { addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, format, isSameMonth, isSameDay, addDays, parseISO, setHours, setMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Plus, FolderPlus, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRecordings } from "@/context/RecordingsContext";
+import { DailyView } from "@/components/DailyView";
 
 export interface CalendarEvent {
   id: string;
@@ -49,6 +49,8 @@ export function Calendar({
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [newFolderColor, setNewFolderColor] = useState("#3b82f6");
+  const [showDailyView, setShowDailyView] = useState(false);
+  const [dailyViewDate, setDailyViewDate] = useState<Date | null>(null);
 
   const isMobile = useIsMobile();
   const { folders, addFolder } = useRecordings();
@@ -107,15 +109,25 @@ export function Calendar({
   }, [events]);
 
   const handleDateClick = (date: Date) => {
-    setSelectedDate(date);
+    setDailyViewDate(date);
+    setShowDailyView(true);
+  };
+
+  const handleTimeSelect = (time: Date) => {
+    setSelectedDate(time);
     setNewEvent({
       title: "",
       description: "",
-      date: format(date, "yyyy-MM-dd'T'HH:mm"),
+      date: format(time, "yyyy-MM-dd'T'HH:mm"),
       folderId: "",
       eventType: ""
     });
     setShowEventDialog(true);
+  };
+
+  const handleBackToMonth = () => {
+    setShowDailyView(false);
+    setDailyViewDate(null);
   };
 
   const handleEventClick = (event: CalendarEvent) => {
@@ -187,94 +199,108 @@ export function Calendar({
 
   return (
     <div className="w-full">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl md:text-2xl font-semibold text-[#005c5f] dark:text-white truncate">
-          {format(currentDate, "MMMM yyyy", {
-            locale: es
-          })}
-        </h2>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <Button variant="outline" size="icon" onClick={goToNextMonth}>
-            <ChevronRight className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
-      
-      <div className="calendar-container w-full overflow-hidden">
-        <div className="calendar-grid-container min-w-full">
-          <div className="calendar-grid mb-1">
-            {getDayNames().map(day => 
-              <div key={day} className="py-2 text-center font-medium text-sm">
-                {day}
-              </div>
-            )}
+      {showDailyView && dailyViewDate ? (
+        <DailyView 
+          date={dailyViewDate}
+          events={events}
+          onBack={handleBackToMonth}
+          onTimeSelect={handleTimeSelect}
+          onEventClick={handleEventClick}
+        />
+      ) : (
+        <>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl md:text-2xl font-semibold text-[#005c5f] dark:text-white truncate">
+              {format(currentDate, "MMMM yyyy", {
+                locale: es
+              })}
+            </h2>
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+              <Button variant="outline" size="icon" onClick={goToNextMonth}>
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
           
-          <div className="calendar-grid border border-border rounded-lg overflow-hidden">
-            {days.map((day, i) => {
-              const dateKey = format(day, "yyyy-MM-dd");
-              const dayEvents = eventsByDate[dateKey] || [];
-              const isToday = isSameDay(day, new Date());
-              const isCurrentMonth = isSameMonth(day, currentDate);
-              return (
-                <div 
-                  key={i} 
-                  className={`
-                    calendar-date border border-border p-1
-                    ${isCurrentMonth ? "bg-background" : "bg-muted/30 text-muted-foreground"}
-                    hover:bg-secondary/50 transition-colors cursor-pointer
-                  `} 
-                  onClick={() => handleDateClick(day)}
-                >
-                  <div className={`
-                    flex items-center justify-center h-7 w-7 mb-1 text-sm
-                    ${isToday ? "bg-primary text-primary-foreground rounded-full" : ""}
-                  `}>
-                    {format(day, "d")}
-                    {dayEvents.length > 0 && 
-                      <span className="ml-1 bg-primary/20 text-primary text-xs px-1 rounded-full">
-                        {dayEvents.length}
-                      </span>
-                    }
+          <div className="calendar-container w-full overflow-hidden">
+            <div className="calendar-grid-container min-w-full">
+              <div className="calendar-grid mb-1">
+                {getDayNames().map(day => 
+                  <div key={day} className="py-2 text-center font-medium text-sm">
+                    {day}
                   </div>
-                  
-                  <div className="space-y-1 max-h-[80px] overflow-y-auto">
-                    {dayEvents.map(event => 
-                      <div 
-                        key={event.id} 
-                        className="calendar-event bg-primary/10 text-primary hover:bg-primary/20" 
-                        onClick={e => {
-                          e.stopPropagation();
-                          handleEventClick(event);
-                        }}
-                      >
-                        {event.title}
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="absolute bottom-1 right-1">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-5 w-5 opacity-0 hover:opacity-100 bg-muted/50 hover:bg-muted" 
-                      onClick={e => {
-                        e.stopPropagation();
-                        handleDateClick(day);
-                      }}
+                )}
+              </div>
+              
+              <div className="calendar-grid border border-border rounded-lg overflow-hidden">
+                {days.map((day, i) => {
+                  const dateKey = format(day, "yyyy-MM-dd");
+                  const dayEvents = eventsByDate[dateKey] || [];
+                  const isToday = isSameDay(day, new Date());
+                  const isCurrentMonth = isSameMonth(day, currentDate);
+                  return (
+                    <div 
+                      key={i} 
+                      className={`
+                        calendar-date border border-border p-1
+                        ${isCurrentMonth ? "bg-background" : "bg-muted/30 text-muted-foreground"}
+                        hover:bg-secondary/50 transition-colors cursor-pointer
+                      `} 
+                      onClick={() => handleDateClick(day)}
                     >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
+                      <div className={`
+                        flex items-center justify-center h-7 w-7 mb-1 text-sm
+                        ${isToday ? "bg-primary text-primary-foreground rounded-full" : ""}
+                      `}>
+                        {format(day, "d")}
+                        {dayEvents.length > 0 && 
+                          <span className="ml-1 bg-primary/20 text-primary text-xs px-1 rounded-full">
+                            {dayEvents.length}
+                          </span>
+                        }
+                      </div>
+                      
+                      <div className="space-y-1 max-h-[80px] overflow-y-auto">
+                        {dayEvents.map(event => 
+                          <div 
+                            key={event.id} 
+                            className="calendar-event bg-primary/10 text-primary hover:bg-primary/20" 
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleEventClick(event);
+                            }}
+                          >
+                            {event.title}
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="absolute bottom-1 right-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-5 w-5 opacity-0 hover:opacity-100 bg-muted/50 hover:bg-muted" 
+                          onClick={e => {
+                            e.stopPropagation();
+                            const now = new Date();
+                            const selectedTime = setMinutes(setHours(day, now.getHours()), 0);
+                            handleTimeSelect(selectedTime);
+                          }}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
       
       <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
         <DialogContent className="max-w-[95vw] sm:max-w-[450px]">
