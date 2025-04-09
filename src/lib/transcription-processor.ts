@@ -1,3 +1,4 @@
+
 import { transcribeAudio } from "@/lib/groq";
 import { splitAudioFile } from "@/lib/audio-splitter";
 import { sendToWebhook } from "@/lib/webhook";
@@ -22,10 +23,11 @@ export async function processAudioForTranscription(
   try {
     // Get audio duration to check if we need to split
     const audioDuration = await getAudioDuration(audioBlob);
-    const MAX_CHUNK_DURATION = 300; // 5 minutes in seconds for better processing
+    const MAX_CHUNK_DURATION = 420; // 7 minutos en segundos (antes 300)
     
     let transcriptionResult;
     let fullTranscript = "";
+    let chunkErrors: string[] = []; // Para registrar errores en cada parte
     
     // Notify about processing start
     if (onTranscriptionProgress) {
@@ -36,7 +38,7 @@ export async function processAudioForTranscription(
     }
     
     if (audioDuration > MAX_CHUNK_DURATION) {
-      // Audio is longer than 5 minutes, split it
+      // Audio is longer than 7 minutes, split it
       if (onTranscriptionProgress) {
         onTranscriptionProgress({
           output: "El audio es largo, dividiendo en partes para procesarlo...",
@@ -76,6 +78,7 @@ export async function processAudioForTranscription(
           let chunkResult;
           let retryCount = 0;
           const MAX_RETRIES = 2;
+          let chunkError = null;
           
           // Implementar sistema de reintentos para cada parte
           while (retryCount <= MAX_RETRIES) {
@@ -86,6 +89,9 @@ export async function processAudioForTranscription(
             } catch (chunkError) {
               retryCount++;
               if (retryCount > MAX_RETRIES) {
+                console.error(`Error al transcribir parte ${chunkNumber} (intento ${retryCount}):`, chunkError);
+                const errorMsg = `Error en parte ${chunkNumber}: No se pudo transcribir después de ${MAX_RETRIES + 1} intentos`;
+                chunkErrors.push(errorMsg);
                 throw chunkError; // Si superamos los reintentos, propagamos el error
               }
               
@@ -102,7 +108,9 @@ export async function processAudioForTranscription(
           }
           
           if (!chunkResult) {
-            throw new Error(`No se pudo transcribir la parte ${chunkNumber} después de varios intentos`);
+            const errorMsg = `No se pudo transcribir la parte ${chunkNumber} después de varios intentos`;
+            chunkErrors.push(errorMsg);
+            throw new Error(errorMsg);
           }
           
           // Add timestamp marker and append to full transcript
@@ -128,7 +136,8 @@ export async function processAudioForTranscription(
         // Create a combined result object
         transcriptionResult = {
           transcript: fullTranscript,
-          language: "es"
+          language: "es",
+          errors: chunkErrors.length > 0 ? chunkErrors : undefined
         };
         
       } catch (splitError) {
@@ -197,7 +206,9 @@ export async function processAudioForTranscription(
               
             } catch (chunkError) {
               console.error(`Error al transcribir parte ${chunkNumber}:`, chunkError);
-              fullTranscript += `\n\n[Error en parte ${chunkNumber} - No se pudo transcribir]\n`;
+              const errorMsg = `Error en parte ${chunkNumber} - No se pudo transcribir`;
+              chunkErrors.push(errorMsg);
+              fullTranscript += `\n\n[${errorMsg}]\n`;
               
               // Actualizar con el texto acumulado hasta ahora, incluyendo el error
               if (onTranscriptionProgress) {
@@ -212,7 +223,8 @@ export async function processAudioForTranscription(
           // Crear objeto de resultado combinado
           transcriptionResult = {
             transcript: fullTranscript || "No se pudo transcribir completamente el audio",
-            language: "es"
+            language: "es",
+            errors: chunkErrors.length > 0 ? chunkErrors : undefined
           };
         } catch (secondSplitError) {
           console.error("Error en el segundo intento de división:", secondSplitError);
@@ -245,7 +257,8 @@ export async function processAudioForTranscription(
       language: transcriptionResult.language || "es",
       subject: subject || "Sin materia",
       speakerMode: speakerMode,
-      processed: true
+      processed: true,
+      errors: transcriptionResult.errors
     };
     
     // Notify that we're waiting for webhook
@@ -286,7 +299,8 @@ export async function processAudioForTranscription(
         type: 'transcriptionComplete',
         data: {
           output: fullTranscript,
-          progress: 100
+          progress: 100,
+          errors: transcriptionResult.errors
         }
       }
     });
@@ -300,7 +314,7 @@ export async function processAudioForTranscription(
     // Signal error
     if (onTranscriptionProgress) {
       onTranscriptionProgress({
-        output: `Error al procesar el audio: ${error.message || "Error desconocido"}`,
+        output: `Error al procesar el audio: ${error instanceof Error ? error.message : "Error desconocido"}`,
         progress: 0
       });
     }

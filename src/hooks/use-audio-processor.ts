@@ -93,7 +93,7 @@ export function useAudioProcessor() {
         });
       }
 
-      // Process the audio file using the extracted module
+      // Process the audio file using the extracted module (con límite de 7 minutos en vez de 10)
       const transcriptionResult = await processAudioForTranscription(
         audioBlob, 
         subject, 
@@ -120,7 +120,7 @@ export function useAudioProcessor() {
       // Notify about the error
       if (onTranscriptionProgress) {
         onTranscriptionProgress({
-          output: "Error al procesar el audio: " + (error.message || "Error desconocido"),
+          output: "Error al procesar el audio: " + (error instanceof Error ? error.message : String(error)),
           progress: 0
         });
       }

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { toast } from "sonner";
 import { sendToWebhook } from "./webhook";
@@ -20,6 +19,7 @@ interface TranscriptionResult {
   transcript: string;
   language?: string;
   webhookResponse?: any;
+  errors?: string[]; // Nuevo campo para registrar errores
 }
 
 // URL constante del endpoint de GROQ
@@ -28,15 +28,24 @@ const GROQ_API_KEY = "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";
 const DEFAULT_WEBHOOK_URL = "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 
 export class TranscriptionService {
-  // Opciones por defecto
+  // Opciones por defecto con nuevo límite de 7 minutos
   private options: TranscriptionOptions = {
-    maxChunkDuration: 600, // 10 minutos en segundos
+    maxChunkDuration: 420, // 7 minutos en segundos (antes 600)
     speakerMode: 'single'
   };
 
   constructor(options?: Partial<TranscriptionOptions>) {
     if (options) {
-      this.options = { ...this.options, ...options };
+      // Aseguramos que si se pasa maxChunkDuration, no exceda los 7 minutos
+      const maxDuration = options.maxChunkDuration && options.maxChunkDuration <= 420 
+        ? options.maxChunkDuration 
+        : 420;
+      
+      this.options = { 
+        ...this.options, 
+        ...options,
+        maxChunkDuration: maxDuration
+      };
     }
   }
 
@@ -123,7 +132,7 @@ export class TranscriptionService {
   ): Promise<TranscriptionResult> {
     this.notifyProgress("Audio largo detectado. Dividiendo en segmentos...", 10, onProgress);
     
-    // Calcular el número de segmentos
+    // Calcular el número de segmentos basado en la duración máxima
     const numChunks = Math.ceil(duration / this.options.maxChunkDuration);
     const chunks = await this.splitAudio(audioBlob, numChunks);
     
@@ -133,6 +142,7 @@ export class TranscriptionService {
     let fullTranscript = "";
     let language = "es";
     let allChunksFailed = true;
+    let errors: string[] = []; // Para registrar errores de transcripción
     
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];
@@ -181,9 +191,16 @@ export class TranscriptionService {
           attempts++;
           
           if (attempts >= maxAttempts) {
-            // Si se agotan los intentos para este segmento, continuar con el siguiente
-            fullTranscript += `\n\n[Error en parte ${chunkNumber} - No se pudo transcribir después de ${maxAttempts} intentos]\n`;
+            // Si se agotan los intentos para este segmento, registrar el error y continuar
+            const errorMsg = `Error en parte ${chunkNumber}: No se pudo transcribir después de ${maxAttempts} intentos`;
+            errors.push(errorMsg);
+            
+            // Mostrar mensaje de error en la transcripción
+            fullTranscript += `\n\n[${errorMsg}]\n`;
             this.notifyProgress(fullTranscript, chunkProgress, onProgress);
+            
+            // Mostrar un toast con el error
+            toast.error(`Falló la transcripción de la parte ${chunkNumber}`);
           }
         }
       }
@@ -202,6 +219,7 @@ export class TranscriptionService {
         webhookResponse = await this.sendToWebhook(fullTranscript);
       } catch (webhookError) {
         console.error("Error al enviar al webhook:", webhookError);
+        errors.push("Error al enviar al webhook: " + (webhookError instanceof Error ? webhookError.message : String(webhookError)));
         // Continuamos a pesar del error en el webhook
       }
     }
@@ -211,7 +229,8 @@ export class TranscriptionService {
     return {
       transcript: fullTranscript,
       language,
-      webhookResponse
+      webhookResponse,
+      errors: errors.length > 0 ? errors : undefined
     };
   }
 
@@ -357,6 +376,29 @@ export class TranscriptionService {
   }
   
   /**
+   * Envía la transcripción al webhook
+   */
+  private async sendToWebhook(transcript: string): Promise<any> {
+    const webhookUrl = this.options.webhookUrl || DEFAULT_WEBHOOK_URL;
+    const data = {
+      transcript,
+      subject: this.options.subject,
+      speakerMode: this.options.speakerMode,
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log("Enviando al webhook:", webhookUrl);
+    console.log("Datos a enviar:", data);
+    
+    try {
+      return await sendToWebhook(webhookUrl, data);
+    } catch (error) {
+      console.error("Error enviando al webhook:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Convierte un buffer a formato WAV usando un método alternativo
    * Este método es una alternativa más simple al anterior
    */
@@ -437,30 +479,8 @@ export class TranscriptionService {
   }
 
   /**
-   * Envía la transcripción al webhook
-   */
-  private async sendToWebhook(transcript: string): Promise<any> {
-    const webhookUrl = this.options.webhookUrl || DEFAULT_WEBHOOK_URL;
-    const data = {
-      transcript,
-      subject: this.options.subject,
-      speakerMode: this.options.speakerMode,
-      timestamp: new Date().toISOString()
-    };
-    
-    console.log("Enviando al webhook:", webhookUrl);
-    console.log("Datos a enviar:", data);
-    
-    try {
-      return await sendToWebhook(webhookUrl, data);
-    } catch (error) {
-      console.error("Error enviando al webhook:", error);
-      throw error;
-    }
-  }
-
-  /**
    * Transcribe un segmento de audio usando la API de GROQ
+   * Método actualizado para usar FormData y enviar del mismo modo que en grabaciones
    */
   private async transcribeAudioChunk(audioBlob: Blob): Promise<TranscriptionResult> {
     try {
@@ -471,16 +491,14 @@ export class TranscriptionService {
         throw new Error("El segmento de audio está vacío");
       }
       
-      // Crear un FormData para la API (siguiendo un enfoque similar al de RNFetchBlob pero para web)
+      // Crear un FormData para la API
       const formData = new FormData();
       
-      // Usar un nombre de archivo con extensión basada en el tipo MIME
+      // Determinar la extensión del archivo basada en el tipo MIME
       let filename = "audio";
       if (audioBlob.type.includes("wav")) {
         filename += ".wav";
-      } else if (audioBlob.type.includes("mp3")) {
-        filename += ".mp3";
-      } else if (audioBlob.type.includes("mpeg")) {
+      } else if (audioBlob.type.includes("mp3") || audioBlob.type.includes("mpeg")) {
         filename += ".mp3";
       } else if (audioBlob.type.includes("ogg")) {
         filename += ".ogg";
@@ -488,13 +506,12 @@ export class TranscriptionService {
         filename += ".wav"; // Default a WAV si no podemos determinar
       }
       
-      // Añadir el blob directamente como archivo
+      // Añadir el blob como archivo
       formData.append("file", audioBlob, filename);
       formData.append("model", "whisper-large-v3-turbo");
       formData.append("response_format", "verbose_json");
       formData.append("language", "es");
       
-      // Log adicional para verificar lo que estamos enviando
       console.log(`Enviando archivo ${filename} (${audioBlob.size} bytes) a la API de GROQ`);
       
       // Crear un prompt basado en el modo de oradores
@@ -504,9 +521,9 @@ export class TranscriptionService {
       
       formData.append("prompt", prompt);
       
-      // Hacer la petición a la API de GROQ
       console.log(`Enviando solicitud a GROQ API para transcripción`);
       
+      // Hacer la petición a la API de GROQ
       const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
         method: "POST",
         headers: {
@@ -546,7 +563,18 @@ export class TranscriptionService {
       }
     } catch (error) {
       console.error("Error en transcripción:", error);
-      throw error;
+      // Mejorar el mensaje de error para mostrar más detalles
+      let errorMessage = "Error desconocido";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        // Agregar información específica según tipo de error
+        if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
+          errorMessage = "Error de red al conectar con la API de GROQ. Verifica tu conexión a Internet.";
+        } else if (error.message.includes("API")) {
+          errorMessage = `Error en la API de GROQ: ${error.message}`;
+        }
+      }
+      throw new Error(`Error de transcripción: ${errorMessage}`);
     }
   }
 
@@ -590,7 +618,109 @@ export class TranscriptionService {
     });
     window.dispatchEvent(event);
   }
-}
+
+  /**
+   * Envía la transcripción al webhook
+   */
+  private async sendToWebhook(transcript: string): Promise<any> {
+    const webhookUrl = this.options.webhookUrl || DEFAULT_WEBHOOK_URL;
+    const data = {
+      transcript,
+      subject: this.options.subject,
+      speakerMode: this.options.speakerMode,
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log("Enviando al webhook:", webhookUrl);
+    console.log("Datos a enviar:", data);
+    
+    try {
+      return await sendToWebhook(webhookUrl, data);
+    } catch (error) {
+      console.error("Error enviando al webhook:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Convierte un AudioBuffer a formato WAV usando un método alternativo
+   * Este método es una alternativa más simple al anterior
+   */
+  private bufferToWave(buffer: AudioBuffer, start: number, end: number): ArrayBuffer {
+    const numOfChan = buffer.numberOfChannels;
+    const length = (end - start) * numOfChan * 2 + 44;
+    const result = new ArrayBuffer(length);
+    const view = new DataView(result);
+    
+    // RIFF chunk descriptor
+    this.writeUTFBytes(view, 0, 'RIFF');
+    view.setUint32(4, length - 8, true);
+    this.writeUTFBytes(view, 8, 'WAVE');
+    
+    // FMT sub-chunk
+    this.writeUTFBytes(view, 12, 'fmt ');
+    view.setUint32(16, 16, true); // subchunk size
+    view.setUint16(20, 1, true); // PCM format
+    view.setUint16(22, numOfChan, true); // # channels
+    view.setUint32(24, buffer.sampleRate, true); // sample rate
+    view.setUint32(28, buffer.sampleRate * numOfChan * 2, true); // byte rate
+    view.setUint16(32, numOfChan * 2, true); // block align
+    view.setUint16(34, 16, true); // bits per sample
+    
+    // Data sub-chunk
+    this.writeUTFBytes(view, 36, 'data');
+    view.setUint32(40, length - 44, true);
+    
+    // Write the PCM samples
+    let offset = 44;
+    
+    // Interleave channels
+    for (let i = start; i < end; i++) {
+      for (let channel = 0; channel < numOfChan; channel++) {
+        // Scale to 16-bit signed int
+        let sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
+        sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+        view.setInt16(offset, sample, true);
+        offset += 2;
+      }
+    }
+    
+    return result;
+  }
+  
+  private writeUTFBytes(view: DataView, offset: number, string: string): void {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
+    }
+  }
+
+  /**
+   * Convierte un AudioBuffer a Blob
+   * @deprecated Usar audioBufferToWav en su lugar
+   */
+  private async audioBufferToBlob(buffer: AudioBuffer, mimeType: string): Promise<Blob> {
+    return new Promise((resolve) => {
+      // Crear un offline context para renderizar el audio
+      const offlineContext = new OfflineAudioContext(
+        buffer.numberOfChannels,
+        buffer.length,
+        buffer.sampleRate
+      );
+      
+      // Crear una fuente desde el buffer
+      const source = offlineContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(offlineContext.destination);
+      source.start(0);
+      
+      // Renderizar el audio
+      offlineContext.startRendering().then(renderedBuffer => {
+        // Convertir el buffer renderizado a WAV
+        const wavBlob = this.bufferToWave(renderedBuffer, 0, renderedBuffer.length);
+        resolve(new Blob([wavBlob], { type: mimeType || 'audio/wav' }));
+      });
+    });
+  }
 
 // Hook personalizado para usar el servicio de transcripción en componentes de React
 export function useTranscription(options?: Partial<TranscriptionOptions>) {
@@ -598,9 +728,18 @@ export function useTranscription(options?: Partial<TranscriptionOptions>) {
   const [progress, setProgress] = React.useState(0);
   const [transcript, setTranscript] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
+  const [errors, setErrors] = React.useState<string[]>([]);
   
   const transcriptionService = React.useMemo(() => {
-    return new TranscriptionService(options);
+    // Asegurarnos de que maxChunkDuration no exceda los 7 minutos
+    const safeOptions = options ? {
+      ...options,
+      maxChunkDuration: options.maxChunkDuration && options.maxChunkDuration <= 420
+        ? options.maxChunkDuration
+        : 420
+    } : { maxChunkDuration: 420 };
+    
+    return new TranscriptionService(safeOptions);
   }, [options]);
   
   /**
@@ -612,6 +751,7 @@ export function useTranscription(options?: Partial<TranscriptionOptions>) {
     setIsTranscribing(true);
     setProgress(0);
     setError(null);
+    setErrors([]);
     
     try {
       // Notificar que comienza la transcripción
@@ -638,6 +778,15 @@ export function useTranscription(options?: Partial<TranscriptionOptions>) {
         window.dispatchEvent(updateEvent);
       });
       
+      // Guardar errores si los hay
+      if (result.errors && result.errors.length > 0) {
+        setErrors(result.errors);
+        // Mostrar toast para cada error
+        result.errors.forEach(err => {
+          toast.error(err);
+        });
+      }
+      
       // Notificar que terminó la transcripción
       const completeEvent = new CustomEvent('audioRecorderMessage', {
         detail: {
@@ -645,7 +794,8 @@ export function useTranscription(options?: Partial<TranscriptionOptions>) {
           data: { 
             output: result.transcript, 
             progress: 100,
-            webhookResponse: result.webhookResponse 
+            webhookResponse: result.webhookResponse,
+            errors: result.errors
           }
         }
       });
@@ -676,6 +826,7 @@ export function useTranscription(options?: Partial<TranscriptionOptions>) {
     isTranscribing,
     progress,
     transcript,
-    error
+    error,
+    errors
   };
 }

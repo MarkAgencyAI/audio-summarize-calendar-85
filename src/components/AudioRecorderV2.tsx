@@ -1,6 +1,6 @@
 
 import { useState, useRef, useEffect } from "react";
-import { Mic, X, Play, Pause, Loader2, Square, User, Users, Upload } from "lucide-react";
+import { Mic, X, Play, Pause, Loader2, Square, User, Users, Upload, AlertCircle } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,12 +38,13 @@ export function AudioRecorderV2() {
     isTranscribing, 
     progress, 
     transcript,
-    error
+    error,
+    errors // Añadimos los errores por parte
   } = useTranscription({ 
     speakerMode,
     subject,
     webhookUrl: WEBHOOK_URL,
-    maxChunkDuration: 600 // 10 minutos
+    maxChunkDuration: 420 // 7 minutos (antes eran 10)
   });
 
   useEffect(() => {
@@ -243,6 +244,11 @@ export function AudioRecorderV2() {
         }
       }
       
+      // Si hay errores en partes específicas, mostrarlos pero continuar
+      if (result.errors && result.errors.length > 0) {
+        toast.warning(`Se completó con ${result.errors.length} errores en algunas partes`);
+      }
+      
       addRecording({
         name: recordingName || `Grabación ${formatDate(new Date())}`,
         audioUrl: audioUrlRef.current,
@@ -253,7 +259,8 @@ export function AudioRecorderV2() {
         subject: subject,
         speakerMode: speakerMode,
         suggestedEvents: suggestedEvents,
-        webhookData: webhookData
+        webhookData: webhookData,
+        errors: result.errors // Guardar los errores en la grabación
       });
       
       setAudioBlob(null);
@@ -445,7 +452,29 @@ export function AudioRecorderV2() {
         
         {error && (
           <div className="p-2 bg-red-100 text-red-800 rounded-md text-sm mt-2">
-            {error}
+            <div className="flex items-start">
+              <AlertCircle className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-medium">Error principal:</p>
+                <p>{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {errors && errors.length > 0 && (
+          <div className="p-2 bg-amber-50 text-amber-800 rounded-md text-sm mt-2">
+            <div className="flex items-start">
+              <AlertCircle className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-medium">Errores en partes específicas:</p>
+                <ul className="list-disc pl-5 mt-1 space-y-1">
+                  {errors.map((err, index) => (
+                    <li key={index}>{err}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </div>
         )}
       </div>
