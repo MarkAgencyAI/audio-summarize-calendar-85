@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,12 +19,32 @@ export function TranscriptionPanel({
   progress = 0,
   showProgress = false
 }: TranscriptionPanelProps) {
-  // Ensure output is always a string, handling null case explicitly
-  const displayOutput = output === null || output === undefined
-    ? ''
-    : typeof output === 'object'
-      ? (output as any).output || JSON.stringify(output)
-      : String(output);
+  // Ensure output is always a string, handling null and object cases explicitly
+  const displayOutput = React.useMemo(() => {
+    if (output === null || output === undefined) {
+      return '';
+    }
+    
+    if (typeof output === 'string') {
+      return output;
+    }
+    
+    // If it's an object with an 'output' property, use that
+    if (typeof output === 'object' && output !== null) {
+      if ('output' in output && typeof (output as any).output === 'string') {
+        return (output as any).output;
+      }
+      
+      // Otherwise stringify the object safely
+      try {
+        return JSON.stringify(output, null, 2);
+      } catch (e) {
+        return 'Error: Could not display object data';
+      }
+    }
+    
+    return String(output);
+  }, [output]);
     
   return (
     <div className="w-full h-full flex flex-col bg-card rounded-lg border shadow-sm overflow-hidden">

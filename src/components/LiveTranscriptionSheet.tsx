@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -26,13 +25,6 @@ export function LiveTranscriptionSheet({
   const [userClosed, setUserClosed] = useState(false);
   const isControlled = open !== undefined && onOpenChange !== undefined;
   const isOpen = isControlled ? open : internalOpen;
-  
-  // Process output to ensure it's a string, with null handling
-  const processedOutput = output === null || output === undefined
-    ? ''
-    : typeof output === 'object'
-      ? (output as any).output || JSON.stringify(output)
-      : String(output);
   
   const handleOpenChange = (newOpen: boolean) => {
     if (isControlled) {
@@ -106,8 +98,8 @@ export function LiveTranscriptionSheet({
         
         <div className="flex-1 overflow-hidden">
           <TranscriptionPanel 
-            output={processedOutput} 
-            isLoading={isTranscribing && !processedOutput} 
+            output={output} 
+            isLoading={isTranscribing && !output} 
             progress={progress}
             showProgress={isTranscribing}
           />
