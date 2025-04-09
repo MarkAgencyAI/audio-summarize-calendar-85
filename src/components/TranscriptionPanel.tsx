@@ -15,6 +15,11 @@ export function TranscriptionPanel({
   output,
   isLoading = false
 }: TranscriptionPanelProps) {
+  // Ensure output is always a string
+  const displayOutput = typeof output === 'object' && output !== null
+    ? output.output || JSON.stringify(output)
+    : String(output || '');
+    
   return (
     <div className="w-full h-full flex flex-col bg-card rounded-lg border shadow-sm overflow-hidden">
       <Tabs defaultValue="output" className="w-full h-full flex flex-col">
@@ -27,7 +32,7 @@ export function TranscriptionPanel({
         </TabsList>
         
         <div className="flex-1 overflow-hidden p-4">
-          {isLoading && !output ? (
+          {isLoading && !displayOutput ? (
             <div className="h-full flex items-center justify-center">
               <div className="animate-pulse flex flex-col items-center">
                 <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
@@ -41,8 +46,8 @@ export function TranscriptionPanel({
           ) : (
             <TabsContent value="output" className="mt-0 h-full">
               <ScrollArea className="h-full bg-muted/20 rounded-md p-4">
-                {output ? (
-                  <pre className="whitespace-pre-wrap font-sans text-sm">{output}</pre>
+                {displayOutput ? (
+                  <pre className="whitespace-pre-wrap font-sans text-sm">{displayOutput}</pre>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-center">
                     <AlertCircle className="h-8 w-8 text-muted-foreground/40 mb-2" />

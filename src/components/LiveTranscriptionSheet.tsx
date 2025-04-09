@@ -1,15 +1,18 @@
+
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { TranscriptionPanel } from "./TranscriptionPanel";
 import { Mic, X } from "lucide-react";
+
 interface LiveTranscriptionSheetProps {
   isTranscribing: boolean;
-  output: string;
+  output: string | { output: string } | any;
   children?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
+
 export function LiveTranscriptionSheet({
   isTranscribing,
   output,
@@ -21,6 +24,12 @@ export function LiveTranscriptionSheet({
   const [userClosed, setUserClosed] = useState(false);
   const isControlled = open !== undefined && onOpenChange !== undefined;
   const isOpen = isControlled ? open : internalOpen;
+  
+  // Process output to ensure it's a string
+  const processedOutput = typeof output === 'object' && output !== null
+    ? output.output || JSON.stringify(output)
+    : String(output || '');
+  
   const handleOpenChange = (newOpen: boolean) => {
     if (isControlled) {
       onOpenChange(newOpen);
@@ -62,10 +71,12 @@ export function LiveTranscriptionSheet({
       window.removeEventListener('audioRecorderMessage', handleEvent);
     };
   }, [userClosed]);
+  
   const handleClose = () => {
     handleOpenChange(false);
     setUserClosed(true);
   };
+  
   return <Sheet open={isOpen} onOpenChange={handleOpenChange}>
       {children ? <SheetTrigger asChild>
           {children}
@@ -90,7 +101,7 @@ export function LiveTranscriptionSheet({
         </SheetHeader>
         
         <div className="flex-1 overflow-hidden">
-          <TranscriptionPanel output={output} isLoading={isTranscribing && !output} />
+          <TranscriptionPanel output={processedOutput} isLoading={isTranscribing && !processedOutput} />
         </div>
       </SheetContent>
     </Sheet>;
