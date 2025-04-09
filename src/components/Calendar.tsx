@@ -333,16 +333,33 @@ export function Calendar({
     }
     
     weeklyEvents.forEach(event => {
-      onAddEvent({
+      const baseEvent = {
         ...event,
         eventType: "Cronograma",
-        repeat: "weekly"
-      });
+        repeat: "weekly" as const
+      };
+      
+      onAddEvent(baseEvent);
+      
+      const startDate = new Date(event.date);
+      const endDate = event.endDate ? new Date(event.endDate) : undefined;
+      const duration = endDate ? endDate.getTime() - startDate.getTime() : 3600000;
+      
+      for (let i = 1; i <= 10; i++) {
+        const nextDate = addWeeks(startDate, i);
+        const nextEndDate = endDate ? new Date(nextDate.getTime() + duration) : addHours(nextDate, 1);
+        
+        onAddEvent({
+          ...baseEvent,
+          date: nextDate.toISOString(),
+          endDate: nextEndDate.toISOString()
+        });
+      }
     });
     
     setShowWeeklySchedule(false);
     setHasSchedule(true);
-    toast.success("Cronograma semanal guardado");
+    toast.success("Cronograma semanal guardado y repetido para las próximas semanas");
   };
 
   const getDayNames = () => {

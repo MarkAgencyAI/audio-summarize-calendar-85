@@ -1,465 +1,261 @@
-
 import { useState, useEffect } from "react";
-import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, setHours, setMinutes, parseISO } from "date-fns";
+import { format, addDays, startOfWeek, setHours, setMinutes, addMinutes, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { ChevronLeft, Plus, Save, X, AlertTriangle } from "lucide-react";
+import { ChevronLeft, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
-import { CalendarEvent, eventTypeColors } from "@/components/Calendar";
-import { useRecordings } from "@/context/RecordingsContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { CalendarEvent, eventTypeColors } from "@/components/Calendar";
+import { useRecordings } from "@/context/RecordingsContext";
 
 interface WeeklyScheduleProps {
   date: Date;
   onSave: (events: Omit<CalendarEvent, "id">[]) => void;
   onCancel: () => void;
-  hasExistingSchedule?: boolean;
-  existingEvents?: CalendarEvent[];
+  hasExistingSchedule: boolean;
+  existingEvents: CalendarEvent[];
 }
 
-interface ScheduleCell {
-  day: Date;
-  hour: number;
-  event?: Omit<CalendarEvent, "id">;
-}
-
-export function WeeklySchedule({ 
-  date, 
-  onSave, 
-  onCancel, 
-  hasExistingSchedule = false,
-  existingEvents = [] 
+export function WeeklySchedule({
+  date,
+  onSave,
+  onCancel,
+  hasExistingSchedule,
+  existingEvents
 }: WeeklyScheduleProps) {
   const { folders } = useRecordings();
-  
-  // Create a week range starting from Monday
-  const weekStart = startOfWeek(date, { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(date, { weekStartsOn: 1 });
-  
-  const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
-  
-  // Hours from 7 AM to 9 PM
-  const hours = Array.from({ length: 15 }, (_, i) => i + 7);
-  
-  // State for schedule cells
-  const [scheduleCells, setScheduleCells] = useState<ScheduleCell[]>(() => {
-    const cells: ScheduleCell[] = [];
-    days.forEach(day => {
-      hours.forEach(hour => {
-        cells.push({ day, hour });
-      });
-    });
-    return cells;
-  });
-  
-  // State for the form
-  const [showEventForm, setShowEventForm] = useState(false);
-  const [selectedCell, setSelectedCell] = useState<ScheduleCell | null>(null);
+  const [scheduleEvents, setScheduleEvents] = useState<Array<Omit<CalendarEvent, "id"> & { tempId: string }>>([]);
+  const [showEventDialog, setShowEventDialog] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<number>(0);
+  const [selectedTime, setSelectedTime] = useState<string>("");
   const [newEvent, setNewEvent] = useState({
     title: "",
     description: "",
-    eventType: "",
+    date: "",
+    endDate: "",
     folderId: "",
-    duration: "1"
+    tempId: ""
   });
   
-  // Event types
-  const eventTypes = [
-    "Examen Parcial",
-    "Examen Final",
-    "Trabajo Práctico",
-    "Tarea",
-    "Actividad",
-    "Consulta",
-    "Clase Especial",
-    "Otro"
-  ];
-
-  // Load existing schedule events when component mounts
+  // Days of the week
+  const weekStart = startOfWeek(date, { weekStartsOn: 0 });
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  
+  // Time slots from 7:00 AM to 9:00 PM
+  const timeSlots = Array.from({ length: 15 }, (_, i) => {
+    const hour = i + 7;
+    return format(setHours(date, hour), "HH:mm");
+  });
+  
+  // Load existing schedule if available
   useEffect(() => {
-    if (hasExistingSchedule && existingEvents.length > 0) {
-      const scheduleEvents = existingEvents.filter(event => 
+    if (hasExistingSchedule) {
+      const scheduleItems = existingEvents.filter(event => 
         event.eventType === "Cronograma" && event.repeat === "weekly"
       );
       
-      if (scheduleEvents.length > 0) {
-        const updatedCells = [...scheduleCells];
-        
-        scheduleEvents.forEach(event => {
-          const eventDate = parseISO(event.date);
-          const eventDay = eventDate.getDay();
-          const eventHour = eventDate.getHours();
-          
-          // Find the corresponding cell in the current week
-          const weekDay = days.find(d => d.getDay() === eventDay);
-          
-          if (weekDay && hours.includes(eventHour)) {
-            const cellIndex = updatedCells.findIndex(cell => 
-              cell.day.getDay() === weekDay.getDay() && 
-              cell.hour === eventHour
-            );
-            
-            if (cellIndex !== -1) {
-              // Calculate event duration
-              let duration = 1;
-              if (event.endDate) {
-                const endDate = parseISO(event.endDate);
-                duration = endDate.getHours() - eventDate.getHours();
-                if (duration < 1) duration = 1;
-              }
-              
-              updatedCells[cellIndex].event = {
-                title: event.title,
-                description: event.description,
-                date: setHours(setMinutes(weekDay, 0), eventHour).toISOString(),
-                endDate: setHours(setMinutes(weekDay, 0), eventHour + duration).toISOString(),
-                eventType: event.eventType,
-                folderId: event.folderId,
-                repeat: "weekly"
-              };
-            }
-          }
-        });
-        
-        setScheduleCells(updatedCells);
-      }
-    }
-  }, [hasExistingSchedule, existingEvents, days, hours]);
-  
-  // Handle cell click to add/edit event
-  const handleCellClick = (day: Date, hour: number) => {
-    const cell = scheduleCells.find(c => 
-      c.day.getDate() === day.getDate() && 
-      c.day.getMonth() === day.getMonth() && 
-      c.hour === hour
-    );
-    
-    if (cell) {
-      setSelectedCell(cell);
+      // Group by day of week to avoid duplicates
+      const uniqueByDayAndTime: Record<string, CalendarEvent> = {};
       
-      if (cell.event) {
-        // Edit existing event
-        const duration = cell.event.endDate 
-          ? Math.round((new Date(cell.event.endDate).getTime() - new Date(cell.event.date).getTime()) / 3600000)
-          : 1;
+      scheduleItems.forEach(event => {
+        const eventDate = parseISO(event.date);
+        const dayOfWeek = eventDate.getDay();
+        const timeKey = format(eventDate, "HH:mm");
+        const key = `${dayOfWeek}-${timeKey}`;
         
-        setNewEvent({
-          title: cell.event.title,
-          description: cell.event.description || "",
-          eventType: cell.event.eventType || "",
-          folderId: cell.event.folderId || "",
-          duration: duration.toString()
-        });
-      } else {
-        // New event
-        setNewEvent({
-          title: "",
-          description: "",
-          eventType: "",
-          folderId: "",
-          duration: "1"
-        });
-      }
-      
-      setShowEventForm(true);
-    }
-  };
-  
-  // Handle saving the event to the schedule
-  const handleSaveEvent = () => {
-    if (!selectedCell) return;
-    if (!newEvent.title.trim()) {
-      toast.error("El título es obligatorio");
-      return;
-    }
-    
-    const eventDay = selectedCell.day;
-    const eventHour = selectedCell.hour;
-    
-    // Create start date
-    const startDate = setMinutes(setHours(eventDay, eventHour), 0);
-    
-    // Create end date based on duration
-    const duration = parseInt(newEvent.duration);
-    const endDate = setMinutes(setHours(eventDay, eventHour + duration), 0);
-    
-    // Create the event
-    const event: Omit<CalendarEvent, "id"> = {
-      title: newEvent.title,
-      description: newEvent.description,
-      date: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-      eventType: newEvent.eventType || undefined,
-      folderId: newEvent.folderId || undefined,
-      repeat: "weekly" // Weekly repeating event
-    };
-    
-    // Update the cells array
-    setScheduleCells(prev => {
-      const updated = [...prev];
-      
-      // First, clear any cells that might be occupied by this event (for resizing)
-      if (selectedCell.event) {
-        const oldDuration = selectedCell.event.endDate 
-          ? Math.round((new Date(selectedCell.event.endDate).getTime() - new Date(selectedCell.event.date).getTime()) / 3600000)
-          : 1;
-        
-        for (let i = 0; i < oldDuration; i++) {
-          const cellToCheck = updated.find(c => 
-            c.day.getDate() === eventDay.getDate() && 
-            c.day.getMonth() === eventDay.getMonth() && 
-            c.hour === (eventHour + i)
-          );
-          
-          if (cellToCheck && cellToCheck.event?.title === selectedCell.event.title) {
-            const cellIndex = updated.indexOf(cellToCheck);
-            if (cellIndex !== -1) {
-              updated[cellIndex] = { ...updated[cellIndex], event: undefined };
-            }
-          }
+        if (!uniqueByDayAndTime[key]) {
+          uniqueByDayAndTime[key] = event;
         }
-      }
+      });
       
-      // Now set the event in the first cell
-      const cellIndex = updated.findIndex(c => 
-        c.day.getDate() === eventDay.getDate() && 
-        c.day.getMonth() === eventDay.getMonth() && 
-        c.hour === eventHour
-      );
-      
-      if (cellIndex !== -1) {
-        updated[cellIndex] = { ...updated[cellIndex], event };
-      }
-      
-      return updated;
-    });
-    
-    setShowEventForm(false);
-    toast.success("Evento agregado al cronograma");
-  };
-  
-  // Handle removing an event from the schedule
-  const handleRemoveEvent = () => {
-    if (!selectedCell || !selectedCell.event) return;
-    
-    setScheduleCells(prev => {
-      const updated = [...prev];
-      
-      // Find the original cell
-      const cellIndex = updated.findIndex(c => 
-        c.day.getDate() === selectedCell.day.getDate() && 
-        c.day.getMonth() === selectedCell.day.getMonth() && 
-        c.hour === selectedCell.hour
-      );
-      
-      if (cellIndex !== -1 && updated[cellIndex].event) {
-        const eventTitle = updated[cellIndex].event!.title;
-        const eventDuration = updated[cellIndex].event!.endDate 
-          ? Math.round((new Date(updated[cellIndex].event!.endDate).getTime() - new Date(updated[cellIndex].event!.date).getTime()) / 3600000)
-          : 1;
+      // Convert to array format needed for the schedule
+      const loadedEvents = Object.values(uniqueByDayAndTime).map(event => {
+        const eventDate = parseISO(event.date);
+        const eventEnd = event.endDate ? parseISO(event.endDate) : addMinutes(eventDate, 60);
         
-        // Clear all cells occupied by this event
-        for (let i = 0; i < eventDuration; i++) {
-          const hourToCheck = selectedCell.hour + i;
-          const cellToUpdateIndex = updated.findIndex(c => 
-            c.day.getDate() === selectedCell.day.getDate() && 
-            c.day.getMonth() === selectedCell.day.getMonth() && 
-            c.hour === hourToCheck
-          );
-          
-          if (cellToUpdateIndex !== -1 && updated[cellToUpdateIndex].event?.title === eventTitle) {
-            updated[cellToUpdateIndex] = { 
-              ...updated[cellToUpdateIndex], 
-              event: undefined 
-            };
-          }
-        }
-      }
-      
-      return updated;
-    });
-    
-    setShowEventForm(false);
-    toast.success("Evento eliminado del cronograma");
-  };
-  
-  // Handle saving the entire schedule
-  const handleSaveSchedule = () => {
-    const events = scheduleCells
-      .filter(cell => cell.event)
-      .map(cell => {
-        const event = cell.event!;
-        // Ensure repeat is set to weekly for all events
         return {
-          ...event,
-          repeat: "weekly" as const
+          title: event.title,
+          description: event.description || "",
+          date: event.date,
+          endDate: event.endDate || format(eventEnd, "yyyy-MM-dd'T'HH:mm"),
+          folderId: event.folderId || "",
+          tempId: crypto.randomUUID()
         };
       });
+      
+      setScheduleEvents(loadedEvents);
+    }
+  }, [hasExistingSchedule, existingEvents]);
+  
+  const handleAddTimeSlot = (dayIndex: number, time: string) => {
+    const selectedDate = weekDays[dayIndex];
+    const [hours, minutes] = time.split(":").map(Number);
     
-    if (events.length === 0) {
-      toast.error("No hay eventos en el cronograma");
+    const startTime = setMinutes(setHours(selectedDate, hours), minutes);
+    const endTime = addMinutes(startTime, 60);
+    
+    setSelectedDay(dayIndex);
+    setSelectedTime(time);
+    setNewEvent({
+      title: "",
+      description: "",
+      date: format(startTime, "yyyy-MM-dd'T'HH:mm"),
+      endDate: format(endTime, "yyyy-MM-dd'T'HH:mm"),
+      folderId: "",
+      tempId: crypto.randomUUID()
+    });
+    
+    setShowEventDialog(true);
+  };
+  
+  const handleSaveEvent = () => {
+    if (!newEvent.title.trim()) {
       return;
     }
     
-    onSave(events);
+    setScheduleEvents(prev => [...prev, newEvent]);
+    setShowEventDialog(false);
   };
   
-  // Get event color based on event type
-  const getEventColor = (eventType?: string) => {
-    if (!eventType) return "#6b7280"; // Default gray
-    return eventTypeColors[eventType] || "#6b7280";
+  const handleDeleteEvent = (tempId: string) => {
+    setScheduleEvents(prev => prev.filter(event => event.tempId !== tempId));
   };
   
-  // Check if a cell is part of a multi-hour event but not the first cell
-  const isContinuationCell = (day: Date, hour: number) => {
-    // Look for an event starting before this hour on the same day
-    for (let h = hour - 1; h >= hours[0]; h--) {
-      const prevCell = scheduleCells.find(c => 
-        c.day.getDate() === day.getDate() && 
-        c.day.getMonth() === day.getMonth() && 
-        c.hour === h
-      );
-      
-      if (prevCell?.event) {
-        // Check if this previous event extends to current hour
-        const startHour = prevCell.hour;
-        const duration = prevCell.event.endDate 
-          ? Math.round((new Date(prevCell.event.endDate).getTime() - new Date(prevCell.event.date).getTime()) / 3600000)
-          : 1;
-        
-        if (startHour + duration > hour) {
-          return {
-            isContinuation: true,
-            event: prevCell.event
-          };
-        }
-      }
-    }
+  const handleSaveSchedule = () => {
+    // Convert schedule events to calendar events
+    const calendarEvents = scheduleEvents.map(({ tempId, ...event }) => event);
+    onSave(calendarEvents);
+  };
+  
+  const getEventAtTimeSlot = (dayIndex: number, time: string) => {
+    const day = weekDays[dayIndex];
+    const [hours, minutes] = time.split(":").map(Number);
+    const slotTime = setMinutes(setHours(day, hours), minutes);
     
-    return {
-      isContinuation: false,
-      event: undefined
-    };
+    return scheduleEvents.find(event => {
+      const eventStart = new Date(event.date);
+      const eventEnd = event.endDate ? new Date(event.endDate) : addMinutes(eventStart, 60);
+      
+      const slotStart = slotTime;
+      const slotEnd = addMinutes(slotTime, 59);
+      
+      return (
+        eventStart <= slotEnd && eventEnd > slotStart &&
+        eventStart.getDay() === day.getDay()
+      );
+    });
+  };
+  
+  const getFolderName = (folderId: string) => {
+    if (!folderId) return "";
+    const folder = folders.find(f => f.id === folderId);
+    return folder ? folder.name : "";
   };
   
   return (
-    <div className="w-full h-full flex flex-col">
-      <div className="flex items-center justify-between mb-4">
+    <div className="w-full">
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-2">
           <Button variant="ghost" size="sm" onClick={onCancel}>
             <ChevronLeft className="h-4 w-4 mr-1" />
             Volver
           </Button>
           <h2 className="text-xl font-semibold text-[#005c5f] dark:text-white">
-            {hasExistingSchedule ? "Editar Cronograma Semanal" : "Crear Cronograma Semanal"}
+            Cronograma Semanal
           </h2>
         </div>
-        <Button onClick={handleSaveSchedule} className="flex items-center gap-1">
-          <Save className="h-4 w-4 mr-1" />
+        
+        <Button onClick={handleSaveSchedule}>
           Guardar Cronograma
         </Button>
       </div>
       
-      {hasExistingSchedule && (
-        <Alert className="mb-4 bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800">
-          <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-          <AlertDescription className="text-yellow-700 dark:text-yellow-300">
-            Ya existe un cronograma semanal. Al guardar este cronograma, se reemplazará el anterior.
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      <div className="border rounded-lg overflow-hidden">
-        {/* Days header */}
-        <div className="grid grid-cols-8 border-b">
-          <div className="p-2 border-r bg-muted/30"></div>
-          {days.map((day, i) => (
-            <div key={i} className="p-2 text-center font-medium border-r last:border-r-0 bg-muted/30">
-              <div>{format(day, "EEE", { locale: es })}</div>
-              <div className="text-xs">{format(day, "d MMM")}</div>
-            </div>
-          ))}
-        </div>
-        
-        <ScrollArea className="h-[calc(100vh-220px)]">
-          {/* Hours and schedule cells */}
-          {hours.map(hour => (
-            <div key={hour} className="grid grid-cols-8 border-b last:border-b-0">
-              <div className="p-2 border-r text-center text-sm text-muted-foreground bg-muted/10">
-                {hour}:00
-              </div>
-              
-              {days.map((day, dayIndex) => {
-                const cell = scheduleCells.find(c => 
-                  c.day.getDate() === day.getDate() && 
-                  c.day.getMonth() === day.getMonth() && 
-                  c.hour === hour
-                );
-                
-                const continuationCheck = isContinuationCell(day, hour);
-                const isPartOfEvent = cell?.event || continuationCheck.isContinuation;
-                const eventToUse = cell?.event || continuationCheck.event;
-                const eventColor = eventToUse ? getEventColor(eventToUse.eventType) : undefined;
-                
-                return (
-                  <div 
-                    key={dayIndex}
-                    className={`
-                      p-2 border-r last:border-r-0 h-16 relative
-                      ${isPartOfEvent ? "" : "hover:bg-muted/20 cursor-pointer"}
-                    `}
-                    onClick={() => !isPartOfEvent && handleCellClick(day, hour)}
-                  >
-                    {isPartOfEvent ? (
-                      <div 
-                        className={`absolute inset-1 rounded p-1 flex flex-col ${continuationCheck.isContinuation ? "border-t-0 rounded-t-none" : "cursor-pointer"}`}
-                        style={{
-                          backgroundColor: `${eventColor}20`,
-                          borderLeft: `3px solid ${eventColor}`,
-                          color: eventColor
-                        }}
-                        onClick={e => {
-                          if (!continuationCheck.isContinuation) {
-                            e.stopPropagation();
-                            handleCellClick(day, hour);
-                          }
-                        }}
-                      >
-                        {!continuationCheck.isContinuation && (
-                          <>
-                            <div className="text-xs font-medium truncate">{eventToUse?.title}</div>
-                            <div className="text-xs opacity-80">Semanal</div>
-                          </>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100">
-                        <Plus className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                    )}
+      <ScrollArea className="h-[calc(100vh-200px)]">
+        <div className="weekly-schedule-grid">
+          {/* Header row with day names */}
+          <div className="weekly-schedule-header">
+            <div className="weekly-time-column"></div>
+            {weekDays.map((day, index) => (
+              <div key={index} className="weekly-day-column">
+                <div className="text-center font-medium py-2">
+                  {format(day, "EEE", { locale: es })}
+                  <div className="text-sm text-muted-foreground">
+                    {format(day, "d MMM", { locale: es })}
                   </div>
-                );
-              })}
-            </div>
-          ))}
-        </ScrollArea>
-      </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          {/* Time slots */}
+          <div className="weekly-schedule-body">
+            {timeSlots.map((time, timeIndex) => (
+              <div key={timeIndex} className="weekly-time-row">
+                <div className="weekly-time-label">
+                  {time}
+                </div>
+                
+                {weekDays.map((_, dayIndex) => {
+                  const event = getEventAtTimeSlot(dayIndex, time);
+                  
+                  return (
+                    <div 
+                      key={dayIndex} 
+                      className="weekly-time-slot"
+                      onClick={() => !event && handleAddTimeSlot(dayIndex, time)}
+                    >
+                      {event ? (
+                        <div 
+                          className="weekly-event"
+                          style={{ 
+                            backgroundColor: `${eventTypeColors[event.title.includes("Clase") ? "Clase Especial" : "Actividad"]}20`,
+                            borderLeft: `3px solid ${eventTypeColors[event.title.includes("Clase") ? "Clase Especial" : "Actividad"]}`,
+                            color: eventTypeColors[event.title.includes("Clase") ? "Clase Especial" : "Actividad"]
+                          }}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium text-sm">{event.title}</p>
+                              {event.folderId && (
+                                <p className="text-xs opacity-80">{getFolderName(event.folderId)}</p>
+                              )}
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-6 w-6 opacity-50 hover:opacity-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteEvent(event.tempId);
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="weekly-add-slot">
+                          <Plus className="h-4 w-4 opacity-0 group-hover:opacity-100" />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      </ScrollArea>
       
-      {/* Event form dialog */}
-      <Dialog open={showEventForm} onOpenChange={setShowEventForm}>
+      <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
         <DialogContent className="max-w-[95vw] sm:max-w-[450px]">
           <DialogHeader>
-            <DialogTitle>
-              {selectedCell?.event ? "Editar evento" : "Agregar evento"}
-            </DialogTitle>
+            <DialogTitle>Agregar evento al cronograma</DialogTitle>
           </DialogHeader>
-          
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="title">Título</Label>
@@ -470,42 +266,8 @@ export function WeeklySchedule({
                   ...newEvent,
                   title: e.target.value
                 })} 
+                placeholder="Ej: Clase de Matemáticas"
               />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="description">Descripción</Label>
-              <Textarea 
-                id="description" 
-                value={newEvent.description} 
-                onChange={e => setNewEvent({
-                  ...newEvent,
-                  description: e.target.value
-                })} 
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="eventType">Tipo de evento</Label>
-              <Select
-                value={newEvent.eventType}
-                onValueChange={(value) => setNewEvent({
-                  ...newEvent,
-                  eventType: value
-                })}
-              >
-                <SelectTrigger id="eventType">
-                  <SelectValue placeholder="Selecciona un tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="otro">Otro</SelectItem>
-                  {eventTypes.map(type => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
             
             <div className="space-y-2">
@@ -521,7 +283,7 @@ export function WeeklySchedule({
                   <SelectValue placeholder="Selecciona una materia" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Sin materia</SelectItem>
+                  <SelectItem value="">Sin materia</SelectItem>
                   {folders.map(folder => (
                     <SelectItem key={folder.id} value={folder.id}>
                       {folder.name}
@@ -532,42 +294,124 @@ export function WeeklySchedule({
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="duration">Duración (horas)</Label>
-              <Select
-                value={newEvent.duration}
-                onValueChange={(value) => setNewEvent({
+              <Label htmlFor="description">Descripción (opcional)</Label>
+              <Textarea 
+                id="description" 
+                value={newEvent.description} 
+                onChange={e => setNewEvent({
                   ...newEvent,
-                  duration: value
-                })}
-              >
-                <SelectTrigger id="duration">
-                  <SelectValue placeholder="Duración" />
-                </SelectTrigger>
-                <SelectContent>
-                  {[1, 2, 3, 4].map(hours => (
-                    <SelectItem key={hours} value={hours.toString()}>
-                      {hours} {hours === 1 ? "hora" : "horas"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  description: e.target.value
+                })} 
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="startTime">Hora de inicio</Label>
+                <Input 
+                  id="startTime" 
+                  type="time" 
+                  value={format(new Date(newEvent.date), "HH:mm")} 
+                  onChange={e => {
+                    const [hours, minutes] = e.target.value.split(":").map(Number);
+                    const day = weekDays[selectedDay];
+                    const newDate = setMinutes(setHours(day, hours), minutes);
+                    setNewEvent({
+                      ...newEvent,
+                      date: format(newDate, "yyyy-MM-dd'T'HH:mm")
+                    });
+                  }} 
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="endTime">Hora de finalización</Label>
+                <Input 
+                  id="endTime" 
+                  type="time" 
+                  value={format(new Date(newEvent.endDate), "HH:mm")} 
+                  onChange={e => {
+                    const [hours, minutes] = e.target.value.split(":").map(Number);
+                    const day = weekDays[selectedDay];
+                    const newDate = setMinutes(setHours(day, hours), minutes);
+                    setNewEvent({
+                      ...newEvent,
+                      endDate: format(newDate, "yyyy-MM-dd'T'HH:mm")
+                    });
+                  }} 
+                />
+              </div>
             </div>
           </div>
-          
-          <DialogFooter className="flex justify-between">
-            {selectedCell?.event && (
-              <Button variant="destructive" onClick={handleRemoveEvent}>
-                <X className="h-4 w-4 mr-2" />
-                Eliminar
-              </Button>
-            )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEventDialog(false)}>
+              Cancelar
+            </Button>
             <Button onClick={handleSaveEvent}>
-              <Save className="h-4 w-4 mr-2" />
-              Guardar
+              Agregar al cronograma
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      <style jsx>{`
+        .weekly-schedule-grid {
+          display: grid;
+          grid-template-rows: auto 1fr;
+          min-width: 800px;
+        }
+        
+        .weekly-schedule-header {
+          display: grid;
+          grid-template-columns: 80px repeat(7, 1fr);
+          border-bottom: 1px solid var(--border);
+        }
+        
+        .weekly-schedule-body {
+          display: grid;
+          grid-template-rows: repeat(${timeSlots.length}, 80px);
+        }
+        
+        .weekly-time-row {
+          display: grid;
+          grid-template-columns: 80px repeat(7, 1fr);
+          border-bottom: 1px solid var(--border-light, rgba(0,0,0,0.1));
+        }
+        
+        .weekly-time-label {
+          display: flex;
+          align-items: flex-start;
+          justify-content: center;
+          padding-top: 8px;
+          font-size: 0.875rem;
+          color: var(--muted-foreground);
+        }
+        
+        .weekly-time-slot {
+          border-left: 1px solid var(--border-light, rgba(0,0,0,0.1));
+          padding: 4px;
+          cursor: pointer;
+          min-height: 80px;
+        }
+        
+        .weekly-time-slot:hover {
+          background-color: var(--accent-light, rgba(0,0,0,0.05));
+        }
+        
+        .weekly-event {
+          height: 100%;
+          padding: 8px;
+          border-radius: 4px;
+          overflow: hidden;
+        }
+        
+        .weekly-add-slot {
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+      `}</style>
     </div>
   );
 }

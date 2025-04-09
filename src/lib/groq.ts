@@ -1,8 +1,8 @@
-
 import { sendToWebhook } from "./webhook";
 import { useState, useCallback } from "react";
 
-// Define the GROQ API key
+// Define the GROQ API key directly in the code for public access
+// This ensures the API works on any device without env variables
 const API_KEY = "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";
 const WEBHOOK_URL = "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 const LLAMA3_MODEL = "llama3-70b-8192";
@@ -244,7 +244,7 @@ export async function transcribeAudio(
     // Set language explicitly to Spanish
     formData.append("language", "es");
     
-    // Make the request to GROQ Audio API for the transcript
+    // Make the request to GROQ Audio API for the transcript - using hard-coded API_KEY
     console.log("Making request to GROQ Audio Transcription API...");
     const transcriptResponse = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
       method: "POST",
