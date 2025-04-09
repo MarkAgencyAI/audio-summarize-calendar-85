@@ -1,8 +1,8 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, setHours, setMinutes, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { ChevronLeft, Plus, Save, X } from "lucide-react";
+import { ChevronLeft, Plus, Save, X, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -13,11 +13,13 @@ import { CalendarEvent, eventTypeColors } from "@/components/Calendar";
 import { useRecordings } from "@/context/RecordingsContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface WeeklyScheduleProps {
   date: Date;
   onSave: (events: Omit<CalendarEvent, "id">[]) => void;
   onCancel: () => void;
+  hasExistingSchedule?: boolean;
 }
 
 interface ScheduleCell {
@@ -26,7 +28,7 @@ interface ScheduleCell {
   event?: Omit<CalendarEvent, "id">;
 }
 
-export function WeeklySchedule({ date, onSave, onCancel }: WeeklyScheduleProps) {
+export function WeeklySchedule({ date, onSave, onCancel, hasExistingSchedule = false }: WeeklyScheduleProps) {
   const { folders } = useRecordings();
   
   // Create a week range starting from Monday
@@ -204,7 +206,7 @@ export function WeeklySchedule({ date, onSave, onCancel }: WeeklyScheduleProps) 
             Volver
           </Button>
           <h2 className="text-xl font-semibold text-[#005c5f] dark:text-white">
-            Cronograma Semanal
+            {hasExistingSchedule ? "Editar Cronograma Semanal" : "Crear Cronograma Semanal"}
           </h2>
         </div>
         <Button onClick={handleSaveSchedule} className="flex items-center gap-1">
@@ -212,6 +214,15 @@ export function WeeklySchedule({ date, onSave, onCancel }: WeeklyScheduleProps) 
           Guardar Cronograma
         </Button>
       </div>
+      
+      {hasExistingSchedule && (
+        <Alert className="mb-4 bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800">
+          <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+          <AlertDescription className="text-yellow-700 dark:text-yellow-300">
+            Ya existe un cronograma semanal. Al guardar este cronograma, se reemplazará el anterior.
+          </AlertDescription>
+        </Alert>
+      )}
       
       <div className="border rounded-lg overflow-hidden">
         {/* Days header */}

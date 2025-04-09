@@ -30,6 +30,9 @@ export default function CalendarPage() {
     eventType: "",
     repeat: "none" as "none" | "daily" | "weekly" | "monthly"
   });
+  const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<CalendarEvent | null>(null);
+  const [deleteAllRecurring, setDeleteAllRecurring] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -149,11 +152,46 @@ export default function CalendarPage() {
   };
 
   const handleDeleteEvent = (id: string) => {
-    setEvents(prev => {
-      const updatedEvents = prev.filter(event => event.id !== id);
-      saveToStorage("calendarEvents", updatedEvents);
-      return updatedEvents;
-    });
+    const eventToDelete = events.find(event => event.id === id);
+    
+    if (eventToDelete && eventToDelete.repeat && eventToDelete.repeat !== "none") {
+      setEventToDelete(eventToDelete);
+      setShowDeleteConfirmDialog(true);
+    } else {
+      setEvents(prev => {
+        const updatedEvents = prev.filter(event => event.id !== id);
+        saveToStorage("calendarEvents", updatedEvents);
+        return updatedEvents;
+      });
+    }
+  };
+
+  const confirmDeleteEvent = () => {
+    if (!eventToDelete) return;
+    
+    if (deleteAllRecurring) {
+      setEvents(prev => {
+        const updatedEvents = prev.filter(event => 
+          !(event.title === eventToDelete.title && 
+            event.eventType === eventToDelete.eventType && 
+            event.repeat === eventToDelete.repeat)
+        );
+        saveToStorage("calendarEvents", updatedEvents);
+        return updatedEvents;
+      });
+      toast.success("Se eliminaron todos los eventos recurrentes");
+    } else {
+      setEvents(prev => {
+        const updatedEvents = prev.filter(event => event.id !== eventToDelete.id);
+        saveToStorage("calendarEvents", updatedEvents);
+        return updatedEvents;
+      });
+      toast.success("Evento eliminado");
+    }
+    
+    setShowDeleteConfirmDialog(false);
+    setEventToDelete(null);
+    setDeleteAllRecurring(false);
   };
 
   const handleQuickAddEvent = () => {
@@ -241,6 +279,8 @@ export default function CalendarPage() {
     setActiveFilter(filter);
     if (filter === "all") {
       toast.info("Mostrando todos los eventos");
+    } else if (filter === "cronograma") {
+      toast.info("Mostrando el cronograma semanal");
     } else {
       toast.info(`Mostrando eventos de tipo: ${filter}`);
     }
@@ -367,6 +407,51 @@ export default function CalendarPage() {
           </div>
           <DialogFooter>
             <Button onClick={handleQuickAddEvent}>Guardar evento</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={showDeleteConfirmDialog} onOpenChange={setShowDeleteConfirmDialog}>
+        <DialogContent className="max-w-[95vw] sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Eliminar evento recurrente</DialogTitle>
+            <DialogDescription>
+              Este es un evento que se repite. ¿Desea eliminar solo esta instancia o todos los eventos de la serie?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <RadioGroup 
+              value={deleteAllRecurring ? "all" : "single"} 
+              onValueChange={(value) => setDeleteAllRecurring(value === "all")}
+              className="flex flex-col space-y-3"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="single" id="delete-single" />
+                <Label htmlFor="delete-single">Solo esta instancia</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="all" id="delete-all" />
+                <Label htmlFor="delete-all">Todos los eventos recurrentes</Label>
+              </div>
+            </RadioGroup>
+          </div>
+          <DialogFooter className="flex justify-between">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowDeleteConfirmDialog(false);
+                setEventToDelete(null);
+                setDeleteAllRecurring(false);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDeleteEvent}
+            >
+              Eliminar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

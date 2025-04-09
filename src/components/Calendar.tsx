@@ -75,6 +75,9 @@ export function Calendar({
   const [showDailyView, setShowDailyView] = useState(false);
   const [dailyViewDate, setDailyViewDate] = useState<Date | null>(null);
   const [showWeeklySchedule, setShowWeeklySchedule] = useState(false);
+  const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
+  const [deleteAllRecurring, setDeleteAllRecurring] = useState(false);
+  const [hasSchedule, setHasSchedule] = useState(false);
 
   const isMobile = useIsMobile();
   const { folders, addFolder } = useRecordings();
@@ -90,9 +93,18 @@ export function Calendar({
     "Otro"
   ];
 
+  useEffect(() => {
+    const scheduleExists = events.some(event => 
+      event.eventType === "Cronograma" && event.repeat === "weekly"
+    );
+    setHasSchedule(scheduleExists);
+  }, [events]);
+
   const filteredEvents = useMemo(() => {
     if (activeFilter === "all") {
       return events;
+    } else if (activeFilter === "cronograma") {
+      return events.filter(event => event.eventType === "Cronograma");
     }
     return events.filter(event => 
       event.eventType === activeFilter || (!event.eventType && activeFilter === "otro")
@@ -245,12 +257,41 @@ export function Calendar({
 
   const handleDeleteEvent = () => {
     if (selectedEvent) {
-      onDeleteEvent(selectedEvent.id);
-      toast.success("Evento eliminado");
-      setSelectedEvent(null);
+      if (selectedEvent.repeat && selectedEvent.repeat !== "none") {
+        setShowDeleteConfirmDialog(true);
+      } else {
+        onDeleteEvent(selectedEvent.id);
+        toast.success("Evento eliminado");
+        setSelectedEvent(null);
+      }
     }
   };
-  
+
+  const confirmDeleteEvent = () => {
+    if (!selectedEvent) return;
+    
+    if (deleteAllRecurring) {
+      const eventsToDelete = events.filter(event => 
+        event.title === selectedEvent.title && 
+        event.eventType === selectedEvent.eventType &&
+        event.repeat === selectedEvent.repeat
+      );
+      
+      eventsToDelete.forEach(event => {
+        onDeleteEvent(event.id);
+      });
+      
+      toast.success("Se eliminaron todos los eventos recurrentes");
+    } else {
+      onDeleteEvent(selectedEvent.id);
+      toast.success("Evento eliminado");
+    }
+    
+    setShowDeleteConfirmDialog(false);
+    setSelectedEvent(null);
+    setDeleteAllRecurring(false);
+  };
+
   const handleCreateFolder = () => {
     if (!newFolderName.trim()) {
       toast.error("El nombre de la materia es obligatorio");
@@ -275,11 +316,32 @@ export function Calendar({
     setShowNewFolderDialog(false);
   };
 
-  const handleCreateWeeklySchedule = (weeklyEvents: CalendarEvent[]) => {
+  const handleCreateWeeklySchedule = (weeklyEvents: Omit<CalendarEvent, "id">[]) => {
+    if (weeklyEvents.length === 0) {
+      toast.error("No hay eventos en el cronograma");
+      return;
+    }
+    
+    if (hasSchedule) {
+      const scheduleEvents = events.filter(event => 
+        event.eventType === "Cronograma" && event.repeat === "weekly"
+      );
+      
+      scheduleEvents.forEach(event => {
+        onDeleteEvent(event.id);
+      });
+    }
+    
     weeklyEvents.forEach(event => {
-      onAddEvent(event);
+      onAddEvent({
+        ...event,
+        eventType: "Cronograma",
+        repeat: "weekly"
+      });
     });
+    
     setShowWeeklySchedule(false);
+    setHasSchedule(true);
     toast.success("Cronograma semanal guardado");
   };
 
@@ -289,7 +351,7 @@ export function Calendar({
     }
     return ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
   };
-  
+
   const getFolderName = (folderId?: string) => {
     if (!folderId) return "Sin materia";
     const folder = folders.find(f => f.id === folderId);
@@ -311,6 +373,8 @@ export function Calendar({
         return <Clock className="h-4 w-4 mr-2" />;
       case 'Clase Especial':
         return <GraduationCap className="h-4 w-4 mr-2" />;
+      case 'Cronograma':
+        return <LayoutGrid className="h-4 w-4 mr-2" />;
       default:
         return <CalendarIcon className="h-4 w-4 mr-2" />;
     }
@@ -318,6 +382,7 @@ export function Calendar({
 
   const getEventColor = (eventType?: string) => {
     if (!eventType) return "#6b7280";
+    if (eventType === "Cronograma") return "#3b82f6";
     return eventTypeColors[eventType] || "#6b7280";
   };
 
@@ -328,6 +393,7 @@ export function Calendar({
           date={currentDate}
           onSave={handleCreateWeeklySchedule}
           onCancel={() => setShowWeeklySchedule(false)}
+          hasExistingSchedule={hasSchedule}
         />
       ) : showDailyView && dailyViewDate ? (
         <DailyView 
@@ -354,7 +420,9 @@ export function Calendar({
                 onClick={() => setShowWeeklySchedule(true)}
               >
                 <LayoutGrid className="h-4 w-4" />
-                <span className="hidden sm:inline">Cronograma</span>
+                <span className="hidden sm:inline">
+                  {hasSchedule ? "Editar Cronograma" : "Crear Cronograma"}
+                </span>
               </Button>
               
               <DropdownMenu>
@@ -363,7 +431,8 @@ export function Calendar({
                     <Filter className="h-4 w-4" />
                     <span className="hidden sm:inline">
                       {activeFilter === "all" ? "Todos los eventos" : 
-                       activeFilter === "otro" ? "Otros eventos" : activeFilter}
+                       activeFilter === "otro" ? "Otros eventos" : 
+                       activeFilter === "cronograma" ? "Cronograma" : activeFilter}
                     </span>
                   </Button>
                 </DropdownMenuTrigger>
@@ -372,6 +441,18 @@ export function Calendar({
                     <DropdownMenuItem onClick={() => onFilterChange("all")}>
                       <CalendarIcon className="h-4 w-4 mr-2" />
                       <span>Todos los eventos</span>
+                    </DropdownMenuItem>
+                    
+                    <DropdownMenuItem 
+                      onClick={() => onFilterChange("cronograma")}
+                      className={activeFilter === "cronograma" ? "bg-primary/10" : ""}
+                    >
+                      <LayoutGrid className="h-4 w-4 mr-2" />
+                      <Badge 
+                        style={{backgroundColor: "#3b82f6"}} 
+                        className="h-2 w-2 p-0 rounded-full mr-1"
+                      />
+                      <span>Cronograma</span>
                     </DropdownMenuItem>
                     
                     {eventTypes.map(type => (
@@ -738,6 +819,47 @@ export function Calendar({
             </DialogFooter>
           </DialogContent>
         }
+      </Dialog>
+      
+      <Dialog open={showDeleteConfirmDialog} onOpenChange={setShowDeleteConfirmDialog}>
+        <DialogContent className="max-w-[95vw] sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Eliminar evento recurrente</DialogTitle>
+            <DialogDescription>
+              Este es un evento que se repite. ¿Desea eliminar solo esta instancia o todos los eventos de la serie?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <RadioGroup 
+              value={deleteAllRecurring ? "all" : "single"} 
+              onValueChange={(value) => setDeleteAllRecurring(value === "all")}
+              className="flex flex-col space-y-3"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="single" id="delete-single" />
+                <Label htmlFor="delete-single">Solo esta instancia</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="all" id="delete-all" />
+                <Label htmlFor="delete-all">Todos los eventos recurrentes</Label>
+              </div>
+            </RadioGroup>
+          </div>
+          <DialogFooter className="flex justify-between">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeleteConfirmDialog(false)}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDeleteEvent}
+            >
+              Eliminar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
     </div>
   );
