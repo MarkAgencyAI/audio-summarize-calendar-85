@@ -155,7 +155,8 @@ export function Calendar({
       date: format(time, "yyyy-MM-dd'T'HH:mm"),
       endDate: format(endTime, "yyyy-MM-dd'T'HH:mm"),
       folderId: "",
-      eventType: ""
+      eventType: "",
+      repeat: "none"
     });
     setShowEventDialog(true);
   };
