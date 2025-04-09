@@ -73,33 +73,6 @@ export function LiveTranscriptionSheet({
     setUserClosed(true);
   };
   
-  // Ensure the output is safe to render by normalizing it to a simple format
-  // This is the key part to fix the React error #31
-  const normalizeOutput = (rawOutput: any): string => {
-    if (rawOutput === null || rawOutput === undefined) {
-      return "";
-    }
-    
-    if (typeof rawOutput === 'string') {
-      return rawOutput;
-    }
-    
-    if (typeof rawOutput === 'object') {
-      if ('output' in rawOutput && typeof rawOutput.output === 'string') {
-        return rawOutput.output;
-      }
-      
-      try {
-        return JSON.stringify(rawOutput, null, 2);
-      } catch {
-        return "No se pudo procesar el formato de salida";
-      }
-    }
-    
-    return String(rawOutput);
-  };
-  
-  // Pass the sanitized output to TranscriptionPanel, which has its own safety processing
   return <Sheet open={isOpen} onOpenChange={handleOpenChange}>
       {children ? <SheetTrigger asChild>
           {children}
@@ -125,7 +98,7 @@ export function LiveTranscriptionSheet({
         
         <div className="flex-1 overflow-hidden">
           <TranscriptionPanel 
-            output={output} // Let TranscriptionPanel handle the output processing
+            output={output} // TranscriptionPanel now handles output processing properly
             isLoading={isTranscribing && !output}
             progress={progress}
             showProgress={isTranscribing}
