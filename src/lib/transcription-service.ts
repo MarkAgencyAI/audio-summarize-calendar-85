@@ -1,5 +1,5 @@
-
 import { toast } from "sonner";
+import React from 'react';
 
 // Definimos las interfaces para nuestro servicio
 interface TranscriptionOptions {

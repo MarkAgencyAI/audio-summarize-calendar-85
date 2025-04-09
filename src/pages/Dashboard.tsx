@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -18,6 +17,7 @@ import { ToolsCarousel } from "@/components/ToolsCarousel";
 import { NotesSection } from "@/components/NotesSection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AudioRecorderV2 } from "@/components/AudioRecorderV2";
+import { LiveTranscriptionSheet } from "@/components/LiveTranscriptionSheet";
 
 interface CalendarEvent {
   id: string;
@@ -129,7 +129,6 @@ function Transcriptions() {
   );
 }
 
-// Componente personalizado para la transcripción
 function AudioTranscriptionTool() {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
