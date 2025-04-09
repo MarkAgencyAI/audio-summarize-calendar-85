@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Mic, X, Play, Pause, Loader2, Square, User, Users } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -183,7 +184,7 @@ export function AudioRecorder() {
   const startTimer = () => {
     timerInterval.current = setInterval(() => {
       setRecordingDuration(prev => prev + 1);
-    }, 1000);
+    }, 1000) as unknown as NodeJS.Timeout;
   };
   
   const pauseTimer = () => {
@@ -261,7 +262,7 @@ export function AudioRecorder() {
             
             saveRecordingWithOutput(webhookOutput || transcriptionResult?.output || "No se recibió respuesta del webhook en el tiempo esperado.");
           }
-        }, 10000);
+        }, 10000) as unknown as NodeJS.Timeout;
       
       } catch (error) {
         console.error("Error transcribing audio:", error);
