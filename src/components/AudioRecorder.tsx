@@ -1,6 +1,6 @@
 
 import { useState, useRef, useEffect } from "react";
-import { Mic, X, Play, Pause, Loader2, Square, User, Users } from "lucide-react";
+import { Mic, X, Play, Pause, Loader2, Square, User, Users, Upload } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ export function AudioRecorder() {
   const [hasPermission, setHasPermission] = useState(false);
   const [webhookOutput, setWebhookOutput] = useState("");
   const [speakerMode, setSpeakerMode] = useState<SpeakerMode>("single");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const subjectRef = useRef(subject);
   const audioUrlRef = useRef<string | null>(null);
@@ -224,6 +225,49 @@ export function AudioRecorder() {
     });
     window.dispatchEvent(event);
   };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!subject.trim()) {
+      toast.error("Por favor, ingresa la materia antes de subir un audio");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Check if the file is an audio file
+    if (!file.type.startsWith('audio/')) {
+      toast.error("Por favor, sube solo archivos de audio");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    // Get audio duration for display
+    const audio = new Audio();
+    audio.src = URL.createObjectURL(file);
+    
+    audio.onloadedmetadata = () => {
+      const durationInSeconds = Math.floor(audio.duration);
+      setRecordingDuration(durationInSeconds);
+      setAudioBlob(file);
+      setRecordingName(file.name.replace(/\.[^/.]+$/, "")); // Remove file extension
+      
+      // Release the object URL
+      URL.revokeObjectURL(audio.src);
+    };
+
+    audio.onerror = () => {
+      toast.error("Error al cargar el archivo de audio");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    };
+  };
   
   const saveRecording = async (audioBlob: Blob) => {
     try {
@@ -333,15 +377,37 @@ export function AudioRecorder() {
         
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            {recordingState === "idle" && (
-              <Button 
-                onClick={startRecording} 
-                disabled={isProcessing || !subject.trim()} 
-                className={`bg-custom-primary hover:bg-custom-primary/90 text-white ${!subject.trim() ? 'opacity-70' : ''}`}
-              >
-                <Mic className="h-4 w-4 mr-2" />
-                Grabar
-              </Button>
+            {recordingState === "idle" && !audioBlob && (
+              <>
+                <Button 
+                  onClick={startRecording} 
+                  disabled={isProcessing || !subject.trim()} 
+                  className={`bg-custom-primary hover:bg-custom-primary/90 text-white ${!subject.trim() ? 'opacity-70' : ''}`}
+                >
+                  <Mic className="h-4 w-4 mr-2" />
+                  Grabar
+                </Button>
+                
+                <div className="relative">
+                  <input
+                    type="file"
+                    id="audio-upload"
+                    ref={fileInputRef}
+                    accept="audio/*"
+                    onChange={handleFileUpload}
+                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                    disabled={isProcessing || !subject.trim()}
+                  />
+                  <Button
+                    type="button"
+                    disabled={isProcessing || !subject.trim()}
+                    className={`bg-custom-accent hover:bg-custom-accent/90 text-white ${!subject.trim() ? 'opacity-70' : ''}`}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Subir Audio
+                  </Button>
+                </div>
+              </>
             )}
             
             {recordingState === "recording" && (
