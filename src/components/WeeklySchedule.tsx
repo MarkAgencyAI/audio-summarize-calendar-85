@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format, addDays, startOfWeek, setHours, setMinutes, addMinutes, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -354,7 +355,8 @@ export function WeeklySchedule({
         </DialogContent>
       </Dialog>
       
-      <style jsx>{`
+      <style>
+        {`
         .weekly-schedule-grid {
           display: grid;
           grid-template-rows: auto 1fr;
@@ -411,7 +413,8 @@ export function WeeklySchedule({
           align-items: center;
           justify-content: center;
         }
-      `}</style>
+        `}
+      </style>
     </div>
   );
 }
