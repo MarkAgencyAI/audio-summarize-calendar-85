@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -138,6 +137,7 @@ export default function Dashboard() {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcriptionOutput, setTranscriptionOutput] = useState("");
+  const [transcriptionProgress, setTranscriptionProgress] = useState(0);
   const [transcriptionOpen, setTranscriptionOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("transcriptions");
 
@@ -151,16 +151,26 @@ export default function Dashboard() {
       } else if (customEvent.detail?.type === 'transcriptionStarted') {
         setIsTranscribing(true);
         setTranscriptionOutput("");
+        setTranscriptionProgress(0);
       } else if (customEvent.detail?.type === 'transcriptionComplete' || 
                 customEvent.detail?.type === 'transcriptionStopped') {
         setIsTranscribing(false);
+        setTranscriptionProgress(100);
         setTimeout(() => {
           if (!isRecording) {
             setTranscriptionOutput("");
+            setTranscriptionProgress(0);
           }
         }, 30000);
       } else if (customEvent.detail?.type === 'transcriptionUpdate') {
-        setTranscriptionOutput(customEvent.detail.data || "");
+        if (customEvent.detail.data) {
+          if (customEvent.detail.data.output) {
+            setTranscriptionOutput(customEvent.detail.data.output);
+          }
+          if (customEvent.detail.data.progress !== undefined) {
+            setTranscriptionProgress(customEvent.detail.data.progress);
+          }
+        }
       }
     };
 
@@ -202,18 +212,12 @@ export default function Dashboard() {
     return () => clearInterval(intervalId);
   }, []);
   
-  // Handle webhook data for notes
   useEffect(() => {
-    // Listen for messages from the ImageUploader component
     const handleWebhookResponse = (event: Event) => {
       const customEvent = event as CustomEvent;
       if (customEvent.detail?.type === 'webhookResponse' && customEvent.detail?.data) {
-        // Store the data in localStorage for the NotesSection to pick up
         localStorage.setItem("lastWebhookData", JSON.stringify(customEvent.detail.data));
-        
-        // Switch to notes tab
         setActiveTab("notes");
-        
         toast.success("¡Imagen recibida! Creando nuevo apunte...");
       }
     };
@@ -225,7 +229,6 @@ export default function Dashboard() {
     };
   }, []);
 
-  // Fix: Only treat non-empty transcriptionOutput as truthy
   const showTranscriptionOptions = isRecording || isTranscribing || !!transcriptionOutput;
 
   return (
@@ -251,6 +254,7 @@ export default function Dashboard() {
               transcriptionOutput={transcriptionOutput}
               transcriptionOpen={transcriptionOpen}
               setTranscriptionOpen={setTranscriptionOpen}
+              transcriptionProgress={transcriptionProgress}
             />
             
             <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -283,6 +287,7 @@ export default function Dashboard() {
                 transcriptionOutput={transcriptionOutput}
                 transcriptionOpen={transcriptionOpen}
                 setTranscriptionOpen={setTranscriptionOpen}
+                transcriptionProgress={transcriptionProgress}
               />
               <UpcomingEvents events={upcomingEvents} />
               <NotesSection />

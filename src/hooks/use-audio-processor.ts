@@ -85,34 +85,31 @@ export function useAudioProcessor() {
     setProgress(0);
     
     try {
-      let progressInterval: number | null = null;
+      // Dispatch initial progress update
       if (onTranscriptionProgress) {
-        progressInterval = window.setInterval(() => {
-          setProgress((prev) => {
-            const newProgress = Math.min(prev + 5, 90);
-            
-            if (newProgress > 10 && newProgress % 20 === 0) {
-              onTranscriptionProgress({
-                output: "Transcribiendo audio..."
-              });
-            }
-            
-            return newProgress;
-          });
-        }, 500);
+        onTranscriptionProgress({
+          output: "Preparando para transcribir...",
+          progress: 0
+        });
       }
 
       // Process the audio file using the extracted module
       const transcriptionResult = await processAudioForTranscription(
         audioBlob, 
         subject, 
-        onTranscriptionProgress,
+        (progressData) => {
+          // Update progress state
+          if (progressData.progress !== undefined) {
+            setProgress(progressData.progress);
+          }
+          
+          // Pass progress data to callback
+          if (onTranscriptionProgress) {
+            onTranscriptionProgress(progressData);
+          }
+        },
         speakerMode
       );
-      
-      if (progressInterval) {
-        clearInterval(progressInterval);
-      }
       
       setProgress(100);
       return transcriptionResult;
@@ -123,7 +120,8 @@ export function useAudioProcessor() {
       // Notify about the error
       if (onTranscriptionProgress) {
         onTranscriptionProgress({
-          output: "Error al procesar el audio: " + (error.message || "Error desconocido")
+          output: "Error al procesar el audio: " + (error.message || "Error desconocido"),
+          progress: 0
         });
       }
       

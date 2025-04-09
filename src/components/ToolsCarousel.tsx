@@ -17,6 +17,7 @@ interface ToolsCarouselProps {
   transcriptionOutput: string;
   transcriptionOpen: boolean;
   setTranscriptionOpen: (open: boolean) => void;
+  transcriptionProgress?: number;
 }
 
 export function ToolsCarousel({
@@ -24,7 +25,8 @@ export function ToolsCarousel({
   isTranscribing,
   transcriptionOutput,
   transcriptionOpen,
-  setTranscriptionOpen
+  setTranscriptionOpen,
+  transcriptionProgress = 0
 }: ToolsCarouselProps) {
   const { user } = useAuth();
 
@@ -66,6 +68,7 @@ export function ToolsCarousel({
                 <LiveTranscriptionSheet
                   isTranscribing={isTranscribing}
                   output={transcriptionOutput}
+                  progress={transcriptionProgress}
                   open={transcriptionOpen}
                   onOpenChange={setTranscriptionOpen}
                 />

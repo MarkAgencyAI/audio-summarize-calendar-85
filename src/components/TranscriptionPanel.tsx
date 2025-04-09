@@ -4,16 +4,21 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Globe, BookOpen, Clock, AlertCircle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Globe, BookOpen, Clock, AlertCircle, Loader2 } from "lucide-react";
 
 interface TranscriptionPanelProps {
   output: string | object | null | undefined;
   isLoading?: boolean;
+  progress?: number;
+  showProgress?: boolean;
 }
 
 export function TranscriptionPanel({
   output,
-  isLoading = false
+  isLoading = false,
+  progress = 0,
+  showProgress = false
 }: TranscriptionPanelProps) {
   // Ensure output is always a string, handling null case explicitly
   const displayOutput = output === null || output === undefined
@@ -32,6 +37,16 @@ export function TranscriptionPanel({
         <TabsList className="bg-muted/30 p-1 mx-4 my-2 grid grid-cols-1">
           <TabsTrigger value="output">Información del Webhook</TabsTrigger>
         </TabsList>
+        
+        {showProgress && (
+          <div className="px-4 pb-2">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-muted-foreground">Progreso de transcripción</span>
+              <span className="text-xs font-medium">{progress}%</span>
+            </div>
+            <Progress value={progress} className="h-2" />
+          </div>
+        )}
         
         <div className="flex-1 overflow-hidden p-4">
           {isLoading && !displayOutput ? (

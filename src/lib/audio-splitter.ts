@@ -40,10 +40,13 @@ const FileSystem = {
 
 /**
  * Splits an audio file into chunks of specified duration (in seconds)
+ * @param audioBlob The audio file to split
+ * @param maxChunkDuration Maximum duration of each chunk in seconds (default: 5 minutes)
+ * @returns Array of audio chunks with blob and time information
  */
 export async function splitAudioFile(
   audioBlob: Blob,
-  maxChunkDuration: number = 600 // 10 minutes in seconds
+  maxChunkDuration: number = 300 // 5 minutes in seconds for better processing
 ): Promise<AudioChunk[]> {
   // First, convert Blob to ArrayBuffer
   const arrayBuffer = await audioBlob.arrayBuffer();

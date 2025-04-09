@@ -3,11 +3,12 @@ import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { TranscriptionPanel } from "./TranscriptionPanel";
-import { Mic, X } from "lucide-react";
+import { Mic, X, Play, Pause, Loader2, Square, User, Users, Upload } from "lucide-react";
 
 interface LiveTranscriptionSheetProps {
   isTranscribing: boolean;
   output: string | { output: string } | any;
+  progress?: number;
   children?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -16,6 +17,7 @@ interface LiveTranscriptionSheetProps {
 export function LiveTranscriptionSheet({
   isTranscribing,
   output,
+  progress = 0,
   children,
   open,
   onOpenChange
@@ -103,7 +105,12 @@ export function LiveTranscriptionSheet({
         </SheetHeader>
         
         <div className="flex-1 overflow-hidden">
-          <TranscriptionPanel output={processedOutput} isLoading={isTranscribing && !processedOutput} />
+          <TranscriptionPanel 
+            output={processedOutput} 
+            isLoading={isTranscribing && !processedOutput} 
+            progress={progress}
+            showProgress={isTranscribing}
+          />
         </div>
       </SheetContent>
     </Sheet>;
