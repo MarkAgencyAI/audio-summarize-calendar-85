@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, format, isSameMonth, isSameDay, addDays, parseISO, setHours, setMinutes, addHours } from "date-fns";
 import { es } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Plus, FolderPlus, Calendar as CalendarIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, FolderPlus, Calendar as CalendarIcon, Filter, GraduationCap, Award, Book, Briefcase, Clock, Star, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRecordings } from "@/context/RecordingsContext";
 import { DailyView } from "@/components/DailyView";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export interface CalendarEvent {
   id: string;
@@ -29,12 +30,16 @@ interface CalendarProps {
   events: CalendarEvent[];
   onAddEvent: (event: Omit<CalendarEvent, "id">) => void;
   onDeleteEvent: (id: string) => void;
+  activeFilter: string;
+  onFilterChange: (filter: string) => void;
 }
 
 export function Calendar({
   events,
   onAddEvent,
   onDeleteEvent,
+  activeFilter,
+  onFilterChange
 }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -68,6 +73,15 @@ export function Calendar({
     "Otro"
   ];
 
+  const filteredEvents = useMemo(() => {
+    if (activeFilter === "all") {
+      return events;
+    }
+    return events.filter(event => 
+      event.eventType === activeFilter || (!event.eventType && activeFilter === "otro")
+    );
+  }, [events, activeFilter]);
+
   const goToPreviousMonth = () => setCurrentDate(subMonths(currentDate, 1));
   const goToNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
 
@@ -100,7 +114,7 @@ export function Calendar({
 
   const eventsByDate = useMemo(() => {
     const grouped: Record<string, CalendarEvent[]> = {};
-    events.forEach(event => {
+    filteredEvents.forEach(event => {
       const dateKey = format(parseISO(event.date), "yyyy-MM-dd");
       if (!grouped[dateKey]) {
         grouped[dateKey] = [];
@@ -108,7 +122,7 @@ export function Calendar({
       grouped[dateKey].push(event);
     });
     return grouped;
-  }, [events]);
+  }, [filteredEvents]);
 
   const handleDateClick = (date: Date) => {
     setDailyViewDate(date);
@@ -207,6 +221,26 @@ export function Calendar({
     return folder ? folder.name : "Sin materia";
   };
 
+  const getEventIcon = (eventType: string) => {
+    switch(eventType) {
+      case 'Examen Parcial':
+      case 'Examen Final':
+        return <FileText className="h-4 w-4 mr-2" />;
+      case 'Trabajo Práctico':
+        return <Book className="h-4 w-4 mr-2" />;
+      case 'Tarea':
+        return <Briefcase className="h-4 w-4 mr-2" />;
+      case 'Actividad':
+        return <Star className="h-4 w-4 mr-2" />;
+      case 'Consulta':
+        return <Clock className="h-4 w-4 mr-2" />;
+      case 'Clase Especial':
+        return <GraduationCap className="h-4 w-4 mr-2" />;
+      default:
+        return <CalendarIcon className="h-4 w-4 mr-2" />;
+    }
+  };
+
   return (
     <div className="w-full">
       {showDailyView && dailyViewDate ? (
@@ -216,22 +250,57 @@ export function Calendar({
           onBack={handleBackToMonth}
           onTimeSelect={handleTimeSelect}
           onEventClick={handleEventClick}
+          activeFilter={activeFilter}
         />
       ) : (
         <>
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
             <h2 className="text-xl md:text-2xl font-semibold text-[#005c5f] dark:text-white truncate">
               {format(currentDate, "MMMM yyyy", {
                 locale: es
               })}
             </h2>
-            <div className="flex items-center space-x-2">
-              <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <Button variant="outline" size="icon" onClick={goToNextMonth}>
-                <ChevronRight className="h-5 w-5" />
-              </Button>
+            
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Filter className="h-4 w-4" />
+                    <span className="hidden sm:inline">
+                      {activeFilter === "all" ? "Todos los eventos" : 
+                       activeFilter === "otro" ? "Otros eventos" : activeFilter}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem onClick={() => onFilterChange("all")}>
+                      <CalendarIcon className="h-4 w-4 mr-2" />
+                      <span>Todos los eventos</span>
+                    </DropdownMenuItem>
+                    
+                    {eventTypes.map(type => (
+                      <DropdownMenuItem 
+                        key={type} 
+                        onClick={() => onFilterChange(type)}
+                        className={activeFilter === type ? "bg-primary/10" : ""}
+                      >
+                        {getEventIcon(type)}
+                        <span>{type}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              <div className="flex items-center space-x-2">
+                <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+                <Button variant="outline" size="icon" onClick={goToNextMonth}>
+                  <ChevronRight className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
           </div>
           

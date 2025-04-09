@@ -20,6 +20,7 @@ export default function CalendarPage() {
   const { user } = useAuth();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [showAddEventDialog, setShowAddEventDialog] = useState(false);
+  const [activeFilter, setActiveFilter] = useState("all");
   const [newEvent, setNewEvent] = useState({
     title: "",
     description: "",
@@ -189,6 +190,17 @@ export default function CalendarPage() {
     setShowAddEventDialog(false);
   };
 
+  // Handler for filter changes
+  const handleFilterChange = (filter: string) => {
+    setActiveFilter(filter);
+    // Puedes mostrar un mensaje para indicar que el filtro ha cambiado
+    if (filter === "all") {
+      toast.info("Mostrando todos los eventos");
+    } else {
+      toast.info(`Mostrando eventos de tipo: ${filter}`);
+    }
+  };
+
   return (
     <Layout>
       <div className="space-y-4 sm:space-y-6 w-full">
@@ -201,7 +213,9 @@ export default function CalendarPage() {
             <Calendar 
               events={events} 
               onAddEvent={handleAddEvent} 
-              onDeleteEvent={handleDeleteEvent} 
+              onDeleteEvent={handleDeleteEvent}
+              activeFilter={activeFilter}
+              onFilterChange={handleFilterChange}
             />
           </div>
         </div>

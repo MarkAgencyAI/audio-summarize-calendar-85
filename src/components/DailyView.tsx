@@ -14,6 +14,7 @@ interface DailyViewProps {
   onBack: () => void;
   onTimeSelect: (time: Date) => void;
   onEventClick: (event: CalendarEvent) => void;
+  activeFilter: string;
 }
 
 export function DailyView({
@@ -21,10 +22,17 @@ export function DailyView({
   events,
   onBack,
   onTimeSelect,
-  onEventClick
+  onEventClick,
+  activeFilter
 }: DailyViewProps) {
   const isMobile = useIsMobile();
-  const dayEvents = events.filter(event => 
+  
+  // Filter events based on the active filter
+  const filteredEvents = activeFilter === "all" 
+    ? events
+    : events.filter(event => event.eventType === activeFilter || (!event.eventType && activeFilter === "otro"));
+  
+  const dayEvents = filteredEvents.filter(event => 
     format(parseISO(event.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd")
   );
   
