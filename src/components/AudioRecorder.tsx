@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Mic, X, Play, Pause, Loader2, Square, User, Users, Upload } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -255,7 +254,14 @@ export function AudioRecorder() {
       const durationInSeconds = Math.floor(audio.duration);
       setRecordingDuration(durationInSeconds);
       setAudioBlob(file);
-      setRecordingName(file.name.replace(/\.[^/.]+$/, "")); // Remove file extension
+      
+      // Set file name without extension as recording name
+      setRecordingName(file.name.replace(/\.[^/.]+$/, ""));
+      
+      // Check if file is over 10 minutes and show a toast notification
+      if (durationInSeconds > 600) { // 10 minutes in seconds
+        toast.info("El archivo es mayor a 10 minutos, se dividirá en partes para procesarlo");
+      }
       
       // Release the object URL
       URL.revokeObjectURL(audio.src);

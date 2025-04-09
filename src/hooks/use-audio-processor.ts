@@ -2,6 +2,7 @@
 import { useState, useRef, useCallback } from "react";
 import { transcribeAudio } from "@/lib/groq";
 import { sendToWebhook } from "@/lib/webhook";
+import { splitAudioFile } from "@/lib/audio-splitter";
 
 export function useAudioProcessor() {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -132,8 +133,80 @@ export function useAudioProcessor() {
         }, 500);
       }
 
-      // Transcribe the audio with Groq, passing the speaker mode
-      const transcriptionResult = await transcribeAudio(audioBlob, subject, speakerMode);
+      // Get audio duration to check if we need to split
+      const audioDuration = await getAudioDuration(audioBlob);
+      const MAX_CHUNK_DURATION = 600; // 10 minutes in seconds
+      
+      let transcriptionResult;
+      let fullTranscript = "";
+      
+      if (audioDuration > MAX_CHUNK_DURATION) {
+        // Audio is longer than 10 minutes, split it
+        if (onTranscriptionProgress) {
+          onTranscriptionProgress({
+            output: "El audio es largo, dividiendo en partes para procesarlo..."
+          });
+        }
+        
+        try {
+          const audioChunks = await splitAudioFile(audioBlob);
+          let totalChunks = audioChunks.length;
+          
+          if (onTranscriptionProgress) {
+            onTranscriptionProgress({
+              output: `Dividido en ${totalChunks} partes. Procesando cada parte...`
+            });
+          }
+          
+          // Process each chunk separately
+          for (let i = 0; i < audioChunks.length; i++) {
+            const chunk = audioChunks[i];
+            
+            if (onTranscriptionProgress) {
+              onTranscriptionProgress({
+                output: `Transcribiendo parte ${i + 1} de ${totalChunks}...`
+              });
+            }
+            
+            // Transcribe the current chunk
+            const chunkResult = await transcribeAudio(chunk.blob, subject, speakerMode);
+            
+            // Add timestamp marker and append to full transcript
+            const startMinutes = Math.floor(chunk.startTime / 60);
+            const startSeconds = chunk.startTime % 60;
+            
+            if (i > 0) {
+              fullTranscript += `\n\n[Continuación - ${startMinutes}:${startSeconds.toString().padStart(2, '0')}]\n`;
+            }
+            
+            fullTranscript += chunkResult.transcript;
+            
+            // Update progress for this chunk
+            setProgress(Math.min(50 + (i / totalChunks * 40), 90));
+          }
+          
+          // Create a combined result object
+          transcriptionResult = {
+            transcript: fullTranscript,
+            language: "es"
+          };
+          
+        } catch (splitError) {
+          console.error("Error splitting audio:", splitError);
+          
+          // Fallback to processing the entire file if splitting fails
+          if (onTranscriptionProgress) {
+            onTranscriptionProgress({
+              output: "Error al dividir el audio. Intentando procesar completo (puede fallar)..."
+            });
+          }
+          
+          transcriptionResult = await transcribeAudio(audioBlob, subject, speakerMode);
+        }
+      } else {
+        // Audio is short enough, process normally
+        transcriptionResult = await transcribeAudio(audioBlob, subject, speakerMode);
+      }
       
       if (progressInterval) {
         clearInterval(progressInterval);
@@ -192,6 +265,25 @@ export function useAudioProcessor() {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // Helper function to get audio duration
+  const getAudioDuration = async (audioBlob: Blob): Promise<number> => {
+    return new Promise((resolve, reject) => {
+      const audio = new Audio();
+      audio.src = URL.createObjectURL(audioBlob);
+      
+      audio.onloadedmetadata = () => {
+        const duration = Math.floor(audio.duration);
+        URL.revokeObjectURL(audio.src);
+        resolve(duration);
+      };
+      
+      audio.onerror = (error) => {
+        URL.revokeObjectURL(audio.src);
+        reject(error);
+      };
+    });
   };
   
   return {
