@@ -1,11 +1,42 @@
 
-import { FFmpegKit, FFmpegSession, ReturnCode, FFmpegKitConfig } from 'ffmpeg-kit-react-native';
+import { FFmpegKit, ReturnCode } from 'ffmpeg-kit-react-native';
 
 interface AudioChunk {
   blob: Blob;
   startTime: number;
   endTime: number;
 }
+
+/**
+ * Simulates file system operations for React Native FFmpeg in a web environment
+ */
+const FileSystem = {
+  // In-memory file system for web environment
+  fileMap: new Map<string, Uint8Array>(),
+
+  // Write data to our in-memory file system
+  writeFile: async (path: string, data: Uint8Array): Promise<void> => {
+    FileSystem.fileMap.set(path, data);
+    console.log(`File written to ${path}`);
+    return Promise.resolve();
+  },
+
+  // Read data from our in-memory file system
+  readFile: async (path: string): Promise<Uint8Array> => {
+    const data = FileSystem.fileMap.get(path);
+    if (!data) {
+      throw new Error(`File not found: ${path}`);
+    }
+    return Promise.resolve(data);
+  },
+
+  // Delete file from our in-memory file system
+  deleteFile: async (path: string): Promise<void> => {
+    FileSystem.fileMap.delete(path);
+    console.log(`File deleted: ${path}`);
+    return Promise.resolve();
+  },
+};
 
 /**
  * Splits an audio file into chunks of specified duration (in seconds)
@@ -23,8 +54,8 @@ export async function splitAudioFile(
   const outputPrefix = `chunk_${Date.now()}_`;
   
   try {
-    // Write the audio data to a temporary file
-    await FFmpegKitConfig.writeFile(tempFileName, audioFile);
+    // Write the audio data to our in-memory file system
+    await FileSystem.writeFile(tempFileName, audioFile);
     
     // Get audio duration
     const probeSession = await FFmpegKit.execute(`-i ${tempFileName} -f null -`);
@@ -76,7 +107,7 @@ export async function splitAudioFile(
       }
       
       // Read the chunk file as bytes
-      const chunkData = await FFmpegKitConfig.readFile(outputFileName);
+      const chunkData = await FileSystem.readFile(outputFileName);
       
       // Convert to Blob
       const chunkBlob = new Blob([chunkData], { type: audioBlob.type });
@@ -87,11 +118,11 @@ export async function splitAudioFile(
       });
       
       // Delete the output file to save space
-      await FFmpegKitConfig.deleteFile(outputFileName);
+      await FileSystem.deleteFile(outputFileName);
     }
     
     // Delete the temporary file
-    await FFmpegKitConfig.deleteFile(tempFileName);
+    await FileSystem.deleteFile(tempFileName);
     
     console.log(`Audio split into ${chunks.length} chunks successfully`);
     return chunks;
