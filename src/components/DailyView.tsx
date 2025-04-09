@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { format, addHours, startOfDay, isSameHour, parseISO, isWithinInterval, addMinutes, differenceInMinutes } from "date-fns";
+import { format, addHours, startOfDay, isSameHour, parseISO, isWithinInterval, addMinutes, differenceInMinutes, isBefore, isAfter, setMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 import { ChevronLeft, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,29 +34,33 @@ export function DailyView({
   
   const timeSlots = Array.from({ length: endTime - startTime + 1 }, (_, i) => {
     const slotTime = addHours(startOfDay(date), startTime + i);
-    // Find events that overlap with this time slot
-    const slotEvents = dayEvents.filter(event => {
-      const eventStart = parseISO(event.date);
-      const eventEnd = event.endDate ? parseISO(event.endDate) : addHours(eventStart, 1);
-      
-      return (
-        isWithinInterval(slotTime, { start: eventStart, end: eventEnd }) ||
-        isWithinInterval(addMinutes(slotTime, 59), { start: eventStart, end: eventEnd }) ||
-        (isSameHour(eventStart, slotTime))
-      );
-    });
+    return { time: slotTime };
+  });
+
+  // Process all day events separate from time slots
+  const processedEvents = dayEvents.map(event => {
+    const eventStart = parseISO(event.date);
+    const eventEnd = event.endDate ? parseISO(event.endDate) : addHours(eventStart, 1);
+    
+    // Calculate which hour slot this event starts in
+    const eventStartHour = eventStart.getHours();
+    const startIndex = Math.max(0, eventStartHour - startTime);
+    
+    // Calculate the height based on duration (in minutes)
+    const durationMinutes = differenceInMinutes(eventEnd, eventStart);
+    const heightPixels = Math.max(60, (durationMinutes / 60) * 60); // 60px per hour
+    
+    // Calculate top position based on minutes past the hour
+    const minutesPastHour = eventStart.getMinutes();
+    const topOffset = (minutesPastHour / 60) * 60; // 60px per hour
     
     return {
-      time: slotTime,
-      events: slotEvents.map(event => {
-        const eventStart = parseISO(event.date);
-        const eventEnd = event.endDate ? parseISO(event.endDate) : addHours(eventStart, 1);
-        const height = Math.min(differenceInMinutes(eventEnd, eventStart) / 60, 4) * 60; // Max 4 hours display
-        return {
-          ...event,
-          height: Math.max(60, height) // Minimum height of 60px
-        };
-      })
+      ...event,
+      startIndex,
+      topOffset,
+      height: heightPixels,
+      startTime: eventStart,
+      endTime: eventEnd
     };
   });
 
@@ -75,7 +79,7 @@ export function DailyView({
       </div>
       
       <ScrollArea className="flex-1 pr-4">
-        <div className="space-y-2">
+        <div className="space-y-2 relative">
           {timeSlots.map((slot, index) => (
             <div 
               key={index}
@@ -86,44 +90,45 @@ export function DailyView({
               </div>
               
               <div className="flex-1 min-h-[60px] relative">
-                {slot.events.length > 0 ? (
-                  <div className="space-y-1 w-full">
-                    {slot.events.map(event => {
-                      const eventStart = parseISO(event.date);
-                      const eventEnd = event.endDate ? parseISO(event.endDate) : addHours(eventStart, 1);
-                      
-                      return (
-                        <div 
-                          key={event.id}
-                          className="bg-primary/10 text-primary p-2 rounded-md cursor-pointer hover:bg-primary/20 transition-colors"
-                          style={{ 
-                            minHeight: `${event.height}px`,
-                            opacity: isSameHour(eventStart, slot.time) ? 1 : 0.7 
-                          }}
-                          onClick={() => onEventClick(event)}
-                        >
-                          <p className="font-medium truncate">{event.title}</p>
-                          <p className="text-xs truncate">
-                            {format(eventStart, "HH:mm")} - {format(eventEnd, "HH:mm")}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div 
-                    className="w-full h-full min-h-[60px] cursor-pointer flex items-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => onTimeSelect(slot.time)}
-                  >
-                    <Button variant="ghost" size="sm" className="h-6">
-                      <Plus className="h-3 w-3 mr-1" />
-                      Agregar evento
-                    </Button>
-                  </div>
-                )}
+                <div 
+                  className="w-full h-full min-h-[60px] cursor-pointer flex items-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={() => onTimeSelect(slot.time)}
+                >
+                  <Button variant="ghost" size="sm" className="h-6">
+                    <Plus className="h-3 w-3 mr-1" />
+                    Agregar evento
+                  </Button>
+                </div>
               </div>
             </div>
           ))}
+          
+          {/* Render events as absolute positioned elements */}
+          {processedEvents.map(event => {
+            // Calculate position
+            const topPosition = event.startIndex * 64 + event.topOffset + 2; // 64px for time slot height + padding
+            
+            return (
+              <div 
+                key={event.id}
+                className="absolute left-20 right-4 bg-primary/10 text-primary p-2 rounded-md cursor-pointer hover:bg-primary/20 transition-colors overflow-hidden"
+                style={{ 
+                  top: `${topPosition}px`,
+                  height: `${event.height}px`,
+                  zIndex: 10
+                }}
+                onClick={() => onEventClick(event)}
+              >
+                <p className="font-medium truncate">{event.title}</p>
+                <p className="text-xs truncate">
+                  {format(event.startTime, "HH:mm")} - {format(event.endTime, "HH:mm")}
+                </p>
+                {event.description && event.height > 80 && (
+                  <p className="text-xs mt-1 line-clamp-2">{event.description}</p>
+                )}
+              </div>
+            );
+          })}
         </div>
       </ScrollArea>
     </div>
