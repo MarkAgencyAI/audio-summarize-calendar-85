@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -16,6 +17,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { ToolsCarousel } from "@/components/ToolsCarousel";
 import { NotesSection } from "@/components/NotesSection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AudioRecorderV2 } from "@/components/AudioRecorderV2";
 
 interface CalendarEvent {
   id: string;
@@ -127,19 +129,13 @@ function Transcriptions() {
   );
 }
 
-export default function Dashboard() {
-  const { user } = useAuth();
-  const { recordings, addRecording } = useRecordings();
-  const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
-  const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  
+// Componente personalizado para la transcripción
+function AudioTranscriptionTool() {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcriptionOutput, setTranscriptionOutput] = useState("");
   const [transcriptionProgress, setTranscriptionProgress] = useState(0);
   const [transcriptionOpen, setTranscriptionOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("transcriptions");
 
   useEffect(() => {
     const handleAudioRecorderMessage = (event: Event) => {
@@ -152,16 +148,11 @@ export default function Dashboard() {
         setIsTranscribing(true);
         setTranscriptionOutput("");
         setTranscriptionProgress(0);
+        setTranscriptionOpen(true);
       } else if (customEvent.detail?.type === 'transcriptionComplete' || 
                 customEvent.detail?.type === 'transcriptionStopped') {
         setIsTranscribing(false);
         setTranscriptionProgress(100);
-        setTimeout(() => {
-          if (!isRecording) {
-            setTranscriptionOutput("");
-            setTranscriptionProgress(0);
-          }
-        }, 30000);
       } else if (customEvent.detail?.type === 'transcriptionUpdate') {
         if (customEvent.detail.data) {
           if (customEvent.detail.data.output) {
@@ -179,7 +170,40 @@ export default function Dashboard() {
     return () => {
       window.removeEventListener('audioRecorderMessage', handleAudioRecorderMessage);
     };
-  }, [isRecording]);
+  }, []);
+
+  return (
+    <div className="space-y-4">
+      <AudioRecorderV2 />
+      
+      {(isRecording || isTranscribing || transcriptionOutput) && (
+        <Button 
+          variant="outline" 
+          className="w-full" 
+          onClick={() => setTranscriptionOpen(true)}
+        >
+          {isTranscribing ? "Ver transcripción en vivo" : "Ver transcripción"}
+        </Button>
+      )}
+      
+      <LiveTranscriptionSheet
+        isTranscribing={isTranscribing}
+        output={transcriptionOutput}
+        progress={transcriptionProgress}
+        open={transcriptionOpen}
+        onOpenChange={setTranscriptionOpen}
+      />
+    </div>
+  );
+}
+
+export default function Dashboard() {
+  const { user } = useAuth();
+  const { recordings, addRecording } = useRecordings();
+  const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const [activeTab, setActiveTab] = useState("transcriptions");
 
   useEffect(() => {
     const loadEvents = () => {
@@ -229,14 +253,12 @@ export default function Dashboard() {
     };
   }, []);
 
-  const showTranscriptionOptions = isRecording || isTranscribing || !!transcriptionOutput;
-
   return (
     <Layout>
       <div className="space-y-6 max-w-full">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-custom-primary dark:text-custom-accent dark:text-white">
+            <h1 className="text-2xl md:text-3xl font-bold text-custom-primary dark:text-white">
               Dashboard
             </h1>
             <p className="text-muted-foreground mt-1">
@@ -248,14 +270,17 @@ export default function Dashboard() {
         {isMobile && (
           <div className="grid grid-cols-1 gap-4">
             <UpcomingEvents events={upcomingEvents} />
-            <ToolsCarousel 
-              showTranscriptionOptions={showTranscriptionOptions}
-              isTranscribing={isTranscribing}
-              transcriptionOutput={transcriptionOutput}
-              transcriptionOpen={transcriptionOpen}
-              setTranscriptionOpen={setTranscriptionOpen}
-              transcriptionProgress={transcriptionProgress}
-            />
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Mic className="h-5 w-5 text-blue-500" />
+                  Nueva Grabación
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AudioTranscriptionTool />
+              </CardContent>
+            </Card>
             
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-2">
@@ -281,14 +306,17 @@ export default function Dashboard() {
         {!isMobile && (
           <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
             <div className="md:col-span-4 space-y-6">
-              <ToolsCarousel 
-                showTranscriptionOptions={showTranscriptionOptions}
-                isTranscribing={isTranscribing}
-                transcriptionOutput={transcriptionOutput}
-                transcriptionOpen={transcriptionOpen}
-                setTranscriptionOpen={setTranscriptionOpen}
-                transcriptionProgress={transcriptionProgress}
-              />
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Mic className="h-5 w-5 text-blue-500" />
+                    Nueva Grabación
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <AudioTranscriptionTool />
+                </CardContent>
+              </Card>
               <UpcomingEvents events={upcomingEvents} />
               <NotesSection />
             </div>

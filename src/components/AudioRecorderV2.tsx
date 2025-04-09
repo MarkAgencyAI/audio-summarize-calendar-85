@@ -1,0 +1,452 @@
+
+import { useState, useRef, useEffect } from "react";
+import { Mic, X, Play, Pause, Loader2, Square, User, Users, Upload } from "lucide-react";
+import { useRecordings } from "@/context/RecordingsContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { toast } from "sonner";
+import { formatDate } from "@/lib/utils";
+import { formatTime } from "@/lib/audio-utils";
+import { useTranscription } from "@/lib/transcription-service";
+
+type RecordingState = "idle" | "recording" | "paused";
+type SpeakerMode = "single" | "multiple";
+
+export function AudioRecorderV2() {
+  const { addRecording, folders } = useRecordings();
+  const mediaRecorder = useRef<MediaRecorder | null>(null);
+  const audioChunks = useRef<Blob[]>([]);
+  const [recordingState, setRecordingState] = useState<RecordingState>("idle");
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [recordingName, setRecordingName] = useState("");
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [subject, setSubject] = useState("");
+  const [selectedFolder, setSelectedFolder] = useState("default");
+  const [speakerMode, setSpeakerMode] = useState<SpeakerMode>("single");
+  const [hasPermission, setHasPermission] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const timerInterval = useRef<NodeJS.Timeout | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
+  
+  // Usar nuestro hook de transcripción
+  const { 
+    transcribeAudio, 
+    isTranscribing, 
+    progress, 
+    transcript,
+    error
+  } = useTranscription({ 
+    speakerMode,
+    subject,
+    maxChunkDuration: 600 // 10 minutos
+  });
+
+  // Verificar permisos de micrófono
+  useEffect(() => {
+    const checkPermissions = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        setHasPermission(true);
+        stream.getTracks().forEach(track => track.stop());
+      } catch (error) {
+        console.error("Error getting microphone permission:", error);
+        setHasPermission(false);
+      }
+    };
+    
+    checkPermissions();
+  }, []);
+
+  // Limpiar temporizador al desmontar
+  useEffect(() => {
+    return () => {
+      if (timerInterval.current) {
+        clearInterval(timerInterval.current);
+      }
+    };
+  }, []);
+
+  // Iniciar grabación
+  const startRecording = async () => {
+    if (!hasPermission) {
+      toast.error("Por favor, permite el acceso al micrófono");
+      return;
+    }
+    
+    if (!subject.trim()) {
+      toast.error("Por favor, ingresa la materia antes de grabar");
+      return;
+    }
+    
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder.current = new MediaRecorder(stream);
+      audioChunks.current = [];
+      
+      mediaRecorder.current.ondataavailable = (event) => {
+        audioChunks.current.push(event.data);
+      };
+      
+      mediaRecorder.current.onstop = () => {
+        const audioBlob = new Blob(audioChunks.current, { type: "audio/webm" });
+        setAudioBlob(audioBlob);
+      };
+      
+      // Enviar mensaje de que comenzó la grabación
+      window.dispatchEvent(new CustomEvent('audioRecorderMessage', {
+        detail: { type: 'recordingStarted' }
+      }));
+      
+      mediaRecorder.current.start();
+      setRecordingState("recording");
+      startTimer();
+      
+    } catch (error) {
+      console.error("Error starting recording:", error);
+      toast.error("Error al iniciar la grabación");
+    }
+  };
+  
+  // Pausar grabación
+  const pauseRecording = () => {
+    if (mediaRecorder.current && mediaRecorder.current.state === "recording") {
+      mediaRecorder.current.pause();
+      setRecordingState("paused");
+      pauseTimer();
+    }
+  };
+  
+  // Reanudar grabación
+  const resumeRecording = () => {
+    if (mediaRecorder.current && mediaRecorder.current.state === "paused") {
+      mediaRecorder.current.resume();
+      setRecordingState("recording");
+      startTimer();
+    }
+  };
+  
+  // Detener grabación
+  const stopRecording = () => {
+    if (mediaRecorder.current && mediaRecorder.current.state !== "inactive") {
+      mediaRecorder.current.stop();
+      setRecordingState("idle");
+      stopTimer();
+      
+      // Detener todos los tracks de audio
+      mediaRecorder.current.stream.getTracks().forEach(track => track.stop());
+      
+      // Generar nombre por defecto
+      if (!recordingName) {
+        setRecordingName(`Grabación ${formatDate(new Date())}`);
+      }
+    }
+  };
+  
+  // Limpiar grabación
+  const clearRecording = () => {
+    setAudioBlob(null);
+    setRecordingName("");
+    
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
+  };
+  
+  // Funciones para el temporizador
+  const startTimer = () => {
+    timerInterval.current = setInterval(() => {
+      setRecordingDuration(prev => prev + 1);
+    }, 1000) as unknown as NodeJS.Timeout;
+  };
+  
+  const pauseTimer = () => {
+    if (timerInterval.current) {
+      clearInterval(timerInterval.current);
+    }
+  };
+  
+  const stopTimer = () => {
+    if (timerInterval.current) {
+      clearInterval(timerInterval.current);
+    }
+  };
+  
+  // Manejar subida de archivo
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!subject.trim()) {
+      toast.error("Por favor, ingresa la materia antes de subir un audio");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Verificar que sea un archivo de audio
+    if (!file.type.startsWith('audio/')) {
+      toast.error("Por favor, sube solo archivos de audio");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    // Obtener duración del audio para mostrar
+    const audio = new Audio();
+    audio.src = URL.createObjectURL(file);
+    
+    audio.onloadedmetadata = () => {
+      const durationInSeconds = Math.floor(audio.duration);
+      setRecordingDuration(durationInSeconds);
+      setAudioBlob(file);
+      
+      // Usar el nombre del archivo sin extensión
+      setRecordingName(file.name.replace(/\.[^/.]+$/, ""));
+      
+      // Verificar si el archivo es mayor a 10 minutos
+      if (durationInSeconds > 600) {
+        toast.info("El archivo es mayor a 10 minutos, se dividirá en partes para procesarlo");
+      }
+      
+      URL.revokeObjectURL(audio.src);
+    };
+
+    audio.onerror = () => {
+      toast.error("Error al cargar el archivo de audio");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    };
+  };
+  
+  // Procesar y guardar grabación
+  const processAndSaveRecording = async () => {
+    if (!audioBlob) return;
+    
+    try {
+      toast.info("Procesando grabación...");
+      
+      // Crear URL del audio
+      if (audioUrlRef.current) {
+        URL.revokeObjectURL(audioUrlRef.current);
+      }
+      audioUrlRef.current = URL.createObjectURL(audioBlob);
+      
+      // Transcribir el audio
+      const result = await transcribeAudio(audioBlob);
+      
+      // Guardar la grabación con la transcripción
+      addRecording({
+        name: recordingName || `Grabación ${formatDate(new Date())}`,
+        audioUrl: audioUrlRef.current,
+        audioData: audioUrlRef.current,
+        output: result.transcript,
+        folderId: selectedFolder,
+        duration: recordingDuration,
+        subject: subject,
+        speakerMode: speakerMode,
+        suggestedEvents: []
+      });
+      
+      // Limpiar estado
+      setAudioBlob(null);
+      setRecordingName('');
+      setSubject('');
+      setRecordingDuration(0);
+      
+      toast.success('Grabación guardada correctamente');
+      
+    } catch (error) {
+      console.error('Error procesando y guardando grabación:', error);
+      toast.error('Error al procesar la grabación');
+    }
+  };
+
+  return (
+    <div className="glassmorphism rounded-xl p-4 md:p-6 shadow-lg bg-white/5 dark:bg-black/20 backdrop-blur-xl border border-white/10 dark:border-white/5">
+      <h2 className="text-xl font-semibold mb-4 text-custom-primary">Nueva grabación</h2>
+      
+      <div className="space-y-4">
+        {recordingState === "idle" && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="subject" className="text-custom-text">Materia *</Label>
+              <Input
+                id="subject"
+                placeholder="Ingresa la materia (ej: Matemáticas, Historia, etc.)"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
+                required
+              />
+              {recordingState === "idle" && !subject.trim() && (
+                <p className="text-xs text-amber-500">Debes ingresar la materia antes de grabar</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-custom-text">Modo de grabación</Label>
+              <RadioGroup 
+                value={speakerMode}
+                onValueChange={(value) => setSpeakerMode(value as SpeakerMode)}
+                className="flex flex-col space-y-2"
+              >
+                <div className="flex items-center space-x-2 p-2 rounded-md">
+                  <RadioGroupItem value="single" id="single-speaker" />
+                  <Label htmlFor="single-speaker" className="flex items-center cursor-pointer">
+                    <User className="h-4 w-4 mr-2" />
+                    <div>
+                      <span className="font-medium">Un solo orador (Modo Clase)</span>
+                      <p className="text-xs text-muted-foreground">Para captar principalmente la voz del profesor</p>
+                    </div>
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 p-2 rounded-md">
+                  <RadioGroupItem value="multiple" id="multiple-speaker" />
+                  <Label htmlFor="multiple-speaker" className="flex items-center cursor-pointer">
+                    <Users className="h-4 w-4 mr-2" />
+                    <div>
+                      <span className="font-medium">Múltiples oradores (Debates)</span>
+                      <p className="text-xs text-muted-foreground">Para captar la información de varias personas</p>
+                    </div>
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+          </>
+        )}
+        
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {recordingState === "idle" && !audioBlob && (
+              <>
+                <Button 
+                  onClick={startRecording} 
+                  disabled={isTranscribing || !subject.trim()} 
+                  className={`bg-custom-primary hover:bg-custom-primary/90 text-white ${!subject.trim() ? 'opacity-70' : ''}`}
+                >
+                  <Mic className="h-4 w-4 mr-2" />
+                  Grabar
+                </Button>
+                
+                <div className="relative">
+                  <input
+                    type="file"
+                    id="audio-upload"
+                    ref={fileInputRef}
+                    accept="audio/*"
+                    onChange={handleFileUpload}
+                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                    disabled={isTranscribing || !subject.trim()}
+                  />
+                  <Button
+                    type="button"
+                    disabled={isTranscribing || !subject.trim()}
+                    className={`bg-custom-accent hover:bg-custom-accent/90 text-white ${!subject.trim() ? 'opacity-70' : ''}`}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Subir Audio
+                  </Button>
+                </div>
+              </>
+            )}
+            
+            {recordingState === "recording" && (
+              <>
+                <Button onClick={pauseRecording} disabled={isTranscribing} className="bg-custom-accent hover:bg-custom-accent/90 text-white">
+                  <Pause className="h-4 w-4 mr-2" />
+                  Pausar
+                </Button>
+                <Button onClick={stopRecording} disabled={isTranscribing} variant="destructive">
+                  <Square className="h-4 w-4 mr-2" />
+                  Detener
+                </Button>
+              </>
+            )}
+            
+            {recordingState === "paused" && (
+              <>
+                <Button onClick={resumeRecording} disabled={isTranscribing} className="bg-custom-accent hover:bg-custom-accent/90 text-white">
+                  <Play className="h-4 w-4 mr-2" />
+                  Reanudar
+                </Button>
+                <Button onClick={stopRecording} disabled={isTranscribing} variant="destructive">
+                  <Square className="h-4 w-4 mr-2" />
+                  Detener
+                </Button>
+              </>
+            )}
+          </div>
+          
+          <span className="text-custom-text">{formatTime(recordingDuration)}</span>
+        </div>
+        
+        {audioBlob === null ? null : (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="recording-name" className="text-custom-text">Nombre de la grabación</Label>
+              <Input
+                id="recording-name"
+                placeholder="Nombre de la grabación"
+                value={recordingName}
+                onChange={(e) => setRecordingName(e.target.value)}
+                className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="folder" className="text-custom-text">Carpeta</Label>
+              <select
+                id="folder"
+                className="w-full h-10 px-3 py-2 bg-background text-custom-text border border-custom-primary/20 rounded-md focus:outline-none focus:ring-2 focus:ring-custom-primary focus:border-custom-primary"
+                value={selectedFolder}
+                onChange={(e) => setSelectedFolder(e.target.value)}
+              >
+                {folders.map(folder => (
+                  <option key={folder.id} value={folder.id}>
+                    {folder.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
+        
+        {audioBlob && (
+          <div className="flex justify-between gap-4">
+            <Button variant="ghost" onClick={clearRecording} className="text-custom-primary hover:bg-custom-primary/10">
+              <X className="h-4 w-4 mr-2" />
+              Borrar
+            </Button>
+            
+            <Button
+              onClick={processAndSaveRecording}
+              disabled={isTranscribing}
+              className="bg-custom-primary hover:bg-custom-primary/90 text-white"
+            >
+              {isTranscribing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Procesando... {progress}%
+                </>
+              ) : (
+                "Guardar grabación"
+              )}
+            </Button>
+          </div>
+        )}
+        
+        {error && (
+          <div className="p-2 bg-red-100 text-red-800 rounded-md text-sm mt-2">
+            {error}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
