@@ -394,6 +394,7 @@ export function Calendar({
           onSave={handleCreateWeeklySchedule}
           onCancel={() => setShowWeeklySchedule(false)}
           hasExistingSchedule={hasSchedule}
+          existingEvents={events}
         />
       ) : showDailyView && dailyViewDate ? (
         <DailyView 

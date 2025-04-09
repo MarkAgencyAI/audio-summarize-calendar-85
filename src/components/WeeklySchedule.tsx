@@ -20,6 +20,7 @@ interface WeeklyScheduleProps {
   onSave: (events: Omit<CalendarEvent, "id">[]) => void;
   onCancel: () => void;
   hasExistingSchedule?: boolean;
+  existingEvents?: CalendarEvent[];
 }
 
 interface ScheduleCell {
@@ -28,7 +29,13 @@ interface ScheduleCell {
   event?: Omit<CalendarEvent, "id">;
 }
 
-export function WeeklySchedule({ date, onSave, onCancel, hasExistingSchedule = false }: WeeklyScheduleProps) {
+export function WeeklySchedule({ 
+  date, 
+  onSave, 
+  onCancel, 
+  hasExistingSchedule = false,
+  existingEvents = [] 
+}: WeeklyScheduleProps) {
   const { folders } = useRecordings();
   
   // Create a week range starting from Monday
@@ -73,6 +80,57 @@ export function WeeklySchedule({ date, onSave, onCancel, hasExistingSchedule = f
     "Clase Especial",
     "Otro"
   ];
+
+  // Load existing schedule events when component mounts
+  useEffect(() => {
+    if (hasExistingSchedule && existingEvents.length > 0) {
+      const scheduleEvents = existingEvents.filter(event => 
+        event.eventType === "Cronograma" && event.repeat === "weekly"
+      );
+      
+      if (scheduleEvents.length > 0) {
+        const updatedCells = [...scheduleCells];
+        
+        scheduleEvents.forEach(event => {
+          const eventDate = parseISO(event.date);
+          const eventDay = eventDate.getDay();
+          const eventHour = eventDate.getHours();
+          
+          // Find the corresponding cell in the current week
+          const weekDay = days.find(d => d.getDay() === eventDay);
+          
+          if (weekDay && hours.includes(eventHour)) {
+            const cellIndex = updatedCells.findIndex(cell => 
+              cell.day.getDay() === weekDay.getDay() && 
+              cell.hour === eventHour
+            );
+            
+            if (cellIndex !== -1) {
+              // Calculate event duration
+              let duration = 1;
+              if (event.endDate) {
+                const endDate = parseISO(event.endDate);
+                duration = endDate.getHours() - eventDate.getHours();
+                if (duration < 1) duration = 1;
+              }
+              
+              updatedCells[cellIndex].event = {
+                title: event.title,
+                description: event.description,
+                date: setHours(setMinutes(weekDay, 0), eventHour).toISOString(),
+                endDate: setHours(setMinutes(weekDay, 0), eventHour + duration).toISOString(),
+                eventType: event.eventType,
+                folderId: event.folderId,
+                repeat: "weekly"
+              };
+            }
+          }
+        });
+        
+        setScheduleCells(updatedCells);
+      }
+    }
+  }, [hasExistingSchedule, existingEvents, days, hours]);
   
   // Handle cell click to add/edit event
   const handleCellClick = (day: Date, hour: number) => {
@@ -87,12 +145,16 @@ export function WeeklySchedule({ date, onSave, onCancel, hasExistingSchedule = f
       
       if (cell.event) {
         // Edit existing event
+        const duration = cell.event.endDate 
+          ? Math.round((new Date(cell.event.endDate).getTime() - new Date(cell.event.date).getTime()) / 3600000)
+          : 1;
+        
         setNewEvent({
           title: cell.event.title,
           description: cell.event.description || "",
           eventType: cell.event.eventType || "",
           folderId: cell.event.folderId || "",
-          duration: "1" // Default to 1 hour
+          duration: duration.toString()
         });
       } else {
         // New event
@@ -140,16 +202,42 @@ export function WeeklySchedule({ date, onSave, onCancel, hasExistingSchedule = f
     
     // Update the cells array
     setScheduleCells(prev => {
-      return prev.map(cell => {
-        if (
-          cell.day.getDate() === eventDay.getDate() && 
-          cell.day.getMonth() === eventDay.getMonth() && 
-          cell.hour === eventHour
-        ) {
-          return { ...cell, event };
+      const updated = [...prev];
+      
+      // First, clear any cells that might be occupied by this event (for resizing)
+      if (selectedCell.event) {
+        const oldDuration = selectedCell.event.endDate 
+          ? Math.round((new Date(selectedCell.event.endDate).getTime() - new Date(selectedCell.event.date).getTime()) / 3600000)
+          : 1;
+        
+        for (let i = 0; i < oldDuration; i++) {
+          const cellToCheck = updated.find(c => 
+            c.day.getDate() === eventDay.getDate() && 
+            c.day.getMonth() === eventDay.getMonth() && 
+            c.hour === (eventHour + i)
+          );
+          
+          if (cellToCheck && cellToCheck.event?.title === selectedCell.event.title) {
+            const cellIndex = updated.indexOf(cellToCheck);
+            if (cellIndex !== -1) {
+              updated[cellIndex] = { ...updated[cellIndex], event: undefined };
+            }
+          }
         }
-        return cell;
-      });
+      }
+      
+      // Now set the event in the first cell
+      const cellIndex = updated.findIndex(c => 
+        c.day.getDate() === eventDay.getDate() && 
+        c.day.getMonth() === eventDay.getMonth() && 
+        c.hour === eventHour
+      );
+      
+      if (cellIndex !== -1) {
+        updated[cellIndex] = { ...updated[cellIndex], event };
+      }
+      
+      return updated;
     });
     
     setShowEventForm(false);
@@ -161,16 +249,40 @@ export function WeeklySchedule({ date, onSave, onCancel, hasExistingSchedule = f
     if (!selectedCell) return;
     
     setScheduleCells(prev => {
-      return prev.map(cell => {
-        if (
-          cell.day.getDate() === selectedCell.day.getDate() && 
-          cell.day.getMonth() === selectedCell.day.getMonth() && 
-          cell.hour === selectedCell.hour
-        ) {
-          return { day: cell.day, hour: cell.hour };
+      const updated = [...prev];
+      
+      // Find the original cell
+      const cellIndex = updated.findIndex(c => 
+        c.day.getDate() === selectedCell.day.getDate() && 
+        c.day.getMonth() === selectedCell.day.getMonth() && 
+        c.hour === selectedCell.hour
+      );
+      
+      if (cellIndex !== -1 && updated[cellIndex].event) {
+        const eventTitle = updated[cellIndex].event!.title;
+        const eventDuration = updated[cellIndex].event!.endDate 
+          ? Math.round((new Date(updated[cellIndex].event!.endDate).getTime() - new Date(updated[cellIndex].event!.date).getTime()) / 3600000)
+          : 1;
+        
+        // Clear all cells occupied by this event
+        for (let i = 0; i < eventDuration; i++) {
+          const hourToCheck = selectedCell.hour + i;
+          const cellToUpdateIndex = updated.findIndex(c => 
+            c.day.getDate() === selectedCell.day.getDate() && 
+            c.day.getMonth() === selectedCell.day.getMonth() && 
+            c.hour === hourToCheck
+          );
+          
+          if (cellToUpdateIndex !== -1 && updated[cellToUpdateIndex].event?.title === eventTitle) {
+            updated[cellToUpdateIndex] = { 
+              ...updated[cellToUpdateIndex], 
+              event: undefined 
+            };
+          }
         }
-        return cell;
-      });
+      }
+      
+      return updated;
     });
     
     setShowEventForm(false);
@@ -195,6 +307,38 @@ export function WeeklySchedule({ date, onSave, onCancel, hasExistingSchedule = f
   const getEventColor = (eventType?: string) => {
     if (!eventType) return "#6b7280"; // Default gray
     return eventTypeColors[eventType] || "#6b7280";
+  };
+  
+  // Check if a cell is part of a multi-hour event but not the first cell
+  const isContinuationCell = (day: Date, hour: number) => {
+    // Look for an event starting before this hour on the same day
+    for (let h = hour - 1; h >= hours[0]; h--) {
+      const prevCell = scheduleCells.find(c => 
+        c.day.getDate() === day.getDate() && 
+        c.day.getMonth() === day.getMonth() && 
+        c.hour === h
+      );
+      
+      if (prevCell?.event) {
+        // Check if this previous event extends to current hour
+        const startHour = prevCell.hour;
+        const duration = prevCell.event.endDate 
+          ? Math.round((new Date(prevCell.event.endDate).getTime() - new Date(prevCell.event.date).getTime()) / 3600000)
+          : 1;
+        
+        if (startHour + duration > hour) {
+          return {
+            isContinuation: true,
+            event: prevCell.event
+          };
+        }
+      }
+    }
+    
+    return {
+      isContinuation: false,
+      event: undefined
+    };
   };
   
   return (
@@ -251,30 +395,41 @@ export function WeeklySchedule({ date, onSave, onCancel, hasExistingSchedule = f
                   c.hour === hour
                 );
                 
-                const hasEvent = !!cell?.event;
-                const eventColor = hasEvent ? getEventColor(cell?.event?.eventType) : undefined;
+                const continuationCheck = isContinuationCell(day, hour);
+                const isPartOfEvent = cell?.event || continuationCheck.isContinuation;
+                const eventToUse = cell?.event || continuationCheck.event;
+                const eventColor = eventToUse ? getEventColor(eventToUse.eventType) : undefined;
                 
                 return (
                   <div 
                     key={dayIndex}
                     className={`
                       p-2 border-r last:border-r-0 h-16 relative
-                      ${hasEvent ? "" : "hover:bg-muted/20 cursor-pointer"}
+                      ${isPartOfEvent ? "" : "hover:bg-muted/20 cursor-pointer"}
                     `}
-                    onClick={() => !hasEvent && handleCellClick(day, hour)}
+                    onClick={() => !isPartOfEvent && handleCellClick(day, hour)}
                   >
-                    {hasEvent ? (
+                    {isPartOfEvent ? (
                       <div 
-                        className="absolute inset-1 rounded p-1 flex flex-col cursor-pointer"
+                        className={`absolute inset-1 rounded p-1 flex flex-col ${continuationCheck.isContinuation ? "border-t-0 rounded-t-none" : "cursor-pointer"}`}
                         style={{
                           backgroundColor: `${eventColor}20`,
                           borderLeft: `3px solid ${eventColor}`,
                           color: eventColor
                         }}
-                        onClick={() => handleCellClick(day, hour)}
+                        onClick={e => {
+                          if (!continuationCheck.isContinuation) {
+                            e.stopPropagation();
+                            handleCellClick(day, hour);
+                          }
+                        }}
                       >
-                        <div className="text-xs font-medium truncate">{cell?.event?.title}</div>
-                        <div className="text-xs opacity-80">Semanal</div>
+                        {!continuationCheck.isContinuation && (
+                          <>
+                            <div className="text-xs font-medium truncate">{eventToUse?.title}</div>
+                            <div className="text-xs opacity-80">Semanal</div>
+                          </>
+                        )}
                       </div>
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100">
