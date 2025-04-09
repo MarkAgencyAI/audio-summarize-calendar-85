@@ -20,34 +20,39 @@ export function TranscriptionPanel({
   progress = 0,
   showProgress = false
 }: TranscriptionPanelProps) {
-  // Improved output processing with more comprehensive type handling
+  // Procesamiento seguro para cualquier tipo de output
   const displayOutput = React.useMemo(() => {
-    // Handle null or undefined
+    // Manejar null o undefined
     if (output === null || output === undefined) {
       return '';
     }
     
-    // If it's already a string, return it
+    // Si ya es un string, devolverlo directamente
     if (typeof output === 'string') {
       return output;
     }
     
-    // Handle object with output property
+    // Manejar objetos (incluidos objetos de error)
     if (typeof output === 'object') {
-      // Check if it has an 'output' property that is a string
+      // Si tiene una propiedad 'output' que es string, usarla
       if ('output' in output && typeof (output as any).output === 'string') {
         return (output as any).output;
       }
       
-      // If not, try to stringify the entire object
+      // Si tiene una propiedad 'message' (objeto de error), mostrar el mensaje
+      if ('message' in output && typeof (output as any).message === 'string') {
+        return `Error: ${(output as any).message}`;
+      }
+      
+      // Si no, intentar convertirlo a JSON
       try {
         return JSON.stringify(output, null, 2);
       } catch {
-        return 'Error: Could not parse object data';
+        return 'Error: No se pudo procesar el objeto';
       }
     }
     
-    // Fallback for any other unexpected type
+    // Fallback para cualquier otro tipo inesperado
     return String(output);
   }, [output]);
     

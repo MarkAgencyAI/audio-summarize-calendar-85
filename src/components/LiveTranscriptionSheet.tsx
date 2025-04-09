@@ -73,6 +73,9 @@ export function LiveTranscriptionSheet({
     setUserClosed(true);
   };
   
+  // Asegurarse de que el output sea seguro para renderizarlo
+  const safeOutput = output === null || output === undefined ? "" : output;
+  
   return <Sheet open={isOpen} onOpenChange={handleOpenChange}>
       {children ? <SheetTrigger asChild>
           {children}
@@ -98,8 +101,8 @@ export function LiveTranscriptionSheet({
         
         <div className="flex-1 overflow-hidden">
           <TranscriptionPanel 
-            output={output} 
-            isLoading={isTranscribing && !output} 
+            output={safeOutput}
+            isLoading={isTranscribing && !safeOutput} 
             progress={progress}
             showProgress={isTranscribing}
           />
