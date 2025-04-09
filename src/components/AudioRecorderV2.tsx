@@ -26,6 +26,7 @@ export function AudioRecorderV2() {
   const [selectedFolder, setSelectedFolder] = useState("default");
   const [speakerMode, setSpeakerMode] = useState<SpeakerMode>("single");
   const [hasPermission, setHasPermission] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
   const audioUrlRef = useRef<string | null>(null);
@@ -40,6 +41,7 @@ export function AudioRecorderV2() {
   } = useTranscription({ 
     speakerMode,
     subject,
+    webhookUrl,
     maxChunkDuration: 600 // 10 minutos
   });
 
@@ -240,6 +242,28 @@ export function AudioRecorderV2() {
       // Transcribir el audio
       const result = await transcribeAudio(audioBlob);
       
+      // Verificar si tenemos respuesta del webhook
+      let webhookData = null;
+      let suggestedEvents = [];
+      
+      if (result.webhookResponse) {
+        toast.success("Respuesta del webhook recibida");
+        webhookData = result.webhookResponse;
+        
+        // Intentar extraer eventos sugeridos de la respuesta del webhook
+        if (webhookData && typeof webhookData === 'object') {
+          if (webhookData.suggestedEvents) {
+            suggestedEvents = webhookData.suggestedEvents;
+          } else if (Array.isArray(webhookData) && webhookData.length > 0) {
+            // Si es un array, verificar el primer elemento
+            const firstItem = webhookData[0];
+            if (firstItem && firstItem.suggestedEvents) {
+              suggestedEvents = firstItem.suggestedEvents;
+            }
+          }
+        }
+      }
+      
       // Guardar la grabación con la transcripción
       addRecording({
         name: recordingName || `Grabación ${formatDate(new Date())}`,
@@ -250,7 +274,8 @@ export function AudioRecorderV2() {
         duration: recordingDuration,
         subject: subject,
         speakerMode: speakerMode,
-        suggestedEvents: []
+        suggestedEvents: suggestedEvents,
+        webhookData: webhookData
       });
       
       // Limpiar estado
@@ -287,6 +312,20 @@ export function AudioRecorderV2() {
               {recordingState === "idle" && !subject.trim() && (
                 <p className="text-xs text-amber-500">Debes ingresar la materia antes de grabar</p>
               )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="webhookUrl" className="text-custom-text">URL del Webhook (opcional)</Label>
+              <Input
+                id="webhookUrl"
+                placeholder="URL del webhook para procesar la transcripción"
+                value={webhookUrl}
+                onChange={(e) => setWebhookUrl(e.target.value)}
+                className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
+              />
+              <p className="text-xs text-muted-foreground">
+                Si se deja vacío, se usará el webhook predeterminado del sistema
+              </p>
             </div>
 
             <div className="space-y-2">

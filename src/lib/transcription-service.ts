@@ -1,11 +1,14 @@
+
 import { toast } from "sonner";
 import React from 'react';
+import { sendToWebhook } from "./webhook";
 
 // Definimos las interfaces para nuestro servicio
 interface TranscriptionOptions {
   maxChunkDuration: number; // en segundos
   speakerMode: 'single' | 'multiple';
   subject?: string;
+  webhookUrl?: string;
 }
 
 interface TranscriptionProgress {
@@ -16,10 +19,13 @@ interface TranscriptionProgress {
 interface TranscriptionResult {
   transcript: string;
   language?: string;
+  webhookResponse?: any;
 }
 
 // URL constante del endpoint de GROQ
 const GROQ_API_KEY = "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";
+// URL del webhook por defecto
+const DEFAULT_WEBHOOK_URL = "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 
 export class TranscriptionService {
   // Opciones por defecto
@@ -56,8 +62,27 @@ export class TranscriptionService {
         // El audio es corto, procesarlo directamente
         this.notifyProgress("Transcribiendo audio...", 20, onProgress);
         const result = await this.transcribeAudioChunk(audioBlob);
-        this.notifyProgress(result.transcript, 100, onProgress);
-        return result;
+        
+        // Enviar al webhook
+        let webhookResponse = null;
+        if (result.transcript) {
+          this.notifyProgress("Enviando transcripción al webhook...", 90, onProgress);
+          try {
+            webhookResponse = await this.sendToWebhook(result.transcript);
+            this.notifyProgress(`Transcripción procesada: ${result.transcript}`, 100, onProgress);
+          } catch (webhookError) {
+            console.error("Error al enviar al webhook:", webhookError);
+            // Continuamos a pesar del error en el webhook
+            this.notifyProgress(`Error al enviar al webhook, pero transcripción disponible: ${result.transcript}`, 100, onProgress);
+          }
+        } else {
+          this.notifyProgress("Transcripción completada sin texto", 100, onProgress);
+        }
+        
+        return {
+          ...result,
+          webhookResponse
+        };
       }
     } catch (error) {
       console.error("Error al procesar audio:", error);
@@ -119,11 +144,24 @@ export class TranscriptionService {
       }
     }
     
+    // Enviar la transcripción completa al webhook
+    let webhookResponse = null;
+    if (fullTranscript) {
+      this.notifyProgress("Enviando transcripción completa al webhook...", 90, onProgress);
+      try {
+        webhookResponse = await this.sendToWebhook(fullTranscript);
+      } catch (webhookError) {
+        console.error("Error al enviar al webhook:", webhookError);
+        // Continuamos a pesar del error en el webhook
+      }
+    }
+    
     this.notifyProgress(fullTranscript, 100, onProgress);
     
     return {
       transcript: fullTranscript,
-      language
+      language,
+      webhookResponse
     };
   }
 
@@ -132,7 +170,7 @@ export class TranscriptionService {
    */
   private async splitAudio(audioBlob: Blob, numChunks: number): Promise<Array<{blob: Blob, startTime: number, endTime: number}>> {
     try {
-      // Convertir blob a AudioBuffer para procesamiento
+      // Convertir blob a ArrayBuffer para procesamiento
       const arrayBuffer = await audioBlob.arrayBuffer();
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
@@ -141,11 +179,20 @@ export class TranscriptionService {
       const chunkDuration = duration / numChunks;
       const chunks: Array<{blob: Blob, startTime: number, endTime: number}> = [];
       
+      console.log(`Dividiendo audio de ${duration}s en ${numChunks} partes de aproximadamente ${chunkDuration}s cada una`);
+      
       // Crear cada segmento
       for (let i = 0; i < numChunks; i++) {
         const startTime = i * chunkDuration;
         const endTime = Math.min((i + 1) * chunkDuration, duration);
         const chunkSeconds = endTime - startTime;
+        
+        if (chunkSeconds <= 0) {
+          console.warn(`Segmento ${i+1} tiene duración cero o negativa, omitiendo`);
+          continue;
+        }
+        
+        console.log(`Creando segmento ${i+1}: ${startTime}s a ${endTime}s (${chunkSeconds}s)`);
         
         // Crear un nuevo buffer para este segmento
         const chunkBuffer = audioContext.createBuffer(
@@ -154,23 +201,53 @@ export class TranscriptionService {
           audioBuffer.sampleRate
         );
         
+        // Verificar que el buffer tenga un tamaño válido
+        if (chunkBuffer.length <= 0) {
+          console.warn(`Buffer para segmento ${i+1} tiene longitud inválida (${chunkBuffer.length}), omitiendo`);
+          continue;
+        }
+        
         // Copiar los datos para cada canal
         for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
           const channelData = new Float32Array(chunkBuffer.length);
-          audioBuffer.copyFromChannel(channelData, channel, Math.floor(startTime * audioBuffer.sampleRate));
+          const sourceOffset = Math.floor(startTime * audioBuffer.sampleRate);
+          
+          // Verificar que estamos dentro de los límites del buffer original
+          if (sourceOffset >= audioBuffer.length) {
+            console.warn(`Offset para segmento ${i+1} fuera de límites, omitiendo`);
+            continue;
+          }
+          
+          // Copiar los datos con verificación de límites
+          const samplesToCopy = Math.min(
+            channelData.length,
+            audioBuffer.length - sourceOffset
+          );
+          
+          if (samplesToCopy <= 0) {
+            console.warn(`No hay muestras para copiar en segmento ${i+1}, omitiendo`);
+            continue;
+          }
+          
+          const sourceData = new Float32Array(samplesToCopy);
+          audioBuffer.copyFromChannel(sourceData, channel, sourceOffset);
+          channelData.set(sourceData.slice(0, samplesToCopy));
           chunkBuffer.copyToChannel(channelData, channel, 0);
         }
         
         // Convertir el buffer a blob
-        const chunkBlob = await this.audioBufferToBlob(chunkBuffer, audioBlob.type);
+        const chunkBlob = await this.audioBufferToBlob(chunkBuffer, audioBlob.type || 'audio/wav');
         
         chunks.push({
           blob: chunkBlob,
           startTime: startTime,
           endTime: endTime
         });
+        
+        console.log(`Segmento ${i+1} creado correctamente (${chunkBlob.size} bytes)`);
       }
       
+      console.log(`Se crearon ${chunks.length} segmentos de audio`);
       return chunks;
     } catch (error) {
       console.error("Error al dividir el audio:", error);
@@ -264,10 +341,35 @@ export class TranscriptionService {
   }
 
   /**
+   * Envía la transcripción al webhook
+   */
+  private async sendToWebhook(transcript: string): Promise<any> {
+    const webhookUrl = this.options.webhookUrl || DEFAULT_WEBHOOK_URL;
+    const data = {
+      transcript,
+      subject: this.options.subject,
+      speakerMode: this.options.speakerMode,
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log("Enviando al webhook:", webhookUrl);
+    console.log("Datos a enviar:", data);
+    
+    try {
+      return await sendToWebhook(webhookUrl, data);
+    } catch (error) {
+      console.error("Error enviando al webhook:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Transcribe un segmento de audio usando la API de GROQ
    */
   private async transcribeAudioChunk(audioBlob: Blob): Promise<TranscriptionResult> {
     try {
+      console.log(`Transcribiendo chunk de audio de ${audioBlob.size} bytes...`);
+      
       // Crear un FormData para la API
       const formData = new FormData();
       formData.append("file", audioBlob, "audio.wav");
@@ -282,30 +384,56 @@ export class TranscriptionService {
       
       formData.append("prompt", prompt);
       
-      // Hacer la petición a la API de GROQ
-      const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${GROQ_API_KEY}`
-        },
-        body: formData
-      });
+      // Hacer la petición a la API de GROQ con manejo de reintentos
+      const maxRetries = 3;
+      let retryCount = 0;
+      let lastError: any = null;
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Error de API: ${response.status} - ${errorText}`);
+      while (retryCount < maxRetries) {
+        try {
+          console.log(`Intento ${retryCount + 1} de transcripción con GROQ API`);
+          
+          const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${GROQ_API_KEY}`
+            },
+            body: formData
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Error de API: ${response.status} - ${errorText}`);
+          }
+          
+          const data = await response.json();
+          
+          if (!data.text) {
+            throw new Error("Respuesta inválida de la API de GROQ");
+          }
+          
+          console.log("Transcripción exitosa:", data.text.slice(0, 50) + "...");
+          
+          return {
+            transcript: data.text.trim(),
+            language: data.language || "es"
+          };
+        } catch (error) {
+          console.error(`Error en intento ${retryCount + 1}:`, error);
+          lastError = error;
+          retryCount++;
+          
+          if (retryCount < maxRetries) {
+            // Espera exponencial entre reintentos (500ms, 1000ms, 2000ms, etc.)
+            const delay = Math.pow(2, retryCount) * 500;
+            console.log(`Esperando ${delay}ms antes del siguiente intento...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+        }
       }
       
-      const data = await response.json();
-      
-      if (!data.text) {
-        throw new Error("Respuesta inválida de la API de GROQ");
-      }
-      
-      return {
-        transcript: data.text.trim(),
-        language: data.language || "es"
-      };
+      console.error("Se agotaron los reintentos para transcribir el audio");
+      throw lastError;
     } catch (error) {
       console.error("Error en transcripción:", error);
       throw error;
@@ -321,14 +449,15 @@ export class TranscriptionService {
       audio.src = URL.createObjectURL(audioBlob);
       
       audio.onloadedmetadata = () => {
-        const duration = Math.floor(audio.duration);
+        const duration = audio.duration;
         URL.revokeObjectURL(audio.src);
-        resolve(duration);
+        resolve(isFinite(duration) ? duration : 0);
       };
       
       audio.onerror = (error) => {
         URL.revokeObjectURL(audio.src);
-        reject(error);
+        console.error("Error obteniendo duración del audio:", error);
+        resolve(0); // Default a 0 en caso de error
       };
     });
   }
@@ -403,7 +532,11 @@ export function useTranscription(options?: Partial<TranscriptionOptions>) {
       const completeEvent = new CustomEvent('audioRecorderMessage', {
         detail: {
           type: 'transcriptionComplete',
-          data: { output: result.transcript, progress: 100 }
+          data: { 
+            output: result.transcript, 
+            progress: 100,
+            webhookResponse: result.webhookResponse 
+          }
         }
       });
       window.dispatchEvent(completeEvent);
