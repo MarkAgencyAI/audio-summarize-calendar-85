@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { toast } from "sonner";
 import { sendToWebhook } from "./webhook";
@@ -721,6 +722,9 @@ export class TranscriptionService {
       });
     });
   }
+
+  // Asegurarnos de cerrar correctamente la clase
+}
 
 // Hook personalizado para usar el servicio de transcripción en componentes de React
 export function useTranscription(options?: Partial<TranscriptionOptions>) {
