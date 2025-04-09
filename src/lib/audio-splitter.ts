@@ -7,21 +7,16 @@ interface AudioChunk {
   endTime: number;
 }
 
-/**
- * Simulates file system operations for React Native FFmpeg in a web environment
- */
+// Simple in-memory file system for web environment
 const FileSystem = {
-  // In-memory file system for web environment
   fileMap: new Map<string, Uint8Array>(),
-
-  // Write data to our in-memory file system
+  
   writeFile: async (path: string, data: Uint8Array): Promise<void> => {
     FileSystem.fileMap.set(path, data);
     console.log(`File written to ${path}`);
     return Promise.resolve();
   },
-
-  // Read data from our in-memory file system
+  
   readFile: async (path: string): Promise<Uint8Array> => {
     const data = FileSystem.fileMap.get(path);
     if (!data) {
@@ -29,13 +24,18 @@ const FileSystem = {
     }
     return Promise.resolve(data);
   },
-
-  // Delete file from our in-memory file system
+  
   deleteFile: async (path: string): Promise<void> => {
     FileSystem.fileMap.delete(path);
     console.log(`File deleted: ${path}`);
     return Promise.resolve();
   },
+  
+  listFiles: async (prefix: string): Promise<string[]> => {
+    return Array.from(FileSystem.fileMap.keys())
+      .filter(key => key.startsWith(prefix))
+      .sort();
+  }
 };
 
 /**
@@ -50,8 +50,9 @@ export async function splitAudioFile(
   
   // Create a temporary file from the blob
   const audioFile = new Uint8Array(arrayBuffer);
-  const tempFileName = `temp_audio_${Date.now()}`;
-  const outputPrefix = `chunk_${Date.now()}_`;
+  const timestamp = Date.now();
+  const tempFileName = `temp_audio_${timestamp}`;
+  const outputPrefix = `chunk_${timestamp}_`;
   
   try {
     // Write the audio data to our in-memory file system
@@ -84,48 +85,53 @@ export async function splitAudioFile(
       }];
     }
     
-    // Calculate number of chunks needed
-    const numChunks = Math.ceil(duration / maxChunkDuration);
-    console.log(`Splitting audio into ${numChunks} chunks`);
+    // Use the segment filter to automatically split the audio into chunks
+    // This is more efficient than manually splitting
+    const segmentCommand = `-i ${tempFileName} -f segment -segment_time ${maxChunkDuration} -c copy ${outputPrefix}%03d`;
     
+    console.log(`Executing segment command: ${segmentCommand}`);
+    const segmentSession = await FFmpegKit.execute(segmentCommand);
+    
+    const returnCode = await segmentSession.getReturnCode();
+    if (!ReturnCode.isSuccess(returnCode)) {
+      console.error(`Error in segmentation: ${await segmentSession.getOutput()}`);
+      throw new Error("Failed to segment audio file");
+    }
+    
+    // Find all segment files
+    const segmentFiles = await FileSystem.listFiles(outputPrefix);
+    console.log(`Created ${segmentFiles.length} segments`);
+    
+    // Process each segment
     const chunks: AudioChunk[] = [];
     
-    // Split audio into chunks
-    for (let i = 0; i < numChunks; i++) {
+    for (let i = 0; i < segmentFiles.length; i++) {
+      const fileName = segmentFiles[i];
       const startTime = i * maxChunkDuration;
       const endTime = Math.min(startTime + maxChunkDuration, duration);
-      const outputFileName = `${outputPrefix}${i}.webm`;
       
-      // Execute FFmpeg command to split audio
-      const session = await FFmpegKit.execute(
-        `-i ${tempFileName} -ss ${startTime} -to ${endTime} -c copy ${outputFileName}`
-      );
+      // Read the segment file data
+      const segmentData = await FileSystem.readFile(fileName);
       
-      const returnCode = await session.getReturnCode();
-      if (!ReturnCode.isSuccess(returnCode)) {
-        throw new Error(`Error splitting audio chunk ${i}: ${await session.getOutput()}`);
-      }
+      // Convert to blob with same type as input
+      const chunkBlob = new Blob([segmentData], { type: audioBlob.type });
       
-      // Read the chunk file as bytes
-      const chunkData = await FileSystem.readFile(outputFileName);
-      
-      // Convert to Blob
-      const chunkBlob = new Blob([chunkData], { type: audioBlob.type });
       chunks.push({
         blob: chunkBlob,
         startTime,
         endTime
       });
       
-      // Delete the output file to save space
-      await FileSystem.deleteFile(outputFileName);
+      // Clean up the segment file
+      await FileSystem.deleteFile(fileName);
     }
     
-    // Delete the temporary file
+    // Delete the temporary input file
     await FileSystem.deleteFile(tempFileName);
     
-    console.log(`Audio split into ${chunks.length} chunks successfully`);
+    console.log(`Audio successfully split into ${chunks.length} chunks`);
     return chunks;
+    
   } catch (error) {
     console.error("Error splitting audio:", error);
     throw error;
