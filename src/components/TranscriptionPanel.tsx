@@ -22,38 +22,40 @@ export function TranscriptionPanel({
 }: TranscriptionPanelProps) {
   // Procesamiento seguro para cualquier tipo de output
   const displayOutput = React.useMemo(() => {
-    // Manejar null o undefined
-    if (output === null || output === undefined) {
-      return '';
-    }
-    
-    // Si ya es un string, devolverlo directamente
-    if (typeof output === 'string') {
-      return output;
-    }
-    
-    // Manejar objetos (incluidos objetos de error)
-    if (typeof output === 'object') {
-      // Si tiene una propiedad 'output' que es string, usarla
-      if ('output' in output && typeof (output as any).output === 'string') {
-        return (output as any).output;
+    try {
+      // Manejar null o undefined
+      if (output === null || output === undefined) {
+        return '';
       }
       
-      // Si tiene una propiedad 'message' (objeto de error), mostrar el mensaje
-      if ('message' in output && typeof (output as any).message === 'string') {
-        return `Error: ${(output as any).message}`;
+      // Si ya es un string, devolverlo directamente
+      if (typeof output === 'string') {
+        return output;
       }
       
-      // Si no, intentar convertirlo a JSON
-      try {
+      // Manejar objetos (incluidos objetos de error)
+      if (typeof output === 'object') {
+        // Si tiene una propiedad 'output' que es string, usarla
+        if ('output' in output && typeof (output as any).output === 'string') {
+          return (output as any).output;
+        }
+        
+        // Si tiene una propiedad 'message' (objeto de error), mostrar el mensaje
+        if ('message' in output && typeof (output as any).message === 'string') {
+          return `Error: ${(output as any).message}`;
+        }
+        
+        // Si no, intentar convertirlo a JSON
         return JSON.stringify(output, null, 2);
-      } catch {
-        return 'Error: No se pudo procesar el objeto';
       }
+      
+      // Fallback para cualquier otro tipo inesperado
+      return String(output);
+    } catch (error) {
+      // Último recurso en caso de error al procesar el output
+      console.error("Error processing output:", error);
+      return "Error: No se pudo procesar la información de salida";
     }
-    
-    // Fallback para cualquier otro tipo inesperado
-    return String(output);
   }, [output]);
     
   return (
