@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
 import { formatTime } from "@/lib/audio-utils";
-import { useTranscription } from "@/lib/transcription-service";
+import { useTranscription } from "@/lib/transcription";
 
 type RecordingState = "idle" | "recording" | "paused";
 type SpeakerMode = "single" | "multiple";
@@ -38,12 +38,12 @@ export function AudioRecorderV2() {
     progress, 
     transcript,
     error,
-    errors // Añadimos los errores por parte
+    errors 
   } = useTranscription({ 
     speakerMode,
     subject,
     webhookUrl: WEBHOOK_URL,
-    maxChunkDuration: 420 // 7 minutos (antes eran 10)
+    maxChunkDuration: 420 
   });
 
   useEffect(() => {
@@ -243,12 +243,10 @@ export function AudioRecorderV2() {
         }
       }
       
-      // Si hay errores en partes específicas, mostrarlos pero continuar
       if (result.errors && result.errors.length > 0) {
         toast.warning(`Se completó con ${result.errors.length} errores en algunas partes`);
       }
       
-      // Create recording object without 'errors' property first
       const recordingData = {
         name: recordingName || `Grabación ${formatDate(new Date())}`,
         audioUrl: audioUrlRef.current,
@@ -262,14 +260,11 @@ export function AudioRecorderV2() {
         webhookData: webhookData,
       };
       
-      // Only add errors to the recording if the Recording type supports it
-      // This ensures we don't get TypeScript errors
-      if (result.errors && result.errors.length > 0) {
-        // @ts-ignore - Adding errors even if not in the type
-        recordingData.errors = result.errors;
-      }
+      const finalRecordingData = result.errors && result.errors.length > 0
+        ? { ...recordingData, errors: result.errors } as any
+        : recordingData;
       
-      addRecording(recordingData);
+      addRecording(finalRecordingData);
       
       setAudioBlob(null);
       setRecordingName('');
