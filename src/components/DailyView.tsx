@@ -37,28 +37,27 @@ export function DailyView({
     return { time: slotTime };
   });
 
-  // Process all day events separate from time slots
+  // Process events for proper positioning in time slots
   const processedEvents = dayEvents.map(event => {
     const eventStart = parseISO(event.date);
     const eventEnd = event.endDate ? parseISO(event.endDate) : addHours(eventStart, 1);
     
-    // Calculate which hour slot this event starts in
-    const eventStartHour = eventStart.getHours();
-    const startIndex = Math.max(0, eventStartHour - startTime);
+    // Calculate position relative to the timeline
+    const hourHeight = 64; // height of each hour slot in pixels
     
-    // Calculate the height based on duration (in minutes)
-    const durationMinutes = differenceInMinutes(eventEnd, eventStart);
-    const heightPixels = Math.max(60, (durationMinutes / 60) * 60); // 60px per hour
+    // Calculate start position (hours from startTime + minutes offset)
+    const startHourOffset = eventStart.getHours() - startTime;
+    const startMinuteOffset = eventStart.getMinutes() / 60;
+    const topPosition = (startHourOffset + startMinuteOffset) * hourHeight;
     
-    // Calculate top position based on minutes past the hour
-    const minutesPastHour = eventStart.getMinutes();
-    const topOffset = (minutesPastHour / 60) * 60; // 60px per hour
+    // Calculate height based on duration
+    const durationInHours = differenceInMinutes(eventEnd, eventStart) / 60;
+    const height = Math.max(durationInHours * hourHeight, 20); // minimum height of 20px
     
     return {
       ...event,
-      startIndex,
-      topOffset,
-      height: heightPixels,
+      topPosition,
+      height,
       startTime: eventStart,
       endTime: eventEnd
     };
@@ -79,19 +78,20 @@ export function DailyView({
       </div>
       
       <ScrollArea className="flex-1 pr-4">
-        <div className="space-y-2 relative">
+        <div className="space-y-0 relative">
           {timeSlots.map((slot, index) => (
             <div 
               key={index}
-              className="flex items-start border-l-2 border-primary/20 pl-2 py-2 group hover:bg-primary/5 rounded-r-md"
+              className="flex items-start border-t border-primary/20 pl-2 py-2 group hover:bg-primary/5 rounded-r-md"
+              style={{ height: '64px' }}
             >
               <div className="w-16 flex-shrink-0 text-sm text-muted-foreground">
                 {format(slot.time, "HH:mm")}
               </div>
               
-              <div className="flex-1 min-h-[60px] relative">
+              <div className="flex-1 h-full relative">
                 <div 
-                  className="w-full h-full min-h-[60px] cursor-pointer flex items-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="w-full h-full cursor-pointer flex items-center opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={() => onTimeSelect(slot.time)}
                 >
                   <Button variant="ghost" size="sm" className="h-6">
@@ -104,16 +104,13 @@ export function DailyView({
           ))}
           
           {/* Render events as absolute positioned elements */}
-          {processedEvents.map(event => {
-            // Calculate position
-            const topPosition = event.startIndex * 64 + event.topOffset + 2; // 64px for time slot height + padding
-            
-            return (
+          <div className="absolute left-0 right-0 top-0 bottom-0 pointer-events-none">
+            {processedEvents.map(event => (
               <div 
                 key={event.id}
-                className="absolute left-20 right-4 bg-primary/10 text-primary p-2 rounded-md cursor-pointer hover:bg-primary/20 transition-colors overflow-hidden"
+                className="absolute left-20 right-4 bg-primary/10 text-primary p-2 rounded-md cursor-pointer hover:bg-primary/20 transition-colors overflow-hidden pointer-events-auto"
                 style={{ 
-                  top: `${topPosition}px`,
+                  top: `${event.topPosition}px`,
                   height: `${event.height}px`,
                   zIndex: 10
                 }}
@@ -127,8 +124,8 @@ export function DailyView({
                   <p className="text-xs mt-1 line-clamp-2">{event.description}</p>
                 )}
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
       </ScrollArea>
     </div>
