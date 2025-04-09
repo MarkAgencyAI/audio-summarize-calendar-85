@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, format, isSameMonth, isSameDay, addDays, parseISO, setHours, setMinutes, addHours } from "date-fns";
+import { addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, format, isSameMonth, isSameDay, addDays, parseISO, setHours, setMinutes, addHours, addWeeks, startOfWeek, endOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Plus, FolderPlus, Calendar as CalendarIcon, Filter, GraduationCap, Award, Book, Briefcase, Clock, Star, FileText } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, FolderPlus, Calendar as CalendarIcon, Filter, GraduationCap, Award, Book, Briefcase, Clock, Star, FileText, LayoutGrid, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -9,11 +9,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRecordings } from "@/context/RecordingsContext";
 import { DailyView } from "@/components/DailyView";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { WeeklySchedule } from "@/components/WeeklySchedule";
 
 export interface CalendarEvent {
   id: string;
@@ -24,7 +27,19 @@ export interface CalendarEvent {
   color?: string;
   folderId?: string;
   eventType?: string;
+  repeat?: "none" | "daily" | "weekly" | "monthly";
 }
+
+export const eventTypeColors: Record<string, string> = {
+  "Examen Parcial": "#F97316",
+  "Examen Final": "#ef4444",
+  "Trabajo Práctico": "#8B5CF6",
+  "Tarea": "#0EA5E9",
+  "Actividad": "#10b981",
+  "Consulta": "#D946EF",
+  "Clase Especial": "#f59e0b",
+  "Otro": "#6b7280",
+};
 
 interface CalendarProps {
   events: CalendarEvent[];
@@ -49,7 +64,8 @@ export function Calendar({
     date: "",
     endDate: "",
     folderId: "",
-    eventType: ""
+    eventType: "",
+    repeat: "none" as "none" | "daily" | "weekly" | "monthly"
   });
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
@@ -58,6 +74,7 @@ export function Calendar({
   const [newFolderColor, setNewFolderColor] = useState("#3b82f6");
   const [showDailyView, setShowDailyView] = useState(false);
   const [dailyViewDate, setDailyViewDate] = useState<Date | null>(null);
+  const [showWeeklySchedule, setShowWeeklySchedule] = useState(false);
 
   const isMobile = useIsMobile();
   const { folders, addFolder } = useRecordings();
@@ -163,17 +180,66 @@ export function Calendar({
       return;
     }
     
-    onAddEvent({
+    if (newEvent.repeat !== "none") {
+      createRepeatingEvents();
+    } else {
+      onAddEvent({
+        title: newEvent.title,
+        description: newEvent.description,
+        date: newEvent.date,
+        endDate: newEvent.endDate || undefined,
+        folderId: newEvent.folderId || undefined,
+        eventType: newEvent.eventType || undefined,
+        repeat: newEvent.repeat
+      });
+      
+      toast.success("Evento agregado");
+    }
+    
+    setShowEventDialog(false);
+  };
+
+  const createRepeatingEvents = () => {
+    const baseEvent = {
       title: newEvent.title,
       description: newEvent.description,
-      date: newEvent.date,
-      endDate: newEvent.endDate || undefined,
       folderId: newEvent.folderId || undefined,
-      eventType: newEvent.eventType || undefined
+      eventType: newEvent.eventType || undefined,
+      repeat: newEvent.repeat
+    };
+    
+    onAddEvent({
+      ...baseEvent,
+      date: newEvent.date,
+      endDate: newEvent.endDate || undefined
     });
     
-    toast.success("Evento agregado");
-    setShowEventDialog(false);
+    const startDate = new Date(newEvent.date);
+    const endDate = newEvent.endDate ? new Date(newEvent.endDate) : undefined;
+    const duration = endDate ? endDate.getTime() - startDate.getTime() : 3600000;
+    
+    for (let i = 1; i <= 10; i++) {
+      let nextDate = new Date(startDate);
+      
+      if (newEvent.repeat === "daily") {
+        nextDate = addDays(startDate, i);
+      } else if (newEvent.repeat === "weekly") {
+        nextDate = addWeeks(startDate, i);
+      } else if (newEvent.repeat === "monthly") {
+        nextDate = new Date(startDate);
+        nextDate.setMonth(nextDate.getMonth() + i);
+      }
+      
+      const nextEndDate = endDate ? new Date(nextDate.getTime() + duration) : undefined;
+      
+      onAddEvent({
+        ...baseEvent,
+        date: nextDate.toISOString(),
+        endDate: nextEndDate?.toISOString()
+      });
+    }
+    
+    toast.success(`Se han creado eventos repetitivos (${newEvent.repeat})`);
   };
 
   const handleDeleteEvent = () => {
@@ -206,6 +272,14 @@ export function Calendar({
     setNewFolderName("");
     setNewFolderColor("#3b82f6");
     setShowNewFolderDialog(false);
+  };
+
+  const handleCreateWeeklySchedule = (weeklyEvents: CalendarEvent[]) => {
+    weeklyEvents.forEach(event => {
+      onAddEvent(event);
+    });
+    setShowWeeklySchedule(false);
+    toast.success("Cronograma semanal guardado");
   };
 
   const getDayNames = () => {
@@ -241,9 +315,20 @@ export function Calendar({
     }
   };
 
+  const getEventColor = (eventType?: string) => {
+    if (!eventType) return "#6b7280";
+    return eventTypeColors[eventType] || "#6b7280";
+  };
+
   return (
     <div className="w-full">
-      {showDailyView && dailyViewDate ? (
+      {showWeeklySchedule ? (
+        <WeeklySchedule 
+          date={currentDate}
+          onSave={handleCreateWeeklySchedule}
+          onCancel={() => setShowWeeklySchedule(false)}
+        />
+      ) : showDailyView && dailyViewDate ? (
         <DailyView 
           date={dailyViewDate}
           events={events}
@@ -262,6 +347,15 @@ export function Calendar({
             </h2>
             
             <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2"
+                onClick={() => setShowWeeklySchedule(true)}
+              >
+                <LayoutGrid className="h-4 w-4" />
+                <span className="hidden sm:inline">Cronograma</span>
+              </Button>
+              
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="flex items-center gap-2">
@@ -285,8 +379,14 @@ export function Calendar({
                         onClick={() => onFilterChange(type)}
                         className={activeFilter === type ? "bg-primary/10" : ""}
                       >
-                        {getEventIcon(type)}
-                        <span>{type}</span>
+                        <div className="flex items-center gap-2">
+                          {getEventIcon(type)}
+                          <Badge 
+                            style={{backgroundColor: getEventColor(type)}} 
+                            className="h-2 w-2 p-0 rounded-full mr-1"
+                          />
+                          <span>{type}</span>
+                        </div>
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuGroup>
@@ -343,18 +443,25 @@ export function Calendar({
                       </div>
                       
                       <div className="space-y-1 max-h-[80px] overflow-y-auto">
-                        {dayEvents.map(event => 
+                        {dayEvents.map(event => (
                           <div 
                             key={event.id} 
-                            className="calendar-event bg-primary/10 text-primary hover:bg-primary/20" 
+                            className="calendar-event hover:bg-primary/20 flex items-center gap-1" 
+                            style={{
+                              backgroundColor: `${getEventColor(event.eventType)}20`,
+                              color: getEventColor(event.eventType)
+                            }}
                             onClick={e => {
                               e.stopPropagation();
                               handleEventClick(event);
                             }}
                           >
-                            {event.title}
+                            {event.repeat && event.repeat !== "none" && (
+                              <RotateCcw className="h-3 w-3 flex-shrink-0" />
+                            )}
+                            <span className="truncate text-xs">{event.title}</span>
                           </div>
-                        )}
+                        ))}
                       </div>
                       
                       <div className="absolute bottom-1 right-1">
@@ -450,7 +557,13 @@ export function Calendar({
                   <SelectItem value="otro">Otro</SelectItem>
                   {eventTypes.map(type => (
                     <SelectItem key={type} value={type}>
-                      {type}
+                      <div className="flex items-center gap-2">
+                        <Badge 
+                          style={{backgroundColor: getEventColor(type)}} 
+                          className="h-2 w-2 p-0 rounded-full"
+                        />
+                        {type}
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -495,6 +608,37 @@ export function Calendar({
                   })} 
                 />
               </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Repetición</Label>
+              <RadioGroup 
+                value={newEvent.repeat} 
+                onValueChange={(value: "none" | "daily" | "weekly" | "monthly") => 
+                  setNewEvent({
+                    ...newEvent,
+                    repeat: value
+                  })
+                }
+                className="flex flex-col space-y-1"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="none" id="none" />
+                  <Label htmlFor="none">Sin repetición</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="daily" id="daily" />
+                  <Label htmlFor="daily">Todos los días</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="weekly" id="weekly" />
+                  <Label htmlFor="weekly">Todas las semanas</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="monthly" id="monthly" />
+                  <Label htmlFor="monthly">Todos los meses</Label>
+                </div>
+              </RadioGroup>
             </div>
           </div>
           <DialogFooter>
@@ -555,8 +699,24 @@ export function Calendar({
               </p>
               
               {selectedEvent.eventType && (
-                <p className="text-sm font-medium mb-1">
-                  Tipo: {selectedEvent.eventType}
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm font-medium">Tipo:</span>
+                  <Badge 
+                    style={{backgroundColor: getEventColor(selectedEvent.eventType)}}
+                    className="text-white"
+                  >
+                    {selectedEvent.eventType}
+                  </Badge>
+                </div>
+              )}
+              
+              {selectedEvent.repeat && selectedEvent.repeat !== "none" && (
+                <p className="text-sm font-medium mb-1 flex items-center gap-2">
+                  <RotateCcw className="h-4 w-4" />
+                  Repetición: {
+                    selectedEvent.repeat === "daily" ? "Diaria" :
+                    selectedEvent.repeat === "weekly" ? "Semanal" : "Mensual"
+                  }
                 </p>
               )}
               

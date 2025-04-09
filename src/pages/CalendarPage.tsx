@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Layout } from "@/components/Layout";
@@ -12,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { loadFromStorage, saveToStorage } from "@/lib/storage";
 
 export default function CalendarPage() {
@@ -27,7 +27,8 @@ export default function CalendarPage() {
     date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
     endDate: format(addHours(new Date(), 1), "yyyy-MM-dd'T'HH:mm"),
     folderId: "",
-    eventType: ""
+    eventType: "",
+    repeat: "none" as "none" | "daily" | "weekly" | "monthly"
   });
 
   useEffect(() => {
@@ -161,39 +162,83 @@ export default function CalendarPage() {
       return;
     }
     
-    // Validate end date is after start date
     if (newEvent.endDate && new Date(newEvent.endDate) <= new Date(newEvent.date)) {
       toast.error("La hora de finalización debe ser posterior a la hora de inicio");
       return;
     }
     
-    handleAddEvent({
-      title: newEvent.title,
-      description: newEvent.description,
-      date: newEvent.date,
-      endDate: newEvent.endDate || undefined,
-      folderId: newEvent.folderId || undefined,
-      eventType: newEvent.eventType || undefined
-    });
+    if (newEvent.repeat === "none") {
+      handleAddEvent({
+        title: newEvent.title,
+        description: newEvent.description,
+        date: newEvent.date,
+        endDate: newEvent.endDate || undefined,
+        folderId: newEvent.folderId || undefined,
+        eventType: newEvent.eventType || undefined,
+        repeat: newEvent.repeat
+      });
+      toast.success("Evento agregado");
+    } else {
+      createRepeatingEvents();
+    }
     
-    // Reset form
     setNewEvent({
       title: "",
       description: "",
       date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
       endDate: format(addHours(new Date(), 1), "yyyy-MM-dd'T'HH:mm"),
       folderId: "",
-      eventType: ""
+      eventType: "",
+      repeat: "none"
     });
     
-    toast.success("Evento agregado");
     setShowAddEventDialog(false);
   };
 
-  // Handler for filter changes
+  const createRepeatingEvents = () => {
+    const baseEvent = {
+      title: newEvent.title,
+      description: newEvent.description,
+      folderId: newEvent.folderId || undefined,
+      eventType: newEvent.eventType || undefined,
+      repeat: newEvent.repeat
+    };
+    
+    handleAddEvent({
+      ...baseEvent,
+      date: newEvent.date,
+      endDate: newEvent.endDate || undefined
+    });
+    
+    const startDate = new Date(newEvent.date);
+    const endDate = newEvent.endDate ? new Date(newEvent.endDate) : undefined;
+    const duration = endDate ? endDate.getTime() - startDate.getTime() : 3600000;
+    
+    for (let i = 1; i <= 10; i++) {
+      let nextDate = new Date(startDate);
+      
+      if (newEvent.repeat === "daily") {
+        nextDate.setDate(nextDate.getDate() + i);
+      } else if (newEvent.repeat === "weekly") {
+        nextDate.setDate(nextDate.getDate() + (i * 7));
+      } else if (newEvent.repeat === "monthly") {
+        nextDate.setMonth(nextDate.getMonth() + i);
+      }
+      
+      const nextEndDate = endDate ? new Date(nextDate.getTime() + duration) : undefined;
+      
+      handleAddEvent({
+        ...baseEvent,
+        date: nextDate.toISOString(),
+        endDate: nextEndDate?.toISOString()
+      });
+    }
+    
+    toast.success(`Se han creado eventos repetitivos (${newEvent.repeat})`);
+  };
+
   const handleFilterChange = (filter: string) => {
     setActiveFilter(filter);
-    // Puedes mostrar un mensaje para indicar que el filtro ha cambiado
     if (filter === "all") {
       toast.info("Mostrando todos los eventos");
     } else {
@@ -221,7 +266,6 @@ export default function CalendarPage() {
         </div>
       </div>
       
-      {/* Floating Action Button */}
       <div className="fixed bottom-6 right-6">
         <Button 
           onClick={() => setShowAddEventDialog(true)}
@@ -231,7 +275,6 @@ export default function CalendarPage() {
         </Button>
       </div>
       
-      {/* Quick Add Event Dialog */}
       <Dialog open={showAddEventDialog} onOpenChange={setShowAddEventDialog}>
         <DialogContent className="max-w-[95vw] sm:max-w-[450px]">
           <DialogHeader>
@@ -289,6 +332,37 @@ export default function CalendarPage() {
                   })} 
                 />
               </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Repetición</Label>
+              <RadioGroup 
+                value={newEvent.repeat} 
+                onValueChange={(value: "none" | "daily" | "weekly" | "monthly") => 
+                  setNewEvent({
+                    ...newEvent,
+                    repeat: value
+                  })
+                }
+                className="flex flex-col space-y-1"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="none" id="r-none" />
+                  <Label htmlFor="r-none">Sin repetición</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="daily" id="r-daily" />
+                  <Label htmlFor="r-daily">Todos los días</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="weekly" id="r-weekly" />
+                  <Label htmlFor="r-weekly">Todas las semanas</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="monthly" id="r-monthly" />
+                  <Label htmlFor="r-monthly">Todos los meses</Label>
+                </div>
+              </RadioGroup>
             </div>
           </div>
           <DialogFooter>

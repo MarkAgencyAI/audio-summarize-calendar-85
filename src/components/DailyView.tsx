@@ -2,9 +2,9 @@
 import { useState } from "react";
 import { format, addHours, startOfDay, isSameHour, parseISO, isWithinInterval, addMinutes, differenceInMinutes, isBefore, isAfter, setMinutes } from "date-fns";
 import { es } from "date-fns/locale";
-import { ChevronLeft, Plus } from "lucide-react";
+import { ChevronLeft, Plus, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CalendarEvent } from "@/components/Calendar";
+import { CalendarEvent, eventTypeColors } from "@/components/Calendar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -62,12 +62,18 @@ export function DailyView({
     const durationInHours = differenceInMinutes(eventEnd, eventStart) / 60;
     const height = Math.max(durationInHours * hourHeight, 20); // minimum height of 20px
     
+    // Get event color based on event type
+    const eventColor = event.eventType 
+      ? eventTypeColors[event.eventType] || "#6b7280" 
+      : "#6b7280";
+    
     return {
       ...event,
       topPosition,
       height,
       startTime: eventStart,
-      endTime: eventEnd
+      endTime: eventEnd,
+      color: eventColor
     };
   });
 
@@ -116,15 +122,23 @@ export function DailyView({
             {processedEvents.map(event => (
               <div 
                 key={event.id}
-                className="absolute left-20 right-4 bg-primary/10 text-primary p-2 rounded-md cursor-pointer hover:bg-primary/20 transition-colors overflow-hidden pointer-events-auto"
+                className="absolute left-20 right-4 p-2 rounded-md cursor-pointer hover:brightness-95 transition-all overflow-hidden pointer-events-auto"
                 style={{ 
                   top: `${event.topPosition}px`,
                   height: `${event.height}px`,
+                  backgroundColor: `${event.color}20`,
+                  color: event.color,
+                  borderLeft: `3px solid ${event.color}`,
                   zIndex: 10
                 }}
                 onClick={() => onEventClick(event)}
               >
-                <p className="font-medium truncate">{event.title}</p>
+                <div className="flex items-center gap-1">
+                  {event.repeat && event.repeat !== "none" && (
+                    <RotateCcw className="h-3 w-3 flex-shrink-0" />
+                  )}
+                  <p className="font-medium truncate">{event.title}</p>
+                </div>
                 <p className="text-xs truncate">
                   {format(event.startTime, "HH:mm")} - {format(event.endTime, "HH:mm")}
                 </p>
