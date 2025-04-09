@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,30 +20,34 @@ export function TranscriptionPanel({
   progress = 0,
   showProgress = false
 }: TranscriptionPanelProps) {
-  // Ensure output is always a string, handling null and object cases explicitly
+  // Improved output processing with more comprehensive type handling
   const displayOutput = React.useMemo(() => {
+    // Handle null or undefined
     if (output === null || output === undefined) {
       return '';
     }
     
+    // If it's already a string, return it
     if (typeof output === 'string') {
       return output;
     }
     
-    // If it's an object with an 'output' property, use that
-    if (typeof output === 'object' && output !== null) {
+    // Handle object with output property
+    if (typeof output === 'object') {
+      // Check if it has an 'output' property that is a string
       if ('output' in output && typeof (output as any).output === 'string') {
         return (output as any).output;
       }
       
-      // Otherwise stringify the object safely
+      // If not, try to stringify the entire object
       try {
         return JSON.stringify(output, null, 2);
-      } catch (e) {
-        return 'Error: Could not display object data';
+      } catch {
+        return 'Error: Could not parse object data';
       }
     }
     
+    // Fallback for any other unexpected type
     return String(output);
   }, [output]);
     
