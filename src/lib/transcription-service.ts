@@ -155,6 +155,7 @@ export class TranscriptionService {
             await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempts) * 1000));
           }
           
+          // Utilizamos directamente el blob para enviarlo como un archivo
           const result = await this.transcribeAudioChunk(chunk.blob);
           
           // Añadir marca de tiempo y agregar a la transcripción completa
@@ -225,67 +226,47 @@ export class TranscriptionService {
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
       
       const duration = audioBuffer.duration;
-      const chunkDuration = duration / numChunks;
+      const chunkDuration = this.options.maxChunkDuration; // Usamos la duración máxima configurada
       const chunks: Array<{blob: Blob, startTime: number, endTime: number}> = [];
       
-      console.log(`Dividiendo audio de ${duration}s en ${numChunks} partes de aproximadamente ${chunkDuration}s cada una`);
+      console.log(`Dividiendo audio de ${duration}s en segmentos de ${chunkDuration}s como máximo`);
       
-      // Crear cada segmento
-      for (let i = 0; i < numChunks; i++) {
-        const startTime = i * chunkDuration;
-        const endTime = Math.min((i + 1) * chunkDuration, duration);
+      // Crear cada segmento basado en la duración máxima, no en número de segmentos
+      let startTime = 0;
+      while (startTime < duration) {
+        const endTime = Math.min(startTime + chunkDuration, duration);
         const chunkSeconds = endTime - startTime;
         
-        if (chunkSeconds <= 0) {
-          console.warn(`Segmento ${i+1} tiene duración cero o negativa, omitiendo`);
-          continue;
-        }
-        
-        console.log(`Creando segmento ${i+1}: ${startTime}s a ${endTime}s (${chunkSeconds}s)`);
+        console.log(`Creando segmento: ${startTime}s a ${endTime}s (${chunkSeconds}s)`);
         
         // Crear un nuevo buffer para este segmento
+        const sampleRate = audioBuffer.sampleRate;
+        const frameCount = Math.ceil(chunkSeconds * sampleRate);
         const chunkBuffer = audioContext.createBuffer(
           audioBuffer.numberOfChannels,
-          Math.ceil(chunkSeconds * audioBuffer.sampleRate),
-          audioBuffer.sampleRate
+          frameCount,
+          sampleRate
         );
-        
-        // Verificar que el buffer tenga un tamaño válido
-        if (chunkBuffer.length <= 0) {
-          console.warn(`Buffer para segmento ${i+1} tiene longitud inválida (${chunkBuffer.length}), omitiendo`);
-          continue;
-        }
         
         // Copiar los datos para cada canal
         for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
-          const channelData = new Float32Array(chunkBuffer.length);
-          const sourceOffset = Math.floor(startTime * audioBuffer.sampleRate);
+          const channelData = new Float32Array(frameCount);
+          const sourceOffset = Math.floor(startTime * sampleRate);
+          const sourceData = audioBuffer.getChannelData(channel);
           
-          // Verificar que estamos dentro de los límites del buffer original
-          if (sourceOffset >= audioBuffer.length) {
-            console.warn(`Offset para segmento ${i+1} fuera de límites, omitiendo`);
-            continue;
+          // Copiar solo los datos que necesitamos para este segmento
+          for (let i = 0; i < frameCount; i++) {
+            const sourceIndex = sourceOffset + i;
+            if (sourceIndex < sourceData.length) {
+              channelData[i] = sourceData[sourceIndex];
+            }
           }
           
-          // Copiar los datos con verificación de límites
-          const samplesToCopy = Math.min(
-            channelData.length,
-            audioBuffer.length - sourceOffset
-          );
-          
-          if (samplesToCopy <= 0) {
-            console.warn(`No hay muestras para copiar en segmento ${i+1}, omitiendo`);
-            continue;
-          }
-          
-          const sourceData = new Float32Array(samplesToCopy);
-          audioBuffer.copyFromChannel(sourceData, channel, sourceOffset);
-          channelData.set(sourceData.slice(0, samplesToCopy));
-          chunkBuffer.copyToChannel(channelData, channel, 0);
+          chunkBuffer.copyToChannel(channelData, channel);
         }
         
-        // Convertir el buffer a blob
-        const chunkBlob = await this.audioBufferToBlob(chunkBuffer, audioBlob.type || 'audio/wav');
+        // Convertir el buffer a blob (formato WAV)
+        const chunkBlob = await this.audioBufferToWav(chunkBuffer, audioBlob.type || 'audio/wav');
         
         chunks.push({
           blob: chunkBlob,
@@ -293,7 +274,10 @@ export class TranscriptionService {
           endTime: endTime
         });
         
-        console.log(`Segmento ${i+1} creado correctamente (${chunkBlob.size} bytes)`);
+        console.log(`Segmento creado correctamente (${chunkBlob.size} bytes)`);
+        
+        // Avanzar al siguiente segmento
+        startTime = endTime;
       }
       
       console.log(`Se crearon ${chunks.length} segmentos de audio`);
@@ -310,34 +294,71 @@ export class TranscriptionService {
   }
   
   /**
-   * Convierte un AudioBuffer a Blob
+   * Convierte un AudioBuffer a un Blob en formato WAV
    */
-  private async audioBufferToBlob(buffer: AudioBuffer, mimeType: string): Promise<Blob> {
-    return new Promise((resolve) => {
-      // Crear un offline context para renderizar el audio
-      const offlineContext = new OfflineAudioContext(
-        buffer.numberOfChannels,
-        buffer.length,
-        buffer.sampleRate
-      );
-      
-      // Crear una fuente desde el buffer
-      const source = offlineContext.createBufferSource();
-      source.buffer = buffer;
-      source.connect(offlineContext.destination);
-      source.start(0);
-      
-      // Renderizar el audio
-      offlineContext.startRendering().then(renderedBuffer => {
-        // Convertir el buffer renderizado a WAV
-        const wavBlob = this.bufferToWave(renderedBuffer, 0, renderedBuffer.length);
-        resolve(new Blob([wavBlob], { type: mimeType || 'audio/wav' }));
-      });
-    });
+  private async audioBufferToWav(buffer: AudioBuffer, mimeType: string): Promise<Blob> {
+    // Función para escribir una cadena UTF8 en un DataView
+    const writeString = (view: DataView, offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+    
+    // Obtener datos del buffer
+    const numChannels = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const format = 1; // PCM format
+    const bitDepth = 16; // 16-bit
+    
+    // Calcular el tamaño del archivo WAV
+    const bytesPerSample = bitDepth / 8;
+    const blockAlign = numChannels * bytesPerSample;
+    const byteRate = sampleRate * blockAlign;
+    const dataSize = buffer.length * blockAlign;
+    const headerSize = 44;
+    const fileSize = headerSize + dataSize;
+    
+    // Crear ArrayBuffer para el archivo WAV
+    const arrayBuffer = new ArrayBuffer(fileSize);
+    const view = new DataView(arrayBuffer);
+    
+    // Escribir cabecera RIFF
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, fileSize - 8, true);
+    writeString(view, 8, 'WAVE');
+    
+    // Escribir cabecera fmt
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true); // tamaño del bloque fmt
+    view.setUint16(20, format, true); // formato PCM
+    view.setUint16(22, numChannels, true); // número de canales
+    view.setUint32(24, sampleRate, true); // frecuencia de muestreo
+    view.setUint32(28, byteRate, true); // byte rate
+    view.setUint16(32, blockAlign, true); // block align
+    view.setUint16(34, bitDepth, true); // bits por muestra
+    
+    // Escribir cabecera data
+    writeString(view, 36, 'data');
+    view.setUint32(40, dataSize, true); // tamaño de los datos
+    
+    // Escribir datos de audio
+    let offset = 44;
+    for (let i = 0; i < buffer.length; i++) {
+      for (let channel = 0; channel < numChannels; channel++) {
+        const sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
+        const sample16bit = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+        view.setInt16(offset, sample16bit, true);
+        offset += 2;
+      }
+    }
+    
+    // Crear el Blob
+    return new Blob([arrayBuffer], { type: mimeType });
   }
   
   /**
-   * Convierte un buffer a formato WAV
+   * Convierte un buffer a formato WAV usando un método alternativo
+   * Este método es una alternativa más simple al anterior
    */
   private bufferToWave(buffer: AudioBuffer, start: number, end: number): ArrayBuffer {
     const numOfChan = buffer.numberOfChannels;
@@ -365,15 +386,13 @@ export class TranscriptionService {
     view.setUint32(40, length - 44, true);
     
     // Write the PCM samples
-    const data = new Float32Array(buffer.length * numOfChan);
     let offset = 44;
     
     // Interleave channels
-    for (let i = 0; i < buffer.numberOfChannels; i++) {
-      const channelData = buffer.getChannelData(i);
-      for (let j = 0; j < channelData.length; j++) {
+    for (let i = start; i < end; i++) {
+      for (let channel = 0; channel < numOfChan; channel++) {
         // Scale to 16-bit signed int
-        let sample = Math.max(-1, Math.min(1, channelData[j]));
+        let sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
         sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
         view.setInt16(offset, sample, true);
         offset += 2;
@@ -387,6 +406,34 @@ export class TranscriptionService {
     for (let i = 0; i < string.length; i++) {
       view.setUint8(offset + i, string.charCodeAt(i));
     }
+  }
+
+  /**
+   * Convierte un AudioBuffer a Blob
+   * @deprecated Usar audioBufferToWav en su lugar
+   */
+  private async audioBufferToBlob(buffer: AudioBuffer, mimeType: string): Promise<Blob> {
+    return new Promise((resolve) => {
+      // Crear un offline context para renderizar el audio
+      const offlineContext = new OfflineAudioContext(
+        buffer.numberOfChannels,
+        buffer.length,
+        buffer.sampleRate
+      );
+      
+      // Crear una fuente desde el buffer
+      const source = offlineContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(offlineContext.destination);
+      source.start(0);
+      
+      // Renderizar el audio
+      offlineContext.startRendering().then(renderedBuffer => {
+        // Convertir el buffer renderizado a WAV
+        const wavBlob = this.bufferToWave(renderedBuffer, 0, renderedBuffer.length);
+        resolve(new Blob([wavBlob], { type: mimeType || 'audio/wav' }));
+      });
+    });
   }
 
   /**
@@ -424,12 +471,31 @@ export class TranscriptionService {
         throw new Error("El segmento de audio está vacío");
       }
       
-      // Crear un FormData para la API
+      // Crear un FormData para la API (siguiendo un enfoque similar al de RNFetchBlob pero para web)
       const formData = new FormData();
-      formData.append("file", audioBlob, "audio.wav");
+      
+      // Usar un nombre de archivo con extensión basada en el tipo MIME
+      let filename = "audio";
+      if (audioBlob.type.includes("wav")) {
+        filename += ".wav";
+      } else if (audioBlob.type.includes("mp3")) {
+        filename += ".mp3";
+      } else if (audioBlob.type.includes("mpeg")) {
+        filename += ".mp3";
+      } else if (audioBlob.type.includes("ogg")) {
+        filename += ".ogg";
+      } else {
+        filename += ".wav"; // Default a WAV si no podemos determinar
+      }
+      
+      // Añadir el blob directamente como archivo
+      formData.append("file", audioBlob, filename);
       formData.append("model", "whisper-large-v3-turbo");
       formData.append("response_format", "verbose_json");
       formData.append("language", "es");
+      
+      // Log adicional para verificar lo que estamos enviando
+      console.log(`Enviando archivo ${filename} (${audioBlob.size} bytes) a la API de GROQ`);
       
       // Crear un prompt basado en el modo de oradores
       const prompt = this.options.speakerMode === 'single'
@@ -438,7 +504,7 @@ export class TranscriptionService {
       
       formData.append("prompt", prompt);
       
-      // Hacer la petición a la API de GROQ con manejo de reintentos
+      // Hacer la petición a la API de GROQ
       console.log(`Enviando solicitud a GROQ API para transcripción`);
       
       const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
@@ -449,23 +515,35 @@ export class TranscriptionService {
         body: formData
       });
       
+      // Verificar errores HTTP
       if (!response.ok) {
         const errorText = await response.text();
+        console.error(`Error de API (${response.status}): ${errorText}`);
         throw new Error(`Error de API: ${response.status} - ${errorText}`);
       }
       
-      const data = await response.json();
-      
-      if (!data.text) {
-        throw new Error("Respuesta inválida de la API de GROQ");
+      // Intentar parsear la respuesta como JSON
+      try {
+        const data = await response.json();
+        
+        if (!data.text) {
+          console.error("Respuesta sin texto:", data);
+          throw new Error("Respuesta inválida de la API de GROQ");
+        }
+        
+        console.log("Transcripción exitosa:", data.text.slice(0, 50) + "...");
+        
+        return {
+          transcript: data.text.trim(),
+          language: data.language || "es"
+        };
+      } catch (jsonError) {
+        // Si no es JSON, intentar obtener el texto
+        console.error("Error al parsear respuesta JSON:", jsonError);
+        const text = await response.text();
+        console.error("Respuesta cruda:", text);
+        throw new Error("Error al procesar la respuesta de la API");
       }
-      
-      console.log("Transcripción exitosa:", data.text.slice(0, 50) + "...");
-      
-      return {
-        transcript: data.text.trim(),
-        language: data.language || "es"
-      };
     } catch (error) {
       console.error("Error en transcripción:", error);
       throw error;
