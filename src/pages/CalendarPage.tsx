@@ -4,8 +4,14 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { Calendar, CalendarEvent } from "@/components/Calendar";
 import { useAuth } from "@/context/AuthContext";
-import { format } from "date-fns";
+import { format, addHours } from "date-fns";
 import { toast } from "sonner";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { loadFromStorage, saveToStorage } from "@/lib/storage";
 
 export default function CalendarPage() {
@@ -13,6 +19,15 @@ export default function CalendarPage() {
   const location = useLocation();
   const { user } = useAuth();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [showAddEventDialog, setShowAddEventDialog] = useState(false);
+  const [newEvent, setNewEvent] = useState({
+    title: "",
+    description: "",
+    date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+    endDate: format(addHours(new Date(), 1), "yyyy-MM-dd'T'HH:mm"),
+    folderId: "",
+    eventType: ""
+  });
 
   useEffect(() => {
     if (!user) {
@@ -139,6 +154,41 @@ export default function CalendarPage() {
     });
   };
 
+  const handleQuickAddEvent = () => {
+    if (!newEvent.title.trim()) {
+      toast.error("El título es obligatorio");
+      return;
+    }
+    
+    // Validate end date is after start date
+    if (newEvent.endDate && new Date(newEvent.endDate) <= new Date(newEvent.date)) {
+      toast.error("La hora de finalización debe ser posterior a la hora de inicio");
+      return;
+    }
+    
+    handleAddEvent({
+      title: newEvent.title,
+      description: newEvent.description,
+      date: newEvent.date,
+      endDate: newEvent.endDate || undefined,
+      folderId: newEvent.folderId || undefined,
+      eventType: newEvent.eventType || undefined
+    });
+    
+    // Reset form
+    setNewEvent({
+      title: "",
+      description: "",
+      date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+      endDate: format(addHours(new Date(), 1), "yyyy-MM-dd'T'HH:mm"),
+      folderId: "",
+      eventType: ""
+    });
+    
+    toast.success("Evento agregado");
+    setShowAddEventDialog(false);
+  };
+
   return (
     <Layout>
       <div className="space-y-4 sm:space-y-6 w-full">
@@ -156,6 +206,82 @@ export default function CalendarPage() {
           </div>
         </div>
       </div>
+      
+      {/* Floating Action Button */}
+      <div className="fixed bottom-6 right-6">
+        <Button 
+          onClick={() => setShowAddEventDialog(true)}
+          className="rounded-full shadow-lg w-14 h-14 p-4"
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
+      </div>
+      
+      {/* Quick Add Event Dialog */}
+      <Dialog open={showAddEventDialog} onOpenChange={setShowAddEventDialog}>
+        <DialogContent className="max-w-[95vw] sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle>Agregar evento</DialogTitle>
+            <DialogDescription>Completa los datos para agregar un nuevo evento</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Título</Label>
+              <Input 
+                id="title" 
+                value={newEvent.title} 
+                onChange={e => setNewEvent({
+                  ...newEvent,
+                  title: e.target.value
+                })} 
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="description">Descripción</Label>
+              <Textarea 
+                id="description" 
+                value={newEvent.description} 
+                onChange={e => setNewEvent({
+                  ...newEvent,
+                  description: e.target.value
+                })} 
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="startDate">Hora de inicio</Label>
+                <Input 
+                  id="startDate" 
+                  type="datetime-local" 
+                  value={newEvent.date} 
+                  onChange={e => setNewEvent({
+                    ...newEvent,
+                    date: e.target.value
+                  })} 
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="endDate">Hora de finalización</Label>
+                <Input 
+                  id="endDate" 
+                  type="datetime-local" 
+                  value={newEvent.endDate} 
+                  onChange={e => setNewEvent({
+                    ...newEvent,
+                    endDate: e.target.value
+                  })} 
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleQuickAddEvent}>Guardar evento</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }

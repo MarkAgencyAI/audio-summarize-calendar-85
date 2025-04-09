@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { format, addHours, startOfDay, isSameHour, parseISO } from "date-fns";
+import { format, addHours, startOfDay, isSameHour, parseISO, isWithinInterval, addMinutes, differenceInMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 import { ChevronLeft, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,13 +34,29 @@ export function DailyView({
   
   const timeSlots = Array.from({ length: endTime - startTime + 1 }, (_, i) => {
     const slotTime = addHours(startOfDay(date), startTime + i);
-    const slotEvents = dayEvents.filter(event => 
-      isSameHour(parseISO(event.date), slotTime)
-    );
+    // Find events that overlap with this time slot
+    const slotEvents = dayEvents.filter(event => {
+      const eventStart = parseISO(event.date);
+      const eventEnd = event.endDate ? parseISO(event.endDate) : addHours(eventStart, 1);
+      
+      return (
+        isWithinInterval(slotTime, { start: eventStart, end: eventEnd }) ||
+        isWithinInterval(addMinutes(slotTime, 59), { start: eventStart, end: eventEnd }) ||
+        (isSameHour(eventStart, slotTime))
+      );
+    });
     
     return {
       time: slotTime,
-      events: slotEvents
+      events: slotEvents.map(event => {
+        const eventStart = parseISO(event.date);
+        const eventEnd = event.endDate ? parseISO(event.endDate) : addHours(eventStart, 1);
+        const height = Math.min(differenceInMinutes(eventEnd, eventStart) / 60, 4) * 60; // Max 4 hours display
+        return {
+          ...event,
+          height: Math.max(60, height) // Minimum height of 60px
+        };
+      })
     };
   });
 
@@ -72,18 +88,27 @@ export function DailyView({
               <div className="flex-1 min-h-[60px] relative">
                 {slot.events.length > 0 ? (
                   <div className="space-y-1 w-full">
-                    {slot.events.map(event => (
-                      <div 
-                        key={event.id}
-                        className="bg-primary/10 text-primary p-2 rounded-md cursor-pointer hover:bg-primary/20 transition-colors"
-                        onClick={() => onEventClick(event)}
-                      >
-                        <p className="font-medium truncate">{event.title}</p>
-                        <p className="text-xs truncate">
-                          {format(parseISO(event.date), "HH:mm")}
-                        </p>
-                      </div>
-                    ))}
+                    {slot.events.map(event => {
+                      const eventStart = parseISO(event.date);
+                      const eventEnd = event.endDate ? parseISO(event.endDate) : addHours(eventStart, 1);
+                      
+                      return (
+                        <div 
+                          key={event.id}
+                          className="bg-primary/10 text-primary p-2 rounded-md cursor-pointer hover:bg-primary/20 transition-colors"
+                          style={{ 
+                            minHeight: `${event.height}px`,
+                            opacity: isSameHour(eventStart, slot.time) ? 1 : 0.7 
+                          }}
+                          onClick={() => onEventClick(event)}
+                        >
+                          <p className="font-medium truncate">{event.title}</p>
+                          <p className="text-xs truncate">
+                            {format(eventStart, "HH:mm")} - {format(eventEnd, "HH:mm")}
+                          </p>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div 

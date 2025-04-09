@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, format, isSameMonth, isSameDay, addDays, parseISO, setHours, setMinutes } from "date-fns";
+import { addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, format, isSameMonth, isSameDay, addDays, parseISO, setHours, setMinutes, addHours } from "date-fns";
 import { es } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Plus, FolderPlus, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +19,7 @@ export interface CalendarEvent {
   title: string;
   description: string;
   date: string;
+  endDate?: string;
   color?: string;
   folderId?: string;
   eventType?: string;
@@ -41,6 +42,7 @@ export function Calendar({
     title: "",
     description: "",
     date: "",
+    endDate: "",
     folderId: "",
     eventType: ""
   });
@@ -114,11 +116,13 @@ export function Calendar({
   };
 
   const handleTimeSelect = (time: Date) => {
+    const endTime = addHours(time, 1);
     setSelectedDate(time);
     setNewEvent({
       title: "",
       description: "",
       date: format(time, "yyyy-MM-dd'T'HH:mm"),
+      endDate: format(endTime, "yyyy-MM-dd'T'HH:mm"),
       folderId: "",
       eventType: ""
     });
@@ -140,10 +144,16 @@ export function Calendar({
       return;
     }
     
+    if (newEvent.endDate && new Date(newEvent.endDate) <= new Date(newEvent.date)) {
+      toast.error("La hora de finalización debe ser posterior a la hora de inicio");
+      return;
+    }
+    
     onAddEvent({
       title: newEvent.title,
       description: newEvent.description,
       date: newEvent.date,
+      endDate: newEvent.endDate || undefined,
       folderId: newEvent.folderId || undefined,
       eventType: newEvent.eventType || undefined
     });
@@ -306,6 +316,7 @@ export function Calendar({
         <DialogContent className="max-w-[95vw] sm:max-w-[450px]">
           <DialogHeader>
             <DialogTitle>Agregar evento</DialogTitle>
+            <DialogDescription>Completa los detalles para crear un nuevo evento</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -389,17 +400,32 @@ export function Calendar({
               />
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="date">Fecha y hora</Label>
-              <Input 
-                id="date" 
-                type="datetime-local" 
-                value={newEvent.date} 
-                onChange={e => setNewEvent({
-                  ...newEvent,
-                  date: e.target.value
-                })} 
-              />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="startDate">Hora de inicio</Label>
+                <Input 
+                  id="startDate" 
+                  type="datetime-local" 
+                  value={newEvent.date} 
+                  onChange={e => setNewEvent({
+                    ...newEvent,
+                    date: e.target.value
+                  })} 
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="endDate">Hora de finalización</Label>
+                <Input 
+                  id="endDate" 
+                  type="datetime-local" 
+                  value={newEvent.endDate} 
+                  onChange={e => setNewEvent({
+                    ...newEvent,
+                    endDate: e.target.value
+                  })} 
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -451,9 +477,12 @@ export function Calendar({
             </DialogHeader>
             <div className="py-4">
               <p className="text-sm text-muted-foreground mb-1">
-                {format(parseISO(selectedEvent.date), "PPPp", {
-                  locale: es
-                })}
+                {format(parseISO(selectedEvent.date), "PPP", { locale: es })}
+              </p>
+              
+              <p className="text-sm text-muted-foreground mb-3">
+                {format(parseISO(selectedEvent.date), "HH:mm")} 
+                {selectedEvent.endDate && ` - ${format(parseISO(selectedEvent.endDate), "HH:mm")}`}
               </p>
               
               {selectedEvent.eventType && (
