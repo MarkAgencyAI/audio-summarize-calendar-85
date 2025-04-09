@@ -1,4 +1,3 @@
-
 import { transcribeAudio } from "@/lib/groq";
 import { splitAudioFile } from "@/lib/audio-splitter";
 import { sendToWebhook } from "@/lib/webhook";
@@ -7,6 +6,9 @@ import { getAudioDuration } from "@/lib/audio-utils";
 interface TranscriptionProgressCallback {
   (data: any): void;
 }
+
+// URL fija del webhook
+const WEBHOOK_URL = "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 
 /**
  * Process an audio file for transcription, handling chunking for long audio files
@@ -256,7 +258,6 @@ export async function processAudioForTranscription(
     
     try {
       // Send data to webhook - use the constant URL
-      const WEBHOOK_URL = "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
       console.log("Iniciando envío a webhook");
       await sendToWebhook(WEBHOOK_URL, webhookData);
       console.log("Webhook completado correctamente");

@@ -1,31 +1,29 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { saveToStorage, loadFromStorage } from "@/lib/storage";
+import { loadFromStorage, saveToStorage } from "@/lib/storage";
 
-// Define types
+export type SpeakerMode = "single" | "multiple";
+
 export interface Recording {
   id: string;
   name: string;
-  date: string;
-  duration: number;
   audioUrl: string;
-  audioData: string;
-  output: string;
+  audioData?: string;
+  output?: string | any;
+  createdAt: string;
   folderId: string;
+  duration: number;
   subject?: string;
-  speakerMode?: 'single' | 'multiple';
-  suggestedEvents?: Array<{
-    title: string;
-    description: string;
-    date?: string;
-  }>;
+  speakerMode?: SpeakerMode;
+  suggestedEvents?: any[];
+  webhookData?: any; // Agregamos el campo webhookData
 }
 
 export interface Folder {
   id: string;
   name: string;
-  color: string;
   createdAt: string;
+  color?: string;
 }
 
 export interface Note {
@@ -87,14 +85,12 @@ export const RecordingsProvider: React.FC<RecordingsProviderProps> = ({ children
   const [notes, setNotes] = useState<Note[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
 
-  // Load data from storage on mount
   useEffect(() => {
     const loadedRecordings = loadFromStorage<Recording[]>("recordings") || [];
     const loadedFolders = loadFromStorage<Folder[]>("folders") || [];
     const loadedNotes = loadFromStorage<Note[]>("notes") || [];
     const loadedGrades = loadFromStorage<Grade[]>("grades") || [];
     
-    // Ensure we have a default folder
     if (loadedFolders.length === 0) {
       const defaultFolders = [
         {
@@ -127,7 +123,6 @@ export const RecordingsProvider: React.FC<RecordingsProviderProps> = ({ children
     setGrades(loadedGrades);
   }, []);
 
-  // Save to storage whenever our data changes
   useEffect(() => {
     saveToStorage("recordings", recordings);
   }, [recordings]);
@@ -144,20 +139,20 @@ export const RecordingsProvider: React.FC<RecordingsProviderProps> = ({ children
     saveToStorage("grades", grades);
   }, [grades]);
 
-  // Recordings functions
   const addRecording = (recording: Partial<Recording>) => {
     const newRecording: Recording = {
       id: uuidv4(),
       name: recording.name || "Grabación sin título",
-      date: new Date().toISOString(),
-      duration: recording.duration || 0,
       audioUrl: recording.audioUrl || "",
       audioData: recording.audioData || "",
       output: recording.output || "",
+      createdAt: new Date().toISOString(),
       folderId: recording.folderId || "default",
-      speakerMode: recording.speakerMode || "single",
+      duration: recording.duration || 0,
       subject: recording.subject,
-      suggestedEvents: recording.suggestedEvents
+      speakerMode: recording.speakerMode || "single",
+      suggestedEvents: recording.suggestedEvents,
+      webhookData: recording.webhookData
     };
     
     setRecordings(prev => [newRecording, ...prev]);
@@ -177,7 +172,6 @@ export const RecordingsProvider: React.FC<RecordingsProviderProps> = ({ children
     );
   };
 
-  // Folder functions
   const addFolder = (name: string, color: string) => {
     const newFolder: Folder = {
       id: uuidv4(),
@@ -198,34 +192,29 @@ export const RecordingsProvider: React.FC<RecordingsProviderProps> = ({ children
   };
 
   const deleteFolder = (id: string) => {
-    // Don't allow deleting the default folder
     if (id === "default") return;
     
     setFolders(prevFolders => 
       prevFolders.filter(folder => folder.id !== id)
     );
     
-    // Move all recordings from this folder to default
     setRecordings(prevRecordings => 
       prevRecordings.map(recording => 
         recording.folderId === id ? { ...recording, folderId: "default" } : recording
       )
     );
     
-    // Move all notes from this folder to default
     setNotes(prevNotes => 
       prevNotes.map(note => 
         note.folderId === id ? { ...note, folderId: "default" } : note
       )
     );
     
-    // Delete grades associated with this folder
     setGrades(prevGrades => 
       prevGrades.filter(grade => grade.folderId !== id)
     );
   };
 
-  // Notes functions
   const addNote = (note: Partial<Note>) => {
     const newNote: Note = {
       id: uuidv4(),
@@ -262,7 +251,6 @@ export const RecordingsProvider: React.FC<RecordingsProviderProps> = ({ children
     return notes.filter(note => note.folderId === folderId);
   };
 
-  // Grades functions
   const addGrade = (folderId: string, name: string, score: number) => {
     const newGrade: Grade = {
       id: uuidv4(),

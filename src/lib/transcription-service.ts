@@ -1,6 +1,5 @@
-
-import { toast } from "sonner";
 import React from 'react';
+import { toast } from "sonner";
 import { sendToWebhook } from "./webhook";
 
 // Definimos las interfaces para nuestro servicio

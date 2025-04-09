@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Mic, X, Play, Pause, Loader2, Square, User, Users, Upload } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -14,6 +13,8 @@ import { useTranscription } from "@/lib/transcription-service";
 type RecordingState = "idle" | "recording" | "paused";
 type SpeakerMode = "single" | "multiple";
 
+const WEBHOOK_URL = "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
+
 export function AudioRecorderV2() {
   const { addRecording, folders } = useRecordings();
   const mediaRecorder = useRef<MediaRecorder | null>(null);
@@ -26,12 +27,10 @@ export function AudioRecorderV2() {
   const [selectedFolder, setSelectedFolder] = useState("default");
   const [speakerMode, setSpeakerMode] = useState<SpeakerMode>("single");
   const [hasPermission, setHasPermission] = useState(false);
-  const [webhookUrl, setWebhookUrl] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
   const audioUrlRef = useRef<string | null>(null);
   
-  // Usar nuestro hook de transcripción
   const { 
     transcribeAudio, 
     isTranscribing, 
@@ -41,11 +40,10 @@ export function AudioRecorderV2() {
   } = useTranscription({ 
     speakerMode,
     subject,
-    webhookUrl,
+    webhookUrl: WEBHOOK_URL,
     maxChunkDuration: 600 // 10 minutos
   });
 
-  // Verificar permisos de micrófono
   useEffect(() => {
     const checkPermissions = async () => {
       try {
@@ -61,7 +59,6 @@ export function AudioRecorderV2() {
     checkPermissions();
   }, []);
 
-  // Limpiar temporizador al desmontar
   useEffect(() => {
     return () => {
       if (timerInterval.current) {
@@ -70,7 +67,6 @@ export function AudioRecorderV2() {
     };
   }, []);
 
-  // Iniciar grabación
   const startRecording = async () => {
     if (!hasPermission) {
       toast.error("Por favor, permite el acceso al micrófono");
@@ -96,7 +92,6 @@ export function AudioRecorderV2() {
         setAudioBlob(audioBlob);
       };
       
-      // Enviar mensaje de que comenzó la grabación
       window.dispatchEvent(new CustomEvent('audioRecorderMessage', {
         detail: { type: 'recordingStarted' }
       }));
@@ -110,8 +105,7 @@ export function AudioRecorderV2() {
       toast.error("Error al iniciar la grabación");
     }
   };
-  
-  // Pausar grabación
+
   const pauseRecording = () => {
     if (mediaRecorder.current && mediaRecorder.current.state === "recording") {
       mediaRecorder.current.pause();
@@ -119,8 +113,7 @@ export function AudioRecorderV2() {
       pauseTimer();
     }
   };
-  
-  // Reanudar grabación
+
   const resumeRecording = () => {
     if (mediaRecorder.current && mediaRecorder.current.state === "paused") {
       mediaRecorder.current.resume();
@@ -128,25 +121,21 @@ export function AudioRecorderV2() {
       startTimer();
     }
   };
-  
-  // Detener grabación
+
   const stopRecording = () => {
     if (mediaRecorder.current && mediaRecorder.current.state !== "inactive") {
       mediaRecorder.current.stop();
       setRecordingState("idle");
       stopTimer();
       
-      // Detener todos los tracks de audio
       mediaRecorder.current.stream.getTracks().forEach(track => track.stop());
       
-      // Generar nombre por defecto
       if (!recordingName) {
         setRecordingName(`Grabación ${formatDate(new Date())}`);
       }
     }
   };
-  
-  // Limpiar grabación
+
   const clearRecording = () => {
     setAudioBlob(null);
     setRecordingName("");
@@ -156,27 +145,25 @@ export function AudioRecorderV2() {
       audioUrlRef.current = null;
     }
   };
-  
-  // Funciones para el temporizador
+
   const startTimer = () => {
     timerInterval.current = setInterval(() => {
       setRecordingDuration(prev => prev + 1);
     }, 1000) as unknown as NodeJS.Timeout;
   };
-  
+
   const pauseTimer = () => {
     if (timerInterval.current) {
       clearInterval(timerInterval.current);
     }
   };
-  
+
   const stopTimer = () => {
     if (timerInterval.current) {
       clearInterval(timerInterval.current);
     }
   };
-  
-  // Manejar subida de archivo
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!subject.trim()) {
       toast.error("Por favor, ingresa la materia antes de subir un audio");
@@ -189,7 +176,6 @@ export function AudioRecorderV2() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Verificar que sea un archivo de audio
     if (!file.type.startsWith('audio/')) {
       toast.error("Por favor, sube solo archivos de audio");
       if (fileInputRef.current) {
@@ -198,7 +184,6 @@ export function AudioRecorderV2() {
       return;
     }
 
-    // Obtener duración del audio para mostrar
     const audio = new Audio();
     audio.src = URL.createObjectURL(file);
     
@@ -207,10 +192,8 @@ export function AudioRecorderV2() {
       setRecordingDuration(durationInSeconds);
       setAudioBlob(file);
       
-      // Usar el nombre del archivo sin extensión
       setRecordingName(file.name.replace(/\.[^/.]+$/, ""));
       
-      // Verificar si el archivo es mayor a 10 minutos
       if (durationInSeconds > 600) {
         toast.info("El archivo es mayor a 10 minutos, se dividirá en partes para procesarlo");
       }
@@ -225,24 +208,20 @@ export function AudioRecorderV2() {
       }
     };
   };
-  
-  // Procesar y guardar grabación
+
   const processAndSaveRecording = async () => {
     if (!audioBlob) return;
     
     try {
       toast.info("Procesando grabación...");
       
-      // Crear URL del audio
       if (audioUrlRef.current) {
         URL.revokeObjectURL(audioUrlRef.current);
       }
       audioUrlRef.current = URL.createObjectURL(audioBlob);
       
-      // Transcribir el audio
       const result = await transcribeAudio(audioBlob);
       
-      // Verificar si tenemos respuesta del webhook
       let webhookData = null;
       let suggestedEvents = [];
       
@@ -250,12 +229,10 @@ export function AudioRecorderV2() {
         toast.success("Respuesta del webhook recibida");
         webhookData = result.webhookResponse;
         
-        // Intentar extraer eventos sugeridos de la respuesta del webhook
         if (webhookData && typeof webhookData === 'object') {
           if (webhookData.suggestedEvents) {
             suggestedEvents = webhookData.suggestedEvents;
           } else if (Array.isArray(webhookData) && webhookData.length > 0) {
-            // Si es un array, verificar el primer elemento
             const firstItem = webhookData[0];
             if (firstItem && firstItem.suggestedEvents) {
               suggestedEvents = firstItem.suggestedEvents;
@@ -264,7 +241,6 @@ export function AudioRecorderV2() {
         }
       }
       
-      // Guardar la grabación con la transcripción
       addRecording({
         name: recordingName || `Grabación ${formatDate(new Date())}`,
         audioUrl: audioUrlRef.current,
@@ -278,7 +254,6 @@ export function AudioRecorderV2() {
         webhookData: webhookData
       });
       
-      // Limpiar estado
       setAudioBlob(null);
       setRecordingName('');
       setSubject('');
@@ -314,20 +289,6 @@ export function AudioRecorderV2() {
               )}
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="webhookUrl" className="text-custom-text">URL del Webhook (opcional)</Label>
-              <Input
-                id="webhookUrl"
-                placeholder="URL del webhook para procesar la transcripción"
-                value={webhookUrl}
-                onChange={(e) => setWebhookUrl(e.target.value)}
-                className="border-custom-primary/20 focus:border-custom-primary focus:ring-custom-primary"
-              />
-              <p className="text-xs text-muted-foreground">
-                Si se deja vacío, se usará el webhook predeterminado del sistema
-              </p>
-            </div>
-
             <div className="space-y-2">
               <Label className="text-custom-text">Modo de grabación</Label>
               <RadioGroup 
