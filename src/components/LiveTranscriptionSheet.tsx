@@ -25,10 +25,12 @@ export function LiveTranscriptionSheet({
   const isControlled = open !== undefined && onOpenChange !== undefined;
   const isOpen = isControlled ? open : internalOpen;
   
-  // Process output to ensure it's a string
-  const processedOutput = typeof output === 'object' && output !== null
-    ? output.output || JSON.stringify(output)
-    : String(output || '');
+  // Process output to ensure it's a string, with null handling
+  const processedOutput = output === null || output === undefined
+    ? ''
+    : typeof output === 'object'
+      ? (output as any).output || JSON.stringify(output)
+      : String(output);
   
   const handleOpenChange = (newOpen: boolean) => {
     if (isControlled) {

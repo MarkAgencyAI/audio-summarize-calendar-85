@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Globe, BookOpen, Clock, AlertCircle } from "lucide-react";
 
 interface TranscriptionPanelProps {
-  output: string;
+  output: string | object | null | undefined;
   isLoading?: boolean;
 }
 
@@ -15,10 +15,12 @@ export function TranscriptionPanel({
   output,
   isLoading = false
 }: TranscriptionPanelProps) {
-  // Ensure output is always a string
-  const displayOutput = typeof output === 'object' && output !== null
-    ? output.output || JSON.stringify(output)
-    : String(output || '');
+  // Ensure output is always a string, handling null case explicitly
+  const displayOutput = output === null || output === undefined
+    ? ''
+    : typeof output === 'object'
+      ? (output as any).output || JSON.stringify(output)
+      : String(output);
     
   return (
     <div className="w-full h-full flex flex-col bg-card rounded-lg border shadow-sm overflow-hidden">
