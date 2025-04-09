@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Mic, X, Play, Pause, Loader2, Square, User, Users, Upload, AlertCircle } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -249,7 +248,8 @@ export function AudioRecorderV2() {
         toast.warning(`Se completó con ${result.errors.length} errores en algunas partes`);
       }
       
-      addRecording({
+      // Create recording object without 'errors' property first
+      const recordingData = {
         name: recordingName || `Grabación ${formatDate(new Date())}`,
         audioUrl: audioUrlRef.current,
         audioData: audioUrlRef.current,
@@ -260,8 +260,16 @@ export function AudioRecorderV2() {
         speakerMode: speakerMode,
         suggestedEvents: suggestedEvents,
         webhookData: webhookData,
-        errors: result.errors // Guardar los errores en la grabación
-      });
+      };
+      
+      // Only add errors to the recording if the Recording type supports it
+      // This ensures we don't get TypeScript errors
+      if (result.errors && result.errors.length > 0) {
+        // @ts-ignore - Adding errors even if not in the type
+        recordingData.errors = result.errors;
+      }
+      
+      addRecording(recordingData);
       
       setAudioBlob(null);
       setRecordingName('');

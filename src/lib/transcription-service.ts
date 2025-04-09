@@ -401,7 +401,6 @@ export class TranscriptionService {
 
   /**
    * Convierte un buffer a formato WAV usando un método alternativo
-   * Este método es una alternativa más simple al anterior
    */
   private bufferToWave(buffer: AudioBuffer, start: number, end: number): ArrayBuffer {
     const numOfChan = buffer.numberOfChannels;
@@ -619,111 +618,6 @@ export class TranscriptionService {
     });
     window.dispatchEvent(event);
   }
-
-  /**
-   * Envía la transcripción al webhook
-   */
-  private async sendToWebhook(transcript: string): Promise<any> {
-    const webhookUrl = this.options.webhookUrl || DEFAULT_WEBHOOK_URL;
-    const data = {
-      transcript,
-      subject: this.options.subject,
-      speakerMode: this.options.speakerMode,
-      timestamp: new Date().toISOString()
-    };
-    
-    console.log("Enviando al webhook:", webhookUrl);
-    console.log("Datos a enviar:", data);
-    
-    try {
-      return await sendToWebhook(webhookUrl, data);
-    } catch (error) {
-      console.error("Error enviando al webhook:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Convierte un AudioBuffer a formato WAV usando un método alternativo
-   * Este método es una alternativa más simple al anterior
-   */
-  private bufferToWave(buffer: AudioBuffer, start: number, end: number): ArrayBuffer {
-    const numOfChan = buffer.numberOfChannels;
-    const length = (end - start) * numOfChan * 2 + 44;
-    const result = new ArrayBuffer(length);
-    const view = new DataView(result);
-    
-    // RIFF chunk descriptor
-    this.writeUTFBytes(view, 0, 'RIFF');
-    view.setUint32(4, length - 8, true);
-    this.writeUTFBytes(view, 8, 'WAVE');
-    
-    // FMT sub-chunk
-    this.writeUTFBytes(view, 12, 'fmt ');
-    view.setUint32(16, 16, true); // subchunk size
-    view.setUint16(20, 1, true); // PCM format
-    view.setUint16(22, numOfChan, true); // # channels
-    view.setUint32(24, buffer.sampleRate, true); // sample rate
-    view.setUint32(28, buffer.sampleRate * numOfChan * 2, true); // byte rate
-    view.setUint16(32, numOfChan * 2, true); // block align
-    view.setUint16(34, 16, true); // bits per sample
-    
-    // Data sub-chunk
-    this.writeUTFBytes(view, 36, 'data');
-    view.setUint32(40, length - 44, true);
-    
-    // Write the PCM samples
-    let offset = 44;
-    
-    // Interleave channels
-    for (let i = start; i < end; i++) {
-      for (let channel = 0; channel < numOfChan; channel++) {
-        // Scale to 16-bit signed int
-        let sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
-        sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
-        view.setInt16(offset, sample, true);
-        offset += 2;
-      }
-    }
-    
-    return result;
-  }
-  
-  private writeUTFBytes(view: DataView, offset: number, string: string): void {
-    for (let i = 0; i < string.length; i++) {
-      view.setUint8(offset + i, string.charCodeAt(i));
-    }
-  }
-
-  /**
-   * Convierte un AudioBuffer a Blob
-   * @deprecated Usar audioBufferToWav en su lugar
-   */
-  private async audioBufferToBlob(buffer: AudioBuffer, mimeType: string): Promise<Blob> {
-    return new Promise((resolve) => {
-      // Crear un offline context para renderizar el audio
-      const offlineContext = new OfflineAudioContext(
-        buffer.numberOfChannels,
-        buffer.length,
-        buffer.sampleRate
-      );
-      
-      // Crear una fuente desde el buffer
-      const source = offlineContext.createBufferSource();
-      source.buffer = buffer;
-      source.connect(offlineContext.destination);
-      source.start(0);
-      
-      // Renderizar el audio
-      offlineContext.startRendering().then(renderedBuffer => {
-        // Convertir el buffer renderizado a WAV
-        const wavBlob = this.bufferToWave(renderedBuffer, 0, renderedBuffer.length);
-        resolve(new Blob([wavBlob], { type: mimeType || 'audio/wav' }));
-      });
-    });
-  }
-
-  // Asegurarnos de cerrar correctamente la clase
 }
 
 // Hook personalizado para usar el servicio de transcripción en componentes de React
