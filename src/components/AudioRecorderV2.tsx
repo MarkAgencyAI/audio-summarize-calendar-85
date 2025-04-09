@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Mic, X, Play, Pause, Loader2, Square, User, Users, Upload } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -13,6 +14,7 @@ import { useTranscription } from "@/lib/transcription-service";
 type RecordingState = "idle" | "recording" | "paused";
 type SpeakerMode = "single" | "multiple";
 
+// URL fija del webhook
 const WEBHOOK_URL = "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 
 export function AudioRecorderV2() {
