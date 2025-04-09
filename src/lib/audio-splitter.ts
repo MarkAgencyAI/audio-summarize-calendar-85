@@ -1,5 +1,5 @@
 
-import { FFmpegKit, FFmpegSession, ReturnCode } from 'ffmpeg-kit-react-native';
+import { FFmpegKit, FFmpegSession, ReturnCode, FFmpegKitConfig } from 'ffmpeg-kit-react-native';
 
 interface AudioChunk {
   blob: Blob;
@@ -24,7 +24,7 @@ export async function splitAudioFile(
   
   try {
     // Write the audio data to a temporary file
-    await FFmpegKit.writeFile(tempFileName, audioFile);
+    await FFmpegKitConfig.writeFile(tempFileName, audioFile);
     
     // Get audio duration
     const probeSession = await FFmpegKit.execute(`-i ${tempFileName} -f null -`);
@@ -76,7 +76,7 @@ export async function splitAudioFile(
       }
       
       // Read the chunk file as bytes
-      const chunkData = await FFmpegKit.readFile(outputFileName);
+      const chunkData = await FFmpegKitConfig.readFile(outputFileName);
       
       // Convert to Blob
       const chunkBlob = new Blob([chunkData], { type: audioBlob.type });
@@ -87,11 +87,11 @@ export async function splitAudioFile(
       });
       
       // Delete the output file to save space
-      await FFmpegKit.deleteFile(outputFileName);
+      await FFmpegKitConfig.deleteFile(outputFileName);
     }
     
     // Delete the temporary file
-    await FFmpegKit.deleteFile(tempFileName);
+    await FFmpegKitConfig.deleteFile(tempFileName);
     
     console.log(`Audio split into ${chunks.length} chunks successfully`);
     return chunks;
