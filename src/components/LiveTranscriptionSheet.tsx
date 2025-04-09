@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -73,6 +74,33 @@ export function LiveTranscriptionSheet({
     setUserClosed(true);
   };
   
+  // Ensure the output is safe to render by normalizing it to a string format
+  // This is crucial to fix the React error #31
+  const safeOutput = (() => {
+    try {
+      if (output === null || output === undefined) {
+        return "";
+      }
+      
+      if (typeof output === 'string') {
+        return output;
+      }
+      
+      if (typeof output === 'object') {
+        if ('output' in output && typeof output.output === 'string') {
+          return output.output;
+        }
+        
+        return JSON.stringify(output, null, 2);
+      }
+      
+      return String(output);
+    } catch (error) {
+      console.error("Error processing output:", error);
+      return "Error: No se pudo procesar el formato de salida";
+    }
+  })();
+  
   return <Sheet open={isOpen} onOpenChange={handleOpenChange}>
       {children ? <SheetTrigger asChild>
           {children}
@@ -98,7 +126,7 @@ export function LiveTranscriptionSheet({
         
         <div className="flex-1 overflow-hidden">
           <TranscriptionPanel 
-            output={output} // TranscriptionPanel now handles output processing properly
+            output={safeOutput}
             isLoading={isTranscribing && !output}
             progress={progress}
             showProgress={isTranscribing}
