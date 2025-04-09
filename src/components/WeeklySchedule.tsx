@@ -246,7 +246,7 @@ export function WeeklySchedule({
   
   // Handle removing an event from the schedule
   const handleRemoveEvent = () => {
-    if (!selectedCell) return;
+    if (!selectedCell || !selectedCell.event) return;
     
     setScheduleCells(prev => {
       const updated = [...prev];
@@ -293,7 +293,14 @@ export function WeeklySchedule({
   const handleSaveSchedule = () => {
     const events = scheduleCells
       .filter(cell => cell.event)
-      .map(cell => cell.event!);
+      .map(cell => {
+        const event = cell.event!;
+        // Ensure repeat is set to weekly for all events
+        return {
+          ...event,
+          repeat: "weekly" as const
+        };
+      });
     
     if (events.length === 0) {
       toast.error("No hay eventos en el cronograma");

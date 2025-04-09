@@ -849,7 +849,11 @@ export function Calendar({
           <DialogFooter className="flex justify-between">
             <Button 
               variant="outline" 
-              onClick={() => setShowDeleteConfirmDialog(false)}
+              onClick={() => {
+                setShowDeleteConfirmDialog(false);
+                setSelectedEvent(null);
+                setDeleteAllRecurring(false);
+              }}
             >
               Cancelar
             </Button>
