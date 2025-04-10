@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { TranscriptionPanel } from "./TranscriptionPanel";
-import { Mic, X, Play, Pause, Loader2, Square, User, Users, Upload } from "lucide-react";
+import { Mic, X, Play, Pause, Loader2, Square, User, Users, Upload, FileJson, MessageSquare } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface LiveTranscriptionSheetProps {
@@ -84,7 +84,6 @@ export function LiveTranscriptionSheet({
   };
   
   // Ensure the output is safe to render by normalizing it to a string format
-  // This is crucial to fix the React error #31
   const safeOutput = (() => {
     try {
       if (output === null || output === undefined) {
@@ -127,7 +126,7 @@ export function LiveTranscriptionSheet({
         return typeof resp === 'string' ? resp : JSON.stringify(resp, null, 2);
       }
       
-      return "No hay respuesta del webhook aún";
+      return "Esperando respuesta del webhook...";
     } catch (error) {
       return "Error al procesar la respuesta del webhook";
     }
@@ -150,7 +149,9 @@ export function LiveTranscriptionSheet({
           <div>
             <SheetTitle>Transcripción en proceso</SheetTitle>
             <SheetDescription>
-              Visualiza la transcripción en tiempo real
+              {isTranscribing ? 
+                "Visualiza la transcripción en tiempo real" : 
+                "Resultados del procesamiento de audio"}
             </SheetDescription>
           </div>
           <SheetClose asChild>
@@ -164,9 +165,16 @@ export function LiveTranscriptionSheet({
         <div className="flex-1 overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
             <TabsList className="bg-muted/30 p-1 mx-4 my-2">
-              <TabsTrigger value="transcription">Transcripción</TabsTrigger>
-              <TabsTrigger value="webhook" disabled={!hasWebhookResponse}>
-                Respuesta del Webhook
+              <TabsTrigger value="transcription" className="flex items-center gap-1">
+                <MessageSquare className="h-4 w-4" />
+                <span>Transcripción</span>
+              </TabsTrigger>
+              <TabsTrigger value="webhook" className="flex items-center gap-1">
+                <FileJson className="h-4 w-4" />
+                <span>Respuesta Webhook</span>
+                {hasWebhookResponse && (
+                  <span className="bg-green-500 h-2 w-2 rounded-full ml-1"></span>
+                )}
               </TabsTrigger>
             </TabsList>
             
@@ -190,9 +198,17 @@ export function LiveTranscriptionSheet({
             </TabsContent>
             
             <TabsContent value="webhook" className="flex-1 overflow-hidden mt-0 px-0">
+              <div className="p-4 pb-2">
+                <div className="text-sm text-muted-foreground mb-2">
+                  {hasWebhookResponse ? 
+                    "Respuesta procesada del webhook (datos estructurados)" : 
+                    "Esperando respuesta del webhook..."}
+                </div>
+              </div>
+              
               <TranscriptionPanel 
                 output={webhookContent}
-                isLoading={false}
+                isLoading={isTranscribing && !hasWebhookResponse}
                 showProgress={false}
               />
             </TabsContent>
