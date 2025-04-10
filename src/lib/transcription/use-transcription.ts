@@ -19,17 +19,18 @@ export function useTranscription(options?: Partial<TranscriptionOptions>) {
   
   // Inicializar el servicio de transcripción
   React.useEffect(() => {
-    // Asegurarnos de que maxChunkDuration no exceda los 7 minutos
+    // Asegurarnos de que las opciones son válidas
     const safeOptions: Partial<TranscriptionOptions> = options ? {
       ...options,
-      maxChunkDuration: options.maxChunkDuration && options.maxChunkDuration <= 420
+      // Asegurar que maxChunkDuration tiene un valor razonable
+      maxChunkDuration: options.maxChunkDuration && options.maxChunkDuration <= 300
         ? options.maxChunkDuration
-        : 420,
-      // Ensure speakerMode is explicitly typed as 'single' | 'multiple'
+        : 60,
+      // Asegurar que speakerMode es del tipo correcto
       speakerMode: (options.speakerMode === 'single' || options.speakerMode === 'multiple') 
         ? options.speakerMode 
         : 'single'
-    } : { maxChunkDuration: 420, speakerMode: 'single' as const };
+    } : { maxChunkDuration: 60, speakerMode: 'single' as const };
     
     transcriptionServiceRef.current = new TranscriptionService(safeOptions);
     
@@ -45,7 +46,7 @@ export function useTranscription(options?: Partial<TranscriptionOptions>) {
   const transcribeAudio = React.useCallback(async (audioBlob: Blob) => {
     if (!audioBlob) {
       toast.error("No se proporcionó un archivo de audio válido");
-      return;
+      return { transcript: "", errors: ["No se proporcionó un archivo de audio válido"] };
     }
     
     if (!transcriptionServiceRef.current) {
@@ -68,7 +69,6 @@ export function useTranscription(options?: Partial<TranscriptionOptions>) {
       window.dispatchEvent(startEvent);
       
       console.log(`Iniciando transcripción de audio: ${(audioBlob.size / (1024 * 1024)).toFixed(2)} MB`);
-      console.log(`Tipo: ${audioBlob.type}`);
       
       // Procesar el audio
       const result = await transcriptionServiceRef.current.processAudio(audioBlob, (progressData) => {
@@ -88,10 +88,15 @@ export function useTranscription(options?: Partial<TranscriptionOptions>) {
       // Guardar errores si los hay
       if (result.errors && result.errors.length > 0) {
         setErrors(result.errors);
-        // Mostrar toast para cada error
-        result.errors.forEach(err => {
-          toast.error(err);
-        });
+        // Mostrar toast para errores importantes
+        if (result.errors.length > 2) {
+          toast.warning(`Se completó con ${result.errors.length} errores en algunas partes`);
+        } else {
+          // Mostrar solo los primeros errores específicos
+          result.errors.slice(0, 2).forEach(err => {
+            toast.error(err);
+          });
+        }
       }
       
       // Notificar que terminó la transcripción
@@ -102,7 +107,12 @@ export function useTranscription(options?: Partial<TranscriptionOptions>) {
             output: result.transcript, 
             progress: 100,
             webhookResponse: result.webhookResponse,
-            errors: result.errors
+            errors: result.errors,
+            processingStats: {
+              duration: result.duration,
+              segmentCount: result.segmentCount,
+              processingTime: result.processingTime
+            }
           }
         }
       });

@@ -11,6 +11,12 @@ export interface TranscriptionOptions {
   speakerMode: 'single' | 'multiple';
   subject?: string;
   webhookUrl?: string;
+  
+  // Opciones avanzadas
+  optimizeForVoice?: boolean;   // Aplicar filtros optimizados para voz humana
+  compressAudio?: boolean;      // Aplicar compresión adicional para reducir tamaño
+  useTimeMarkers?: boolean;     // Incluir marcadores de tiempo en la transcripción
+  retryAttempts?: number;       // Número de intentos en caso de error
 }
 
 /**
@@ -29,6 +35,9 @@ export interface TranscriptionResult {
   language?: string;
   webhookResponse?: any;
   errors?: string[];
+  duration?: number;          // Duración total del audio procesado
+  segmentCount?: number;      // Número de segmentos procesados
+  processingTime?: number;    // Tiempo total de procesamiento en ms
 }
 
 /**
@@ -38,5 +47,38 @@ export interface AudioChunk {
   blob: Blob;
   startTime: number;
   endTime: number;
-  url: string; // URL para acceder al segmento
+  url: string;             // URL para acceder al segmento
+  transcript?: string;     // Transcripción de este segmento particular
+  isProcessed?: boolean;   // Indicador de si el segmento ya fue procesado
+  error?: string;          // Error específico de este segmento
+}
+
+/**
+ * Respuesta de la API de transcripción
+ */
+export interface TranscriptionApiResponse {
+  text: string;            // Texto transcrito
+  language?: string;       // Idioma detectado
+  words?: WordTiming[];    // Información de timing por palabra
+  segments?: Segment[];    // Información de segmentos
+}
+
+/**
+ * Información de tiempo por palabra
+ */
+export interface WordTiming {
+  word: string;
+  start: number;
+  end: number;
+  confidence?: number;
+}
+
+/**
+ * Información de segmentos de la transcripción
+ */
+export interface Segment {
+  id: number;
+  start: number;
+  end: number;
+  text: string;
 }
