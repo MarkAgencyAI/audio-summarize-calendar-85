@@ -46,9 +46,11 @@ export interface Grade {
 
 interface RecordingsContextType {
   recordings: Recording[];
+  recentRecordings: Recording[]; // Add this property
   folders: Folder[];
   notes: Note[];
   grades: Grade[];
+  fetchUserData: () => Promise<void>; // Add this property
   addRecording: (recording: Partial<Recording>) => void;
   updateRecording: (id: string, updates: Partial<Recording>) => void;
   deleteRecording: (id: string) => void;
@@ -84,6 +86,9 @@ export const RecordingsProvider: React.FC<RecordingsProviderProps> = ({ children
   const [folders, setFolders] = useState<Folder[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
+
+  // Calculate recent recordings - most recent 5 recordings
+  const recentRecordings = recordings.slice(0, 5);
 
   useEffect(() => {
     const loadedRecordings = loadFromStorage<Recording[]>("recordings") || [];
@@ -122,6 +127,25 @@ export const RecordingsProvider: React.FC<RecordingsProviderProps> = ({ children
     setNotes(loadedNotes);
     setGrades(loadedGrades);
   }, []);
+
+  // Add fetchUserData method to match the interface
+  const fetchUserData = async (): Promise<void> => {
+    try {
+      // In a real app, this would fetch data from an API
+      // For now, we'll just reload from storage
+      const loadedRecordings = loadFromStorage<Recording[]>("recordings") || [];
+      const loadedFolders = loadFromStorage<Folder[]>("folders") || [];
+      const loadedNotes = loadFromStorage<Note[]>("notes") || [];
+      const loadedGrades = loadFromStorage<Grade[]>("grades") || [];
+      
+      setRecordings(loadedRecordings);
+      setFolders(loadedFolders);
+      setNotes(loadedNotes);
+      setGrades(loadedGrades);
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  };
 
   useEffect(() => {
     saveToStorage("recordings", recordings);
@@ -285,9 +309,11 @@ export const RecordingsProvider: React.FC<RecordingsProviderProps> = ({ children
     <RecordingsContext.Provider
       value={{
         recordings,
+        recentRecordings, // Add this property
         folders,
         notes,
         grades,
+        fetchUserData, // Add this property
         addRecording,
         updateRecording,
         deleteRecording,
