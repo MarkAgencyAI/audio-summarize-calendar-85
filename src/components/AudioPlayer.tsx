@@ -226,7 +226,7 @@ export function AudioPlayer({
     setPlaybackRate(rate);
   };
   
-  // Calculate progress for the progress bar
+  // Calculate progress for the progress bar (fixed to avoid NaN or Infinity)
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
