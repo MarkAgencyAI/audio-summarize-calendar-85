@@ -14,23 +14,39 @@ export function useTranscription(options?: Partial<TranscriptionOptions>) {
   const [error, setError] = React.useState<string | null>(null);
   const [errors, setErrors] = React.useState<string[]>([]);
   
-  const transcriptionService = React.useMemo(() => {
+  // Referencia al servicio de transcripción
+  const transcriptionServiceRef = React.useRef<TranscriptionService | null>(null);
+  
+  // Inicializar el servicio de transcripción
+  React.useEffect(() => {
     // Asegurarnos de que maxChunkDuration no exceda los 7 minutos
     const safeOptions = options ? {
       ...options,
       maxChunkDuration: options.maxChunkDuration && options.maxChunkDuration <= 420
         ? options.maxChunkDuration
         : 420
-    } : { maxChunkDuration: 420 };
+    } : { maxChunkDuration: 420, speakerMode: 'single' };
     
-    return new TranscriptionService(safeOptions);
+    transcriptionServiceRef.current = new TranscriptionService(safeOptions);
+    
+    return () => {
+      // Limpiar recursos si es necesario
+      transcriptionServiceRef.current = null;
+    };
   }, [options]);
   
   /**
    * Transcribe un archivo de audio
    */
   const transcribeAudio = React.useCallback(async (audioBlob: Blob) => {
-    if (!audioBlob) return;
+    if (!audioBlob) {
+      toast.error("No se proporcionó un archivo de audio válido");
+      return;
+    }
+    
+    if (!transcriptionServiceRef.current) {
+      transcriptionServiceRef.current = new TranscriptionService(options);
+    }
     
     setIsTranscribing(true);
     setProgress(0);
@@ -47,8 +63,11 @@ export function useTranscription(options?: Partial<TranscriptionOptions>) {
       });
       window.dispatchEvent(startEvent);
       
+      console.log(`Iniciando transcripción de audio: ${(audioBlob.size / (1024 * 1024)).toFixed(2)} MB`);
+      console.log(`Tipo: ${audioBlob.type}`);
+      
       // Procesar el audio
-      const result = await transcriptionService.processAudio(audioBlob, (progressData) => {
+      const result = await transcriptionServiceRef.current.processAudio(audioBlob, (progressData) => {
         setProgress(progressData.progress);
         setTranscript(progressData.output);
         
@@ -103,7 +122,7 @@ export function useTranscription(options?: Partial<TranscriptionOptions>) {
     } finally {
       setIsTranscribing(false);
     }
-  }, [transcriptionService]);
+  }, [options]);
   
   return {
     transcribeAudio,

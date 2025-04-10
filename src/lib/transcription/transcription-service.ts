@@ -52,7 +52,7 @@ export class TranscriptionService {
       
       // Obtener duración del audio
       const audioDuration = await getAudioDuration(audioBlob);
-      console.log(`Duración del audio: ${audioDuration} segundos`);
+      console.log(`Duración del audio: ${audioDuration.toFixed(2)} segundos`);
       
       // Comprobar si el audio es demasiado largo
       const MAX_DURATION_THRESHOLD = 600; // 10 minutos
@@ -65,47 +65,7 @@ export class TranscriptionService {
         this.notifyProgress("Transcribiendo audio...", 20, onProgress);
         
         // Sistema de reintentos
-        let attempts = 0;
-        const maxAttempts = 3;
-        let lastError;
-        
-        while (attempts < maxAttempts) {
-          try {
-            const result = await this.transcribeAudioChunk(audioBlob);
-            
-            // Enviar al webhook
-            let webhookResponse = null;
-            if (result.transcript) {
-              this.notifyProgress("Enviando transcripción al webhook...", 90, onProgress);
-              try {
-                webhookResponse = await this.sendToWebhook(result.transcript);
-                this.notifyProgress(`Transcripción procesada: ${result.transcript}`, 100, onProgress);
-              } catch (webhookError) {
-                console.error("Error al enviar al webhook:", webhookError);
-                this.notifyProgress(`Error al enviar al webhook, pero transcripción disponible: ${result.transcript}`, 100, onProgress);
-              }
-            } else {
-              this.notifyProgress("Transcripción completada sin texto", 100, onProgress);
-            }
-            
-            return {
-              ...result,
-              webhookResponse
-            };
-          } catch (error) {
-            attempts++;
-            lastError = error;
-            console.warn(`Intento ${attempts}/${maxAttempts} fallido. Error:`, error);
-            
-            if (attempts < maxAttempts) {
-              this.notifyProgress(`Error en intento ${attempts}. Reintentando...`, 20 + (attempts * 10), onProgress);
-              await new Promise(resolve => setTimeout(resolve, 1000 * attempts)); // Espera entre intentos
-            }
-          }
-        }
-        
-        // Si llegamos aquí, todos los intentos fallaron
-        throw lastError || new Error("No se pudo transcribir el audio después de múltiples intentos");
+        return await this.transcribeWithRetry(audioBlob, onProgress);
       }
     } catch (error) {
       console.error("Error al procesar audio:", error);
@@ -144,68 +104,55 @@ export class TranscriptionService {
         const chunkProgress = Math.floor(20 + (70 * (i / chunks.length)));
         this.notifyProgress(`Transcribiendo parte ${chunkNumber} de ${chunks.length}...`, chunkProgress, onProgress);
         
-        // Sistema de reintentos para cada chunk
-        let attempts = 0;
-        const maxAttempts = 3;
-        let success = false;
-        
-        while (attempts < maxAttempts && !success) {
-          try {
-            if (attempts > 0) {
-              this.notifyProgress(`Reintentando parte ${chunkNumber} (intento ${attempts+1}/${maxAttempts})...`, chunkProgress, onProgress);
-              // Backoff exponencial
-              await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempts) * 1000));
-            }
-            
-            console.log(`Iniciando transcripción de la parte ${chunkNumber}/${chunks.length} - Tamaño: ${chunk.blob.size} bytes`);
-            
-            // Verificar que el chunk es válido
-            if (chunk.blob.size === 0) {
-              throw new Error(`La parte ${chunkNumber} tiene tamaño 0, no se puede transcribir`);
-            }
-            
-            // Transcribir el chunk actual
-            const result = await this.transcribeAudioChunk(chunk.blob);
-            
-            // Añadir marca de tiempo y agregar a la transcripción completa
-            const startMinutes = Math.floor(chunk.startTime / 60);
-            const startSeconds = Math.floor(chunk.startTime % 60);
-            const timeMarker = `${startMinutes}:${startSeconds.toString().padStart(2, '0')}`;
-            
-            if (i > 0) {
-              fullTranscript += `\n\n[Continuación - ${timeMarker}]\n`;
-            }
-            
-            fullTranscript += result.transcript;
-            language = result.language || language;
-            
-            // Actualizar progreso con el texto acumulado
-            this.notifyProgress(fullTranscript, chunkProgress, onProgress);
-            
-            // Marcar chunk como exitoso
-            success = true;
-            
-            // Pausa entre chunks para no sobrecargar la API
-            if (i < chunks.length - 1) {
-              await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-          } catch (error) {
-            console.error(`Error al transcribir parte ${chunkNumber} (intento ${attempts+1}):`, error);
-            attempts++;
-            
-            if (attempts >= maxAttempts) {
-              // Registrar el error y continuar con el siguiente chunk
-              const errorMsg = `Error en parte ${chunkNumber}: No se pudo transcribir después de ${maxAttempts} intentos`;
-              errors.push(errorMsg);
-              
-              // Añadir mensaje de error en la transcripción
-              fullTranscript += `\n\n[${errorMsg}]\n`;
-              this.notifyProgress(fullTranscript, chunkProgress, onProgress);
-              
-              // Mostrar toast
-              toast.error(`Falló la transcripción de la parte ${chunkNumber}`);
-            }
+        try {
+          console.log(`Iniciando transcripción de la parte ${chunkNumber}/${chunks.length}`);
+          console.log(`- URL de la parte: ${chunk.url}`);
+          console.log(`- Tamaño: ${(chunk.blob.size / 1024).toFixed(2)} KB`);
+          console.log(`- Inicio: ${chunk.startTime.toFixed(2)}s, Fin: ${chunk.endTime.toFixed(2)}s`);
+          
+          // Verificar que el chunk es válido
+          if (chunk.blob.size === 0) {
+            throw new Error(`La parte ${chunkNumber} tiene tamaño 0, no se puede transcribir`);
           }
+          
+          // Transcribir el chunk con sistema de reintentos
+          const result = await this.transcribeWithRetry(chunk.blob, onProgress, 3, chunkNumber);
+          
+          // Añadir marca de tiempo y agregar a la transcripción completa
+          const startMinutes = Math.floor(chunk.startTime / 60);
+          const startSeconds = Math.floor(chunk.startTime % 60);
+          const timeMarker = `${startMinutes}:${startSeconds.toString().padStart(2, '0')}`;
+          
+          if (i > 0) {
+            fullTranscript += `\n\n[Continuación - ${timeMarker}]\n`;
+          }
+          
+          fullTranscript += result.transcript;
+          language = result.language || language;
+          
+          // Actualizar progreso con el texto acumulado
+          this.notifyProgress(fullTranscript, chunkProgress, onProgress);
+          
+          // Pausa entre chunks para no sobrecargar la API
+          if (i < chunks.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        } catch (error) {
+          console.error(`Error al transcribir parte ${chunkNumber}:`, error);
+          
+          // Registrar el error y continuar con el siguiente chunk
+          const errorMsg = `Error en parte ${chunkNumber}: ${error instanceof Error ? error.message : String(error)}`;
+          errors.push(errorMsg);
+          
+          // Añadir mensaje de error en la transcripción
+          fullTranscript += `\n\n[${errorMsg}]\n`;
+          this.notifyProgress(fullTranscript, chunkProgress, onProgress);
+          
+          // Mostrar toast
+          toast.error(`Falló la transcripción de la parte ${chunkNumber}`);
+          
+          // Continuar con el siguiente chunk
+          continue;
         }
       }
       
@@ -227,6 +174,13 @@ export class TranscriptionService {
       
       this.notifyProgress(fullTranscript, 100, onProgress);
       
+      // Liberar URLs
+      chunks.forEach(chunk => {
+        if (chunk.url) {
+          URL.revokeObjectURL(chunk.url);
+        }
+      });
+      
       return {
         transcript: fullTranscript,
         language,
@@ -239,6 +193,74 @@ export class TranscriptionService {
       this.notifyProgress(`Error en audio largo: ${errorMessage}`, 0, onProgress);
       throw error;
     }
+  }
+
+  /**
+   * Método que implementa reintentos con backoff exponencial
+   */
+  private async transcribeWithRetry(
+    audioBlob: Blob, 
+    onProgress?: (progress: TranscriptionProgress) => void,
+    maxAttempts: number = 3,
+    chunkNumber?: number
+  ): Promise<TranscriptionResult> {
+    let attempts = 0;
+    let lastError: Error | null = null;
+    
+    while (attempts < maxAttempts) {
+      try {
+        if (attempts > 0) {
+          const backoffTime = Math.pow(2, attempts) * 1000; // Backoff exponencial: 2s, 4s, 8s...
+          console.log(`Reintento ${attempts + 1}/${maxAttempts} después de ${backoffTime/1000}s...`);
+          
+          const retryMessage = chunkNumber 
+            ? `Reintentando parte ${chunkNumber} (intento ${attempts + 1}/${maxAttempts})...`
+            : `Reintentando transcripción (intento ${attempts + 1}/${maxAttempts})...`;
+            
+          this.notifyProgress(retryMessage, 20 + (attempts * 10), onProgress);
+          
+          // Esperar antes de reintentar
+          await new Promise(resolve => setTimeout(resolve, backoffTime));
+        }
+        
+        // Intentar transcribir
+        const result = await this.transcribeAudioChunk(audioBlob);
+        
+        // Si llegamos aquí, la transcripción fue exitosa
+        
+        // Enviar al webhook si no estamos en un chunk (si es audio completo)
+        let webhookResponse = null;
+        if (result.transcript && !chunkNumber) {
+          this.notifyProgress("Enviando transcripción al webhook...", 90, onProgress);
+          try {
+            webhookResponse = await this.sendToWebhook(result.transcript);
+            this.notifyProgress(`Transcripción procesada: ${result.transcript}`, 100, onProgress);
+          } catch (webhookError) {
+            console.error("Error al enviar al webhook:", webhookError);
+            this.notifyProgress(`Error al enviar al webhook, pero transcripción disponible: ${result.transcript}`, 100, onProgress);
+          }
+        } else if (!chunkNumber) {
+          this.notifyProgress("Transcripción completada sin texto", 100, onProgress);
+        }
+        
+        return {
+          ...result,
+          webhookResponse
+        };
+      } catch (error) {
+        attempts++;
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.warn(`Intento ${attempts}/${maxAttempts} fallido. Error:`, error);
+        
+        if (attempts >= maxAttempts) {
+          console.error("Se agotaron los reintentos:", lastError);
+          break;
+        }
+      }
+    }
+    
+    // Si llegamos aquí, todos los intentos fallaron
+    throw lastError || new Error("No se pudo transcribir el audio después de múltiples intentos");
   }
 
   /**
@@ -282,10 +304,14 @@ export class TranscriptionService {
       formData.append("prompt", prompt);
       
       console.log(`Enviando solicitud a GROQ API para transcripción`);
+      console.log(`- Modelo: whisper-large-v3-turbo`);
+      console.log(`- Tamaño: ${(audioBlob.size / 1024).toFixed(2)} KB`);
+      console.log(`- Tipo: ${audioBlob.type}`);
+      console.log(`- Nombre: ${filename}`);
       
       // Implementar timeout para evitar esperas infinitas
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos timeout
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 segundos timeout
       
       try {
         // Petición a la API con timeout
@@ -304,7 +330,16 @@ export class TranscriptionService {
         if (!response.ok) {
           const errorText = await response.text();
           console.error(`Error de API (${response.status}): ${errorText}`);
-          throw new Error(`Error de API: ${response.status} - ${errorText}`);
+          
+          if (response.status === 413) {
+            throw new Error("El archivo de audio es demasiado grande para la API de GROQ");
+          } else if (response.status === 429) {
+            throw new Error("Límite de tasa excedido en la API de GROQ. Espera unos segundos e intenta de nuevo.");
+          } else if (response.status >= 500) {
+            throw new Error(`Error del servidor GROQ (${response.status}). Intenta de nuevo más tarde.`);
+          } else {
+            throw new Error(`Error de API: ${response.status} - ${errorText}`);
+          }
         }
         
         // Parsear respuesta
@@ -323,7 +358,7 @@ export class TranscriptionService {
         };
       } catch (fetchError) {
         if (fetchError.name === 'AbortError') {
-          throw new Error("La solicitud a la API de GROQ excedió el tiempo límite (30 segundos)");
+          throw new Error("La solicitud a la API de GROQ excedió el tiempo límite (60 segundos)");
         }
         throw fetchError;
       }
