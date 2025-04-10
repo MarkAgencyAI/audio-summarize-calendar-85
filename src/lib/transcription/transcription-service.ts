@@ -118,6 +118,13 @@ export class TranscriptionService {
           // Transcribir el chunk con sistema de reintentos
           const result = await this.transcribeWithRetry(chunk.blob, onProgress, 3, chunkNumber);
           
+          // Verificar que obtuvimos una transcripción
+          if (!result.transcript || result.transcript.trim() === "") {
+            console.warn(`La parte ${chunkNumber} no generó texto en la transcripción`);
+          } else {
+            console.log(`Transcripción de parte ${chunkNumber} completada: ${result.transcript.substring(0, 50)}...`);
+          }
+          
           // Añadir marca de tiempo y agregar a la transcripción completa
           const startMinutes = Math.floor(chunk.startTime / 60);
           const startSeconds = Math.floor(chunk.startTime % 60);
@@ -275,6 +282,10 @@ export class TranscriptionService {
         throw new Error("El segmento de audio está vacío");
       }
       
+      // Crear una URL del blob para acceder al audio
+      const audioUrl = URL.createObjectURL(audioBlob);
+      console.log(`URL creada para el audio: ${audioUrl}`);
+      
       // Crear FormData para la API
       const formData = new FormData();
       
@@ -331,6 +342,9 @@ export class TranscriptionService {
           const errorText = await response.text();
           console.error(`Error de API (${response.status}): ${errorText}`);
           
+          // Liberar la URL del blob
+          URL.revokeObjectURL(audioUrl);
+          
           if (response.status === 413) {
             throw new Error("El archivo de audio es demasiado grande para la API de GROQ");
           } else if (response.status === 429) {
@@ -345,6 +359,9 @@ export class TranscriptionService {
         // Parsear respuesta
         const data = await response.json();
         
+        // Liberar la URL del blob después de usarla
+        URL.revokeObjectURL(audioUrl);
+        
         if (!data.text) {
           console.error("Respuesta sin texto:", data);
           throw new Error("Respuesta inválida de la API de GROQ");
@@ -357,6 +374,9 @@ export class TranscriptionService {
           language: data.language || "es"
         };
       } catch (fetchError) {
+        // Liberar la URL del blob en caso de error
+        URL.revokeObjectURL(audioUrl);
+        
         if (fetchError.name === 'AbortError') {
           throw new Error("La solicitud a la API de GROQ excedió el tiempo límite (60 segundos)");
         }
