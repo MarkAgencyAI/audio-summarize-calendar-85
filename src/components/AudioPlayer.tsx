@@ -31,37 +31,40 @@ export function AudioPlayer({
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
+  const intervalRef = useRef<number | null>(null);
   
   // Initialize audio element
   useEffect(() => {
-    if (!audioRef.current) {
-      const audio = new Audio();
-      audio.preload = "metadata";
-      audioRef.current = audio;
-      
-      // Event listeners
-      audio.addEventListener("loadedmetadata", handleLoadedMetadata);
-      audio.addEventListener("timeupdate", handleTimeUpdate);
-      audio.addEventListener("ended", handleEnded);
-      audio.addEventListener("canplay", () => setIsLoading(false));
-      audio.addEventListener("waiting", () => setIsLoading(true));
-      audio.addEventListener("playing", () => setIsLoading(false));
-      
-      // Set initial values
-      audio.volume = volume;
-      audio.playbackRate = playbackRate;
-    }
+    const audio = new Audio();
+    audio.preload = "metadata";
+    audioRef.current = audio;
+    
+    // Event listeners
+    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
+    audio.addEventListener("ended", handleEnded);
+    audio.addEventListener("canplay", () => setIsLoading(false));
+    audio.addEventListener("waiting", () => setIsLoading(true));
+    audio.addEventListener("playing", () => setIsLoading(false));
+    
+    // Set initial values
+    audio.volume = volume;
+    audio.playbackRate = playbackRate;
     
     return () => {
       if (audioRef.current) {
         const audio = audioRef.current;
         audio.pause();
         audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
-        audio.removeEventListener("timeupdate", handleTimeUpdate);
         audio.removeEventListener("ended", handleEnded);
         audio.removeEventListener("canplay", () => setIsLoading(false));
         audio.removeEventListener("waiting", () => setIsLoading(true));
         audio.removeEventListener("playing", () => setIsLoading(false));
+        
+        // Clear interval if it exists
+        if (intervalRef.current) {
+          window.clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
         
         URL.revokeObjectURL(audio.src);
       }
@@ -87,6 +90,37 @@ export function AudioPlayer({
     }
   }, [audioUrl, audioBlob]);
   
+  // Create an interval to update the current time when playing
+  useEffect(() => {
+    if (isPlaying) {
+      // Clear any existing interval
+      if (intervalRef.current) {
+        window.clearInterval(intervalRef.current);
+      }
+      
+      // Create a new interval to update the time
+      intervalRef.current = window.setInterval(() => {
+        if (audioRef.current && !isDragging) {
+          setCurrentTime(audioRef.current.currentTime);
+        }
+      }, 100); // Update every 100ms for smooth slider movement
+    } else {
+      // Clear interval when paused
+      if (intervalRef.current) {
+        window.clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+    
+    // Clean up interval on unmount
+    return () => {
+      if (intervalRef.current) {
+        window.clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [isPlaying, isDragging]);
+  
   // Update playback rate when it changes
   useEffect(() => {
     if (audioRef.current) {
@@ -103,15 +137,14 @@ export function AudioPlayer({
   
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
-      setDuration(audioRef.current.duration || initialDuration);
+      const audioDuration = audioRef.current.duration;
+      // Only update duration if it's a valid number
+      if (audioDuration && !isNaN(audioDuration)) {
+        setDuration(audioDuration);
+      } else if (initialDuration > 0) {
+        setDuration(initialDuration);
+      }
       setIsLoading(false);
-    }
-  };
-  
-  const handleTimeUpdate = () => {
-    if (audioRef.current && !isDragging) {
-      const newTime = audioRef.current.currentTime;
-      setCurrentTime(newTime);
     }
   };
   
@@ -125,9 +158,6 @@ export function AudioPlayer({
   
   const playAudio = () => {
     if (audioRef.current) {
-      // Make sure our time tracking is reset if needed
-      setCurrentTime(audioRef.current.currentTime);
-      
       audioRef.current.play()
         .then(() => {
           setIsPlaying(true);
@@ -208,7 +238,7 @@ export function AudioPlayer({
             <Slider 
               value={[currentTime]} 
               min={0} 
-              max={duration} 
+              max={duration || 100} 
               step={0.01}
               onValueChange={handleSeek}
               onValueCommit={() => setIsDragging(false)}
