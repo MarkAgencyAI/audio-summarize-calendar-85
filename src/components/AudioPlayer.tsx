@@ -194,6 +194,9 @@ export function AudioPlayer({
   
   // Calculate progress for the progress bar
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  // Added console.log to debug time updates
+  console.log("Current time:", currentTime, "Duration:", duration, "Progress:", progress);
   
   return (
     <div className="w-full bg-background border rounded-md p-4 shadow-sm">
