@@ -1,7 +1,7 @@
-
 /**
  * Utilidades para trabajar con buffers de audio en el navegador
  */
+import { AudioChunk } from './types';
 
 /**
  * Obtiene la duración de un blob de audio
@@ -23,16 +23,6 @@ export async function getAudioDuration(audioBlob: Blob): Promise<number> {
       reject(error);
     };
   });
-}
-
-/**
- * Tipo para representar un segmento de audio
- */
-export interface AudioChunk {
-  blob: Blob;
-  startTime: number;
-  endTime: number;
-  url: string; // Añadimos URL para acceso directo al segmento
 }
 
 /**

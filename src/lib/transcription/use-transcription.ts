@@ -20,12 +20,16 @@ export function useTranscription(options?: Partial<TranscriptionOptions>) {
   // Inicializar el servicio de transcripción
   React.useEffect(() => {
     // Asegurarnos de que maxChunkDuration no exceda los 7 minutos
-    const safeOptions = options ? {
+    const safeOptions: Partial<TranscriptionOptions> = options ? {
       ...options,
       maxChunkDuration: options.maxChunkDuration && options.maxChunkDuration <= 420
         ? options.maxChunkDuration
-        : 420
-    } : { maxChunkDuration: 420, speakerMode: 'single' };
+        : 420,
+      // Ensure speakerMode is explicitly typed as 'single' | 'multiple'
+      speakerMode: (options.speakerMode === 'single' || options.speakerMode === 'multiple') 
+        ? options.speakerMode 
+        : 'single'
+    } : { maxChunkDuration: 420, speakerMode: 'single' as const };
     
     transcriptionServiceRef.current = new TranscriptionService(safeOptions);
     

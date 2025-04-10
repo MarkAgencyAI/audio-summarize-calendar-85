@@ -3,7 +3,8 @@
 export * from './types';
 export * from './transcription-service';
 export * from './use-transcription';
-export * from './audio-buffer-utils';
+// Export audio-buffer-utils selectively to avoid the duplicate AudioChunk export
+export { getAudioDuration, splitAudioIntoChunks, bufferToWav } from './audio-buffer-utils';
 
 // Función conveniente para procesar audio directamente
 export async function processAudio(
