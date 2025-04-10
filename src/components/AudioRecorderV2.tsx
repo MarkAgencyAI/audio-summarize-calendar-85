@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Mic, X, Play, Pause, Loader2, Square, User, Users, Upload, AlertCircle } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -10,6 +11,7 @@ import { formatDate } from "@/lib/utils";
 import { formatTime } from "@/lib/audio-utils";
 import { useTranscription } from "@/lib/transcription";
 import { LiveTranscriptionSheet } from "./LiveTranscriptionSheet";
+import { saveAudioToStorage } from "@/lib/storage";
 
 type RecordingState = "idle" | "recording" | "paused";
 type SpeakerMode = "single" | "multiple";
@@ -275,8 +277,21 @@ export function AudioRecorderV2() {
         console.error("Errores durante la transcripción:", result.errors);
       }
       
+      // Generar un ID único para la grabación
+      const recordingId = crypto.randomUUID();
+      
+      // Guardar el blob de audio en IndexedDB
+      try {
+        await saveAudioToStorage(recordingId, audioBlob);
+        console.log("Audio guardado en IndexedDB correctamente");
+      } catch (error) {
+        console.error("Error guardando audio en IndexedDB:", error);
+        toast.warning("No se pudo guardar el audio localmente. La reproducción podría no estar disponible sin conexión.");
+      }
+      
       // Crear objeto de grabación priorizando la respuesta del webhook
       const recordingData = {
+        id: recordingId,
         name: recordingName || `Grabación ${formatDate(new Date())}`,
         audioUrl: audioUrlRef.current,
         audioData: audioUrlRef.current,

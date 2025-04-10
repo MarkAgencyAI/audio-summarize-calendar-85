@@ -6,6 +6,7 @@ import { useRecordings } from "@/context/RecordingsContext";
 import { RecordingDetails } from "@/components/RecordingDetails";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { loadAudioFromStorage } from "@/lib/storage";
 
 export default function RecordingDetailsPage() {
   const { recordingId } = useParams<{ recordingId: string }>();
@@ -30,6 +31,21 @@ export default function RecordingDetailsPage() {
       navigate("/dashboard");
     }
   };
+  
+  // Preload audio from storage when page loads
+  useEffect(() => {
+    if (recording) {
+      const preloadAudio = async () => {
+        try {
+          await loadAudioFromStorage(recording.id);
+        } catch (error) {
+          console.error("Error preloading audio:", error);
+        }
+      };
+      
+      preloadAudio();
+    }
+  }, [recording]);
   
   if (!recording) {
     return null;

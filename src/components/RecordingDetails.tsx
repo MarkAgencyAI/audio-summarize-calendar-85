@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Recording, useRecordings } from "@/context/RecordingsContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGroq } from "@/lib/groq";
 import { sendToWebhook } from "@/lib/webhook";
 import { extractWebhookOutput } from "@/lib/transcription-service";
+import { AudioPlayer } from "@/components/AudioPlayer";
+import { loadAudioFromStorage, saveAudioToStorage } from "@/lib/storage";
 
 interface RecordingDetailsProps {
   recording: Recording;
@@ -45,11 +48,48 @@ export function RecordingDetails({
   const [editedOutput, setEditedOutput] = useState(recording.output || "");
   const [isGeneratingOutput, setIsGeneratingOutput] = useState(false);
   const [activeTab, setActiveTab] = useState("webhook");
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
 
   const dialogOpen = propIsOpen !== undefined ? propIsOpen : isOpen;
   const setDialogOpen = onOpenChange || setIsOpenState;
   
   const folder = folders.find(f => f.id === recording.folderId) || folders[0];
+  
+  // Load audio blob from storage when component mounts
+  useEffect(() => {
+    const loadAudio = async () => {
+      try {
+        const blob = await loadAudioFromStorage(recording.id);
+        if (blob) {
+          setAudioBlob(blob);
+        }
+      } catch (error) {
+        console.error("Error loading audio from storage:", error);
+      }
+    };
+    
+    loadAudio();
+  }, [recording.id]);
+  
+  // Save audio blob to storage if it's available from URL
+  useEffect(() => {
+    const saveAudio = async () => {
+      if (recording.audioUrl && !audioBlob) {
+        try {
+          const response = await fetch(recording.audioUrl);
+          if (response.ok) {
+            const blob = await response.blob();
+            await saveAudioToStorage(recording.id, blob);
+            setAudioBlob(blob);
+          }
+        } catch (error) {
+          console.error("Error saving audio to storage:", error);
+        }
+      }
+    };
+    
+    saveAudio();
+  }, [recording.audioUrl, recording.id, audioBlob]);
   
   const getLanguageDisplay = (code?: string) => {
     const languages: Record<string, string> = {
@@ -321,6 +361,15 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
         
         <Separator className="my-2 dark:bg-custom-secondary/40" />
         
+        {/* Audio Player Section */}
+        <div className="my-2">
+          <AudioPlayer 
+            audioUrl={recording.audioUrl} 
+            audioBlob={audioBlob || undefined}
+            initialDuration={recording.duration}
+          />
+        </div>
+        
         <div className="flex-1 overflow-hidden pt-2">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
             <TabsList className="mb-4">
@@ -337,7 +386,7 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
               </TabsTrigger>
             </TabsList>
             
-            <ScrollArea className="flex-1 h-[60vh] md:h-[65vh] pr-2 overflow-y-auto">
+            <ScrollArea className="flex-1 h-[60vh] md:h-[50vh] pr-2 overflow-y-auto">
               <div className="px-4 pb-16">
                 <TabsContent value="webhook" className="h-full mt-0">
                   <div className="mb-4">
