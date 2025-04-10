@@ -222,6 +222,17 @@ export function AudioRecorderV2() {
       }
       audioUrlRef.current = URL.createObjectURL(audioBlob);
       
+      const fileSizeMB = (audioBlob.size / (1024 * 1024)).toFixed(2);
+      console.log(`Procesando archivo de audio: ${fileSizeMB}MB, tipo: ${audioBlob.type}, duración: ${recordingDuration}s`);
+      
+      if (audioBlob.size > 20 * 1024 * 1024) {
+        toast.warning("El archivo de audio es muy grande, la transcripción puede tardar más tiempo");
+      }
+      
+      if (recordingDuration > 180) {
+        toast.info(`El audio dura más de 3 minutos (${Math.floor(recordingDuration / 60)} minutos). Se dividirá en segmentos para procesarlo.`);
+      }
+      
       const result = await transcribeAudio(audioBlob);
       
       let webhookData = null;
@@ -243,8 +254,20 @@ export function AudioRecorderV2() {
         }
       }
       
+      if (result.transcript) {
+        const transcriptLength = result.transcript.length;
+        console.log(`Transcripción completada: ${transcriptLength} caracteres`);
+        
+        if (transcriptLength < 10) {
+          toast.warning("La transcripción es muy corta, es posible que el audio no se haya procesado correctamente");
+        }
+      } else {
+        toast.error("No se obtuvo texto de la transcripción");
+      }
+      
       if (result.errors && result.errors.length > 0) {
         toast.warning(`Se completó con ${result.errors.length} errores en algunas partes`);
+        console.error("Errores durante la transcripción:", result.errors);
       }
       
       const recordingData = {
@@ -261,7 +284,7 @@ export function AudioRecorderV2() {
       };
       
       const finalRecordingData = result.errors && result.errors.length > 0
-        ? { ...recordingData, errors: result.errors } as any
+        ? { ...recordingData, errors: result.errors }
         : recordingData;
       
       addRecording(finalRecordingData);
@@ -275,7 +298,17 @@ export function AudioRecorderV2() {
       
     } catch (error) {
       console.error('Error procesando y guardando grabación:', error);
-      toast.error('Error al procesar la grabación');
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "Ocurrió un error desconocido";
+      
+      toast.error(`Error al procesar la grabación: ${errorMessage}`);
+      
+      if (errorMessage.includes("GROQ") || errorMessage.includes("api.groq.com")) {
+        toast.error("Error de conexión con el servicio de transcripción. Intenta de nuevo más tarde.", {
+          duration: 5000
+        });
+      }
     }
   };
 
