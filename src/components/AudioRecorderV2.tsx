@@ -239,30 +239,17 @@ export function AudioRecorderV2() {
       
       const result = await transcribeAudio(audioBlob);
       
+      // Extraer la salida del webhook usando la función auxiliar
+      const { extractWebhookOutput } = await import('@/lib/transcription-service');
+      const webhookOutput = extractWebhookOutput(result.webhookResponse);
+      
       // Verificar explícitamente la respuesta del webhook
-      if (!result.webhookResponse) {
+      if (!webhookOutput) {
         toast.error("No se recibió respuesta del servicio de procesamiento. No se puede guardar la grabación.");
         return;
       }
       
       toast.success("Resumen y puntos fuertes recibidos y guardados");
-      
-      // Guardar solo la variable output del webhook si existe
-      let webhookOutput = null;
-      if (result.webhookResponse) {
-        if (typeof result.webhookResponse === 'object' && result.webhookResponse !== null) {
-          // Si la respuesta es un objeto y tiene una propiedad output, usar solo esa
-          if ('output' in result.webhookResponse) {
-            webhookOutput = result.webhookResponse.output;
-          } else {
-            // Si no tiene output, usar la respuesta completa
-            webhookOutput = result.webhookResponse;
-          }
-        } else {
-          // Si no es un objeto, usar tal cual
-          webhookOutput = result.webhookResponse;
-        }
-      }
       
       // Extraer eventos sugeridos si existen en la respuesta del webhook
       let suggestedEvents = [];
@@ -300,7 +287,7 @@ export function AudioRecorderV2() {
         subject: subject,
         speakerMode: speakerMode,
         suggestedEvents: suggestedEvents,
-        // IMPORTANTE: Guardar solo la variable output (o la respuesta completa si no hay output)
+        // IMPORTANTE: Guardar solo la variable output
         webhookData: webhookOutput,
       };
       

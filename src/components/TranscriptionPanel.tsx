@@ -92,10 +92,10 @@ export function TranscriptionPanel({
               </div>
             </div>
           ) : (
-            <TabsContent value="output" className="mt-0 h-full">
-              <ScrollArea className="h-full bg-muted/20 rounded-md p-4">
+            <TabsContent value="output" className="mt-0 h-full overflow-y-auto">
+              <ScrollArea className="h-full max-h-[60vh] bg-muted/20 rounded-md p-4">
                 {displayOutput ? (
-                  <pre className="whitespace-pre-wrap font-sans text-sm">{displayOutput}</pre>
+                  <pre className="whitespace-pre-wrap font-sans text-sm overflow-y-auto">{displayOutput}</pre>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-center">
                     <AlertCircle className="h-8 w-8 text-muted-foreground/40 mb-2" />

@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGroq } from "@/lib/groq";
 import { sendToWebhook } from "@/lib/webhook";
+import { extractWebhookOutput } from "@/lib/transcription-service";
 
 interface RecordingDetailsProps {
   recording: Recording;
@@ -21,7 +22,6 @@ interface RecordingDetailsProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-// Define the webhook URL
 const WEBHOOK_URL = "https://ssn8nss.maettiai.tech/webhook-test/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 
 export function RecordingDetails({
@@ -44,9 +44,8 @@ export function RecordingDetails({
   const [isEditingOutput, setIsEditingOutput] = useState(false);
   const [editedOutput, setEditedOutput] = useState(recording.output || "");
   const [isGeneratingOutput, setIsGeneratingOutput] = useState(false);
-  const [activeTab, setActiveTab] = useState("webhook"); // Establecer la pestaña webhook como predeterminada
-  
-  // Use controlled or uncontrolled state based on whether props are provided
+  const [activeTab, setActiveTab] = useState("webhook");
+
   const dialogOpen = propIsOpen !== undefined ? propIsOpen : isOpen;
   const setDialogOpen = onOpenChange || setIsOpenState;
   
@@ -92,7 +91,6 @@ export function RecordingDetails({
     toast.success("Carpeta actualizada");
   };
 
-  // Función para formatear la respuesta del webhook para mostrarla
   const formatWebhookResponse = () => {
     if (!recording.webhookData) {
       return "No hay resumen y puntos fuertes disponibles";
@@ -100,17 +98,9 @@ export function RecordingDetails({
     
     try {
       if (typeof recording.webhookData === 'string') {
-        try {
-          // Intentar parsear si es un string que contiene JSON
-          const parsed = JSON.parse(recording.webhookData);
-          return JSON.stringify(parsed, null, 2);
-        } catch {
-          // Si no es JSON válido, mostrar como está
-          return recording.webhookData;
-        }
+        return recording.webhookData;
       }
       
-      // Si es un objeto, formatearlo bonito
       return JSON.stringify(recording.webhookData, null, 2);
     } catch (error) {
       console.error("Error al formatear resumen:", error);
@@ -119,7 +109,6 @@ export function RecordingDetails({
   };
   
   const handleSaveOutput = async () => {
-    // Send updated output to webhook
     await sendToWebhook(WEBHOOK_URL, {
       type: "output_update",
       recordingId: recording.id,
@@ -144,7 +133,6 @@ export function RecordingDetails({
       setIsGeneratingOutput(true);
       toast.info("Generando contenido con IA...");
 
-      // Send a request to the webhook to indicate we're starting a generation
       await sendToWebhook(WEBHOOK_URL, {
         type: "generating_output",
         recordingId: recording.id,
@@ -152,12 +140,10 @@ export function RecordingDetails({
         timestamp: new Date().toISOString()
       });
 
-      // Generate a prompt for the analysis
       const prompt = `Genera un análisis del siguiente audio. Destaca los puntos principales, las fechas importantes si las hay, y organiza la información de forma clara y coherente. Si hay temas educativos, enfócate en explicarlos de manera didáctica.
 
 Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 oraciones.`;
 
-      // Call the GROQ API
       const response = await llama3({
         messages: [
           {
@@ -172,7 +158,6 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
       if (response && response.choices && response.choices[0]?.message?.content) {
         const output = response.choices[0].message.content;
         
-        // Send the generated output to the webhook
         await sendToWebhook(WEBHOOK_URL, {
           type: "generated_output",
           recordingId: recording.id,
@@ -180,20 +165,16 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
           timestamp: new Date().toISOString()
         });
         
-        // Update the recording with the generated output
         updateRecording(recording.id, {
           output: output
         });
         
-        // Update local state
         setEditedOutput(output);
         
         toast.success("Contenido generado exitosamente");
       } else {
-        // Try to generate a basic output if the API fails
         const simpleOutput = `Contenido generado localmente: Este es un análisis básico de la grabación "${recording.name}" que contiene aproximadamente ${recording.audioData.length} caracteres.`;
         
-        // Send the simple output to the webhook
         await sendToWebhook(WEBHOOK_URL, {
           type: "fallback_output",
           recordingId: recording.id,
@@ -202,12 +183,10 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
           timestamp: new Date().toISOString()
         });
         
-        // Update with simple output
         updateRecording(recording.id, {
           output: simpleOutput
         });
         
-        // Update local state
         setEditedOutput(simpleOutput);
         
         toast.warning("Se generó un contenido básico debido a problemas con la API");
@@ -215,7 +194,6 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
     } catch (error) {
       console.error("Error al generar el contenido:", error);
       
-      // Send error to webhook
       await sendToWebhook(WEBHOOK_URL, {
         type: "output_generation_error",
         recordingId: recording.id,
@@ -225,7 +203,6 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
       
       toast.error("Error al generar el contenido");
       
-      // Generate fallback output
       const errorOutput = "No se pudo generar un análisis automático. Por favor, intente más tarde o edite manualmente el contenido.";
       setEditedOutput(errorOutput);
       updateRecording(recording.id, {
@@ -296,7 +273,6 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
           </DialogDescription>
         </DialogHeader>
         
-        {/* Mejorado: Selector de carpeta con más espacio y mejor visualización */}
         <div className="flex flex-wrap items-center gap-2 mt-2 mb-2">
           <div className="flex items-center gap-2 w-full">
             <Label htmlFor="folder-select" className="min-w-20 flex items-center">
@@ -345,7 +321,6 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
         
         <Separator className="my-2 dark:bg-custom-secondary/40" />
         
-        {/* Contenido con pestañas: Resumen y puntos fuertes primero, luego Transcripción */}
         <div className="flex-1 overflow-hidden pt-2">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
             <TabsList className="mb-4">
@@ -362,7 +337,7 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
               </TabsTrigger>
             </TabsList>
             
-            <ScrollArea className="flex-1 h-[60vh] md:h-[65vh] pr-2">
+            <ScrollArea className="flex-1 h-[60vh] md:h-[65vh] pr-2 overflow-y-auto">
               <div className="px-4 pb-16">
                 <TabsContent value="webhook" className="h-full mt-0">
                   <div className="mb-4">
@@ -372,7 +347,7 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                     
                     <div className="prose prose-sm dark:prose-invert max-w-none">
                       {hasWebhookData ? (
-                        <pre className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 overflow-x-auto">
+                        <pre className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 overflow-x-auto max-h-[50vh] overflow-y-auto">
                           {formatWebhookResponse()}
                         </pre>
                       ) : (
@@ -446,7 +421,7 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
                           className="min-h-[250px] whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90"
                         />
                       ) : (
-                        <pre className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 overflow-x-auto">
+                        <pre className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 overflow-x-auto max-h-[50vh] overflow-y-auto">
                           {recording.output || "No hay transcripción disponible. Edita o genera contenido con IA."}
                         </pre>
                       )}

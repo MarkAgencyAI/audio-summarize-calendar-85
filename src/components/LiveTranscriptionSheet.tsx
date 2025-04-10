@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -6,6 +5,7 @@ import { TranscriptionPanel } from "./TranscriptionPanel";
 import { Mic, X, Play, Pause, Loader2, Square, User, Users, Upload, FileJson, MessageSquare, Sparkles } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { extractWebhookOutput } from "@/lib/transcription-service";
 
 interface LiveTranscriptionSheetProps {
   isTranscribing: boolean;
@@ -29,6 +29,7 @@ export function LiveTranscriptionSheet({
   const [internalOpen, setInternalOpen] = useState(false);
   const [userClosed, setUserClosed] = useState(false);
   const [activeTab, setActiveTab] = useState("transcription");
+  const [processedWebhookResponse, setProcessedWebhookResponse] = useState<any>(null);
   const isControlled = open !== undefined && onOpenChange !== undefined;
   const isOpen = isControlled ? open : internalOpen;
   
@@ -55,6 +56,14 @@ export function LiveTranscriptionSheet({
     }
   }, [isTranscribing, isOpen, userClosed]);
 
+  // Process webhook response whenever it changes
+  useEffect(() => {
+    if (webhookResponse) {
+      const extracted = extractWebhookOutput(webhookResponse);
+      setProcessedWebhookResponse(extracted);
+    }
+  }, [webhookResponse]);
+
   // Listen for complete transcription events to ensure panel shows final transcription
   useEffect(() => {
     const handleTranscriptionComplete = (event: CustomEvent) => {
@@ -65,6 +74,10 @@ export function LiveTranscriptionSheet({
         // Si hay respuesta del webhook, cambiar a esa pestaña
         if (event.detail.data.webhookResponse) {
           setActiveTab("webhook");
+          
+          // Process the webhook response
+          const extracted = extractWebhookOutput(event.detail.data.webhookResponse);
+          setProcessedWebhookResponse(extracted);
         }
       }
     };
@@ -111,47 +124,25 @@ export function LiveTranscriptionSheet({
   })();
   
   // Procesar webhook response para mostrarlo
-  const hasWebhookResponse = webhookResponse || 
+  const hasWebhookResponse = processedWebhookResponse || 
     (typeof output === 'object' && output && 'webhookResponse' in output);
   
   const webhookContent = (() => {
-    try {
-      if (webhookResponse) {
-        return typeof webhookResponse === 'string' 
-          ? webhookResponse 
-          : JSON.stringify(webhookResponse, null, 2);
-      }
-      
-      if (typeof output === 'object' && output && 'webhookResponse' in output) {
-        const resp = output.webhookResponse;
-        return typeof resp === 'string' ? resp : JSON.stringify(resp, null, 2);
-      }
-      
-      return "Esperando resumen y puntos fuertes...";
-    } catch (error) {
-      return "Error al procesar la respuesta del servicio";
+    if (processedWebhookResponse) {
+      return typeof processedWebhookResponse === 'string' 
+        ? processedWebhookResponse 
+        : JSON.stringify(processedWebhookResponse, null, 2);
     }
+    
+    if (typeof output === 'object' && output && 'webhookResponse' in output) {
+      const extractedResponse = extractWebhookOutput(output.webhookResponse);
+      return typeof extractedResponse === 'string' 
+        ? extractedResponse 
+        : JSON.stringify(extractedResponse, null, 2);
+    }
+    
+    return "Esperando resumen y puntos fuertes...";
   })();
-  
-  // Actualizar en tiempo real para la respuesta del webhook
-  useEffect(() => {
-    // Si se recibe una respuesta de webhook y estamos en esa pestaña, actualizar
-    if (webhookResponse && activeTab === "webhook") {
-      // Forzar una actualización del componente
-      const timer = setTimeout(() => {
-        setActiveTab(prev => {
-          if (prev === "webhook") {
-            // Forzar una actualización usando este truco
-            setActiveTab("__temp__");
-            return "webhook";
-          }
-          return prev;
-        });
-      }, 100);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [webhookResponse]);
   
   return (
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
