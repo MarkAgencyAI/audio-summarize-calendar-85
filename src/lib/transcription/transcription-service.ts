@@ -11,6 +11,7 @@ import {
   splitAudioIntoChunks,
   compressAudioBlob
 } from "./audio-buffer-utils";
+import { toast } from "sonner";
 
 // URL constante del endpoint de GROQ
 const GROQ_API_KEY = "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";
