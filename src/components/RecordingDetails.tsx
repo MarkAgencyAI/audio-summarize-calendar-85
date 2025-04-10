@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Recording, useRecordings } from "@/context/RecordingsContext";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { FileText, Edit, Trash2, Save, X, Globe, Folder, MessageSquare, FileJson } from "lucide-react";
+import { FileText, Edit, Trash2, Save, X, Globe, Folder, MessageSquare, Sparkles } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -96,7 +95,7 @@ export function RecordingDetails({
   // Función para formatear la respuesta del webhook para mostrarla
   const formatWebhookResponse = () => {
     if (!recording.webhookData) {
-      return "No hay respuesta del webhook disponible";
+      return "No hay resumen y puntos fuertes disponibles";
     }
     
     try {
@@ -114,8 +113,8 @@ export function RecordingDetails({
       // Si es un objeto, formatearlo bonito
       return JSON.stringify(recording.webhookData, null, 2);
     } catch (error) {
-      console.error("Error al formatear respuesta webhook:", error);
-      return "Error al formatear la respuesta del webhook";
+      console.error("Error al formatear resumen:", error);
+      return "Error al formatear el resumen y puntos fuertes";
     }
   };
   
@@ -346,13 +345,13 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
         
         <Separator className="my-2 dark:bg-custom-secondary/40" />
         
-        {/* Contenido con pestañas: Webhook primero, luego Transcripción */}
+        {/* Contenido con pestañas: Resumen y puntos fuertes primero, luego Transcripción */}
         <div className="flex-1 overflow-hidden pt-2">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
             <TabsList className="mb-4">
               <TabsTrigger value="webhook" className="flex items-center gap-1">
-                <FileJson className="h-4 w-4" />
-                <span>Respuesta del Webhook</span>
+                <Sparkles className="h-4 w-4" />
+                <span>Resumen y puntos fuertes</span>
                 {hasWebhookData && (
                   <span className="bg-green-500 h-2 w-2 rounded-full ml-1"></span>
                 )}
@@ -364,95 +363,97 @@ Por favor proporciona un análisis bien estructurado de aproximadamente 5-10 ora
             </TabsList>
             
             <ScrollArea className="flex-1 h-[60vh] md:h-[65vh] pr-2">
-              <TabsContent value="webhook" className="h-full mt-0">
-                <div className="mb-4">
-                  <h3 className="font-medium mb-2 dark:text-custom-accent text-[#005c5f] dark:text-[#f1f2f6]">
-                    Datos procesados (Respuesta del Webhook)
-                  </h3>
-                  
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                    {hasWebhookData ? (
-                      <pre className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 overflow-x-auto">
-                        {formatWebhookResponse()}
-                      </pre>
-                    ) : (
-                      <div className="bg-amber-50 text-amber-800 p-4 rounded-md text-sm">
-                        <p>No hay respuesta del webhook disponible para esta grabación.</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                {recording.suggestedEvents && recording.suggestedEvents.length > 0 && (
+              <div className="px-4 pb-16">
+                <TabsContent value="webhook" className="h-full mt-0">
                   <div className="mb-4">
-                    <h3 className="font-medium mb-2 dark:text-custom-accent">Eventos sugeridos</h3>
-                    <ul className="space-y-1 ml-5 list-disc dark:text-white/90">
-                      {recording.suggestedEvents.map((event, index) => (
-                        <li key={index}>
-                          <strong>{event.title}</strong>: {event.description}
-                          {event.date && <span className="text-sm text-muted-foreground ml-2">({event.date})</span>}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </TabsContent>
-              
-              <TabsContent value="transcription" className="h-full mt-0">
-                <div className="mb-4">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <h3 className="font-medium mb-2 dark:text-custom-accent text-[#005c5f] dark:text-[#f1f2f6]">
-                      Transcripción del Audio
+                      Resumen y puntos fuertes
                     </h3>
-                    <div className="flex gap-1 flex-wrap">
-                      {isEditingOutput ? (
-                        <>
-                          <Button variant="ghost" size="sm" onClick={handleSaveOutput} className="h-7 py-0">
-                            <Save className="h-3.5 w-3.5 mr-1" /> Guardar
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={handleCancelOutputEdit} className="h-7 py-0">
-                            <X className="h-3.5 w-3.5 mr-1" /> Cancelar
-                          </Button>
-                        </>
+                    
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      {hasWebhookData ? (
+                        <pre className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 overflow-x-auto">
+                          {formatWebhookResponse()}
+                        </pre>
                       ) : (
-                        <>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => setIsEditingOutput(true)} 
-                            className="h-7 py-0"
-                          >
-                            <Edit className="h-3.5 w-3.5 mr-1" /> Editar
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={generateOutputWithGroq}
-                            disabled={isGeneratingOutput || isGroqLoading}
-                            className="h-7 py-0"
-                          >
-                            {isGeneratingOutput ? 'Generando...' : 'Generar con IA'}
-                          </Button>
-                        </>
+                        <div className="bg-amber-50 text-amber-800 p-4 rounded-md text-sm">
+                          <p>No hay resumen y puntos fuertes disponibles para esta grabación.</p>
+                        </div>
                       )}
                     </div>
                   </div>
                   
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                    {isEditingOutput ? (
-                      <Textarea 
-                        value={editedOutput} 
-                        onChange={e => setEditedOutput(e.target.value)}
-                        className="min-h-[250px] whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90"
-                      />
-                    ) : (
-                      <pre className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 overflow-x-auto">
-                        {recording.output || "No hay transcripción disponible. Edita o genera contenido con IA."}
-                      </pre>
-                    )}
+                  {recording.suggestedEvents && recording.suggestedEvents.length > 0 && (
+                    <div className="mb-4">
+                      <h3 className="font-medium mb-2 dark:text-custom-accent">Eventos sugeridos</h3>
+                      <ul className="space-y-1 ml-5 list-disc dark:text-white/90">
+                        {recording.suggestedEvents.map((event, index) => (
+                          <li key={index}>
+                            <strong>{event.title}</strong>: {event.description}
+                            {event.date && <span className="text-sm text-muted-foreground ml-2">({event.date})</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="transcription" className="h-full mt-0">
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <h3 className="font-medium mb-2 dark:text-custom-accent text-[#005c5f] dark:text-[#f1f2f6]">
+                        Transcripción del Audio
+                      </h3>
+                      <div className="flex gap-1 flex-wrap">
+                        {isEditingOutput ? (
+                          <>
+                            <Button variant="ghost" size="sm" onClick={handleSaveOutput} className="h-7 py-0">
+                              <Save className="h-3.5 w-3.5 mr-1" /> Guardar
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={handleCancelOutputEdit} className="h-7 py-0">
+                              <X className="h-3.5 w-3.5 mr-1" /> Cancelar
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => setIsEditingOutput(true)} 
+                              className="h-7 py-0"
+                            >
+                              <Edit className="h-3.5 w-3.5 mr-1" /> Editar
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={generateOutputWithGroq}
+                              disabled={isGeneratingOutput || isGroqLoading}
+                              className="h-7 py-0"
+                            >
+                              {isGeneratingOutput ? 'Generando...' : 'Generar con IA'}
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      {isEditingOutput ? (
+                        <Textarea 
+                          value={editedOutput} 
+                          onChange={e => setEditedOutput(e.target.value)}
+                          className="min-h-[250px] whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90"
+                        />
+                      ) : (
+                        <pre className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded-md dark:bg-custom-secondary/20 dark:text-white/90 overflow-x-auto">
+                          {recording.output || "No hay transcripción disponible. Edita o genera contenido con IA."}
+                        </pre>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </TabsContent>
+                </TabsContent>
+              </div>
             </ScrollArea>
           </Tabs>
         </div>

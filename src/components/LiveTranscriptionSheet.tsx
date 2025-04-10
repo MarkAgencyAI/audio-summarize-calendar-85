@@ -3,8 +3,9 @@ import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { TranscriptionPanel } from "./TranscriptionPanel";
-import { Mic, X, Play, Pause, Loader2, Square, User, Users, Upload, FileJson, MessageSquare } from "lucide-react";
+import { Mic, X, Play, Pause, Loader2, Square, User, Users, Upload, FileJson, MessageSquare, Sparkles } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface LiveTranscriptionSheetProps {
   isTranscribing: boolean;
@@ -126,11 +127,31 @@ export function LiveTranscriptionSheet({
         return typeof resp === 'string' ? resp : JSON.stringify(resp, null, 2);
       }
       
-      return "Esperando respuesta del webhook...";
+      return "Esperando resumen y puntos fuertes...";
     } catch (error) {
-      return "Error al procesar la respuesta del webhook";
+      return "Error al procesar la respuesta del servicio";
     }
   })();
+  
+  // Actualizar en tiempo real para la respuesta del webhook
+  useEffect(() => {
+    // Si se recibe una respuesta de webhook y estamos en esa pestaña, actualizar
+    if (webhookResponse && activeTab === "webhook") {
+      // Forzar una actualización del componente
+      const timer = setTimeout(() => {
+        setActiveTab(prev => {
+          if (prev === "webhook") {
+            // Forzar una actualización usando este truco
+            setActiveTab("__temp__");
+            return "webhook";
+          }
+          return prev;
+        });
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [webhookResponse]);
   
   return (
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
@@ -170,8 +191,8 @@ export function LiveTranscriptionSheet({
                 <span>Transcripción</span>
               </TabsTrigger>
               <TabsTrigger value="webhook" className="flex items-center gap-1">
-                <FileJson className="h-4 w-4" />
-                <span>Respuesta Webhook</span>
+                <Sparkles className="h-4 w-4" />
+                <span>Resumen y puntos fuertes</span>
                 {hasWebhookResponse && (
                   <span className="bg-green-500 h-2 w-2 rounded-full ml-1"></span>
                 )}
@@ -189,28 +210,36 @@ export function LiveTranscriptionSheet({
                 </div>
               </div>
             
-              <TranscriptionPanel 
-                output={safeOutput}
-                isLoading={isTranscribing && !output}
-                progress={progress}
-                showProgress={false}
-              />
+              <ScrollArea className="h-[calc(100vh-220px)]">
+                <div className="px-4 pb-16">
+                  <TranscriptionPanel 
+                    output={safeOutput}
+                    isLoading={isTranscribing && !output}
+                    progress={progress}
+                    showProgress={false}
+                  />
+                </div>
+              </ScrollArea>
             </TabsContent>
             
             <TabsContent value="webhook" className="flex-1 overflow-hidden mt-0 px-0">
               <div className="p-4 pb-2">
                 <div className="text-sm text-muted-foreground mb-2">
                   {hasWebhookResponse ? 
-                    "Respuesta procesada del webhook (datos estructurados)" : 
-                    "Esperando respuesta del webhook..."}
+                    "Resumen y puntos fuertes (datos procesados)" : 
+                    "Esperando procesamiento de la transcripción..."}
                 </div>
               </div>
               
-              <TranscriptionPanel 
-                output={webhookContent}
-                isLoading={isTranscribing && !hasWebhookResponse}
-                showProgress={false}
-              />
+              <ScrollArea className="h-[calc(100vh-220px)]">
+                <div className="px-4 pb-16">
+                  <TranscriptionPanel 
+                    output={webhookContent}
+                    isLoading={isTranscribing && !hasWebhookResponse}
+                    showProgress={false}
+                  />
+                </div>
+              </ScrollArea>
             </TabsContent>
           </Tabs>
         </div>

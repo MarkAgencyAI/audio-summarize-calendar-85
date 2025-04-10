@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
-import { Globe, BookOpen, Clock, AlertCircle, Loader2 } from "lucide-react";
+import { Globe, BookOpen, Clock, AlertCircle, Loader2, Sparkles } from "lucide-react";
 
 interface TranscriptionPanelProps {
   output: string | object | null | undefined;
@@ -66,7 +66,7 @@ export function TranscriptionPanel({
         </div>
         
         <TabsList className="bg-muted/30 p-1 mx-4 my-2 grid grid-cols-1">
-          <TabsTrigger value="output">Información del Webhook</TabsTrigger>
+          <TabsTrigger value="output">Información procesada</TabsTrigger>
         </TabsList>
         
         {showProgress && (
@@ -84,7 +84,7 @@ export function TranscriptionPanel({
             <div className="h-full flex items-center justify-center">
               <div className="animate-pulse flex flex-col items-center">
                 <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
-                  <BookOpen className="h-12 w-12 text-muted-foreground/40" />
+                  <Sparkles className="h-12 w-12 text-muted-foreground/40" />
                 </div>
                 <div className="text-center text-muted-foreground">
                   Procesando audio...

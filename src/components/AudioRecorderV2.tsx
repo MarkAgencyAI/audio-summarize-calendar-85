@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Mic, X, Play, Pause, Loader2, Square, User, Users, Upload, AlertCircle } from "lucide-react";
 import { useRecordings } from "@/context/RecordingsContext";
@@ -242,21 +241,37 @@ export function AudioRecorderV2() {
       
       // Verificar explícitamente la respuesta del webhook
       if (!result.webhookResponse) {
-        toast.error("No se recibió respuesta del webhook. No se puede guardar la grabación.");
+        toast.error("No se recibió respuesta del servicio de procesamiento. No se puede guardar la grabación.");
         return;
       }
       
-      toast.success("Respuesta del webhook recibida y guardada");
-      const webhookData = result.webhookResponse;
+      toast.success("Resumen y puntos fuertes recibidos y guardados");
+      
+      // Guardar solo la variable output del webhook si existe
+      let webhookOutput = null;
+      if (result.webhookResponse) {
+        if (typeof result.webhookResponse === 'object' && result.webhookResponse !== null) {
+          // Si la respuesta es un objeto y tiene una propiedad output, usar solo esa
+          if ('output' in result.webhookResponse) {
+            webhookOutput = result.webhookResponse.output;
+          } else {
+            // Si no tiene output, usar la respuesta completa
+            webhookOutput = result.webhookResponse;
+          }
+        } else {
+          // Si no es un objeto, usar tal cual
+          webhookOutput = result.webhookResponse;
+        }
+      }
       
       // Extraer eventos sugeridos si existen en la respuesta del webhook
       let suggestedEvents = [];
       
-      if (webhookData && typeof webhookData === 'object') {
-        if (webhookData.suggestedEvents) {
-          suggestedEvents = webhookData.suggestedEvents;
-        } else if (Array.isArray(webhookData) && webhookData.length > 0) {
-          const firstItem = webhookData[0];
+      if (result.webhookResponse && typeof result.webhookResponse === 'object') {
+        if (result.webhookResponse.suggestedEvents) {
+          suggestedEvents = result.webhookResponse.suggestedEvents;
+        } else if (Array.isArray(result.webhookResponse) && result.webhookResponse.length > 0) {
+          const firstItem = result.webhookResponse[0];
           if (firstItem && firstItem.suggestedEvents) {
             suggestedEvents = firstItem.suggestedEvents;
           }
@@ -265,7 +280,7 @@ export function AudioRecorderV2() {
       
       // Notificar al usuario si no hay texto transcrito pero sí hay respuesta del webhook
       if (!result.transcript) {
-        toast.warning("No se obtuvo texto de la transcripción, pero se guardará la respuesta del webhook");
+        toast.warning("No se obtuvo texto de la transcripción, pero se guardarán los puntos fuertes");
       }
       
       if (result.errors && result.errors.length > 0) {
@@ -278,15 +293,15 @@ export function AudioRecorderV2() {
         name: recordingName || `Grabación ${formatDate(new Date())}`,
         audioUrl: audioUrlRef.current,
         audioData: audioUrlRef.current,
-        // La transcripción se guarda como referencia pero no es lo principal
+        // La transcripción se guarda como referencia
         output: result.transcript,
         folderId: selectedFolder,
         duration: recordingDuration,
         subject: subject,
         speakerMode: speakerMode,
         suggestedEvents: suggestedEvents,
-        // IMPORTANTE: Guardar la respuesta del webhook completa
-        webhookData: webhookData,
+        // IMPORTANTE: Guardar solo la variable output (o la respuesta completa si no hay output)
+        webhookData: webhookOutput,
       };
       
       const finalRecordingData = result.errors && result.errors.length > 0
@@ -302,14 +317,14 @@ export function AudioRecorderV2() {
       setRecordingDuration(0);
       setShowTranscriptionSheet(false);
       
-      toast.success('Grabación guardada correctamente con respuesta del webhook');
+      toast.success('Grabación guardada correctamente con resumen y puntos fuertes');
       
       // Notificar que se completó la transcripción
       window.dispatchEvent(new CustomEvent('audioRecorderMessage', {
         detail: { 
           type: 'transcriptionComplete',
           data: {
-            webhookResponse: webhookData,
+            webhookResponse: webhookOutput,
             transcript: result.transcript
           }
         }
