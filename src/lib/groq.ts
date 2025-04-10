@@ -1,13 +1,12 @@
 import { sendToWebhook } from "./webhook";
 import { useState, useCallback } from "react";
 
-// Define the GROQ API key directly in the code for public access
-// This ensures the API works on any device without env variables
-const API_KEY = "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";
+// Actualizar la clave API de GROQ
+const API_KEY = "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";
 const WEBHOOK_URL = "https://sswebhookss.maettiai.tech/webhook/8e34aca2-3111-488c-8ee8-a0a2c63fc9e4";
 const LLAMA3_MODEL = "llama3-70b-8192";
 
-// Interface for the transcription response
+// Interface para la respuesta de transcripción
 interface TranscriptionResult {
   transcript: string;
   summary?: string;
@@ -23,7 +22,7 @@ interface TranscriptionResult {
   }>;
 }
 
-// Interface for GROQ API response
+// Interface para la respuesta de GROQ API
 interface GroqApiResponse {
   choices: Array<{
     message: {
@@ -32,63 +31,63 @@ interface GroqApiResponse {
   }>;
 }
 
-// Interface for GROQ Audio API response
+// Interface para la respuesta de GROQ Audio API
 interface GroqAudioResponse {
   text: string;
 }
 
 /**
- * Process audio for noise reduction and voice isolation
- * Note: This is a client-side preprocessing before sending to GROQ
+ * Procesar audio para reducción de ruido y separación de voz
+ * Nota: Esto es un preprocesamiento cliente antes de enviar a GROQ
  */
 async function preprocessAudio(audioBlob: Blob, speakerMode: 'single' | 'multiple' = 'single'): Promise<Blob> {
   try {
-    console.log(`Preprocessing audio for ${speakerMode} speaker mode...`);
+    console.log(`Preprocesando audio para modo de orador: ${speakerMode}...`);
     
-    // Convert blob to AudioBuffer for processing
+    // Convert blob to AudioBuffer para procesamiento
     const arrayBuffer = await audioBlob.arrayBuffer();
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
     
-    // Create offline context for processing
+    // Crear contexto offline para procesamiento
     const offlineContext = new OfflineAudioContext(
       audioBuffer.numberOfChannels,
       audioBuffer.length,
       audioBuffer.sampleRate
     );
     
-    // Create source from buffer
+    // Crear fuente desde buffer
     const source = offlineContext.createBufferSource();
     source.buffer = audioBuffer;
     
-    // Create filters based on speaker mode
+    // Crear filtros basados en el modo de orador
     const lowPassFilter = offlineContext.createBiquadFilter();
     const highPassFilter = offlineContext.createBiquadFilter();
     const compressor = offlineContext.createDynamicsCompressor();
     
     if (speakerMode === 'single') {
-      // For single speaker: Focus more on the main voice frequency range
+      // Para un solo orador: Foco más en el rango de frecuencia principal de la voz
       lowPassFilter.type = "lowpass";
-      lowPassFilter.frequency.value = 4500; // Slightly narrower frequency band for single speaker
+      lowPassFilter.frequency.value = 4500; // Rango de frecuencia más estrecho para un solo orador
       
       highPassFilter.type = "highpass";
-      highPassFilter.frequency.value = 100; // Higher threshold to reduce background noise
+      highPassFilter.frequency.value = 100; // Umbral más alto para reducir el ruido de fondo
       
-      // More aggressive compression for single speaker to enhance the main voice
+      // Comprimidor más agresivo para un solo orador para enfatizar la voz principal
       compressor.threshold.value = -45;
       compressor.knee.value = 35;
       compressor.ratio.value = 12;
       compressor.attack.value = 0;
       compressor.release.value = 0.2;
     } else {
-      // For multiple speakers: Wider frequency range and less compression
+      // Para múltiples oradores: Rango de frecuencia más amplio y menos compresión
       lowPassFilter.type = "lowpass";
-      lowPassFilter.frequency.value = 6000; // Wider frequency range to capture different voices
+      lowPassFilter.frequency.value = 6000; // Rango de frecuencia más amplio para capturar diferentes voces
       
       highPassFilter.type = "highpass";
-      highPassFilter.frequency.value = 70; // Lower threshold to include more varied voices
+      highPassFilter.frequency.value = 70; // Umbral más bajo para incluir más voces variadas
       
-      // Less aggressive compression for multiple speakers
+      // Comprimidor menos agresivo para múltiples oradores
       compressor.threshold.value = -55;
       compressor.knee.value = 40;
       compressor.ratio.value = 8;
@@ -96,41 +95,41 @@ async function preprocessAudio(audioBlob: Blob, speakerMode: 'single' | 'multipl
       compressor.release.value = 0.25;
     }
     
-    // Connect the audio processing graph
+    // Conectar la gráfica de procesamiento de audio
     source.connect(highPassFilter);
     highPassFilter.connect(lowPassFilter);
     lowPassFilter.connect(compressor);
     compressor.connect(offlineContext.destination);
     
-    // Start audio source
+    // Iniciar fuente de audio
     source.start(0);
     
-    // Render audio
+    // Renderizar audio
     const renderedBuffer = await offlineContext.startRendering();
     
-    // Convert buffer back to blob
+    // Convertir buffer de vuelta a blob
     const processedWav = await audioBufferToWav(renderedBuffer);
     
-    console.log(`Audio preprocessing completed for ${speakerMode} speaker mode`);
+    console.log(`Audio preprocesado completado para modo de orador: ${speakerMode}`);
     return new Blob([processedWav], { type: 'audio/wav' });
   } catch (error) {
-    console.error("Error preprocessing audio:", error);
-    // If preprocessing fails, return original audio
+    console.error("Error preprocesando audio:", error);
+    // Si el preprocesamiento falla, devolver audio original
     return audioBlob;
   }
 }
 
 /**
- * Helper function to convert AudioBuffer to WAV format
+ * Función auxiliar para convertir AudioBuffer a formato WAV
  */
 function audioBufferToWav(buffer: AudioBuffer): Promise<ArrayBuffer> {
   return new Promise((resolve) => {
     const numberOfChannels = buffer.numberOfChannels;
     const sampleRate = buffer.sampleRate;
-    const format = 1; // PCM format
+    const format = 1; // Formato PCM
     const bitDepth = 16;
     
-    // Calculate buffer size
+    // Calcular tamaño del buffer
     const bytesPerSample = bitDepth / 8;
     const blockAlign = numberOfChannels * bytesPerSample;
     const byteRate = sampleRate * blockAlign;
@@ -138,16 +137,16 @@ function audioBufferToWav(buffer: AudioBuffer): Promise<ArrayBuffer> {
     const headerSize = 44;
     const wavSize = headerSize + dataSize;
     
-    // Create WAV header
+    // Crear encabezado WAV
     const wav = new ArrayBuffer(wavSize);
     const view = new DataView(wav);
     
-    // Write "RIFF" header
+    // Escribir encabezado "RIFF"
     writeString(view, 0, 'RIFF');
     view.setUint32(4, 36 + dataSize, true);
     writeString(view, 8, 'WAVE');
     
-    // Write "fmt " chunk
+    // Escribir encabezado "fmt "
     writeString(view, 12, 'fmt ');
     view.setUint32(16, 16, true);
     view.setUint16(20, format, true);
@@ -157,15 +156,15 @@ function audioBufferToWav(buffer: AudioBuffer): Promise<ArrayBuffer> {
     view.setUint16(32, blockAlign, true);
     view.setUint16(34, bitDepth, true);
     
-    // Write "data" chunk
+    // Escribir encabezado "data"
     writeString(view, 36, 'data');
     view.setUint32(40, dataSize, true);
     
-    // Write audio data
+    // Escribir datos de audio
     const offset = headerSize;
     const bufferData = new Float32Array(buffer.length * numberOfChannels);
     
-    // Interleave channels
+    // Intercalar canales
     for (let channel = 0; channel < numberOfChannels; channel++) {
       const channelData = buffer.getChannelData(channel);
       for (let i = 0; i < buffer.length; i++) {
@@ -173,9 +172,9 @@ function audioBufferToWav(buffer: AudioBuffer): Promise<ArrayBuffer> {
       }
     }
     
-    // Convert and write audio samples
+    // Convertir y escribir datos de audio
     let index = 0;
-    const volume = 0.9; // Avoid clipping
+    const volume = 0.9; // Evitar sobrecalentamiento
     for (let i = 0; i < bufferData.length; i++) {
       const sample = Math.max(-1, Math.min(1, bufferData[i])) * volume;
       view.setInt16(offset + index, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
@@ -193,7 +192,7 @@ function audioBufferToWav(buffer: AudioBuffer): Promise<ArrayBuffer> {
 }
 
 /**
- * Transcribe audio using GROQ API - focus on exact transcription
+ * Transcribir audio usando GROQ API - enfocarse en transcripción exacta
  */
 export async function transcribeAudio(
   audioBlob: Blob, 
@@ -203,15 +202,15 @@ export async function transcribeAudio(
   try {
     console.log(`Procesando audio con GROQ API en modo: ${speakerMode}...`);
     
-    // Preprocess audio with the specified speaker mode
+    // Preprocesar audio con el modo de orador especificado
     const processedAudio = await preprocessAudio(audioBlob, speakerMode);
     
-    // Analyze audio to check if it contains actual content
+    // Analizar audio para verificar si contiene contenido real
     const audioBuffer = await processedAudio.arrayBuffer();
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const audioData = await audioContext.decodeAudioData(audioBuffer);
     
-    // Get audio samples for analysis
+    // Obtener muestras de audio para análisis
     const samples = audioData.getChannelData(0).slice(0, 4000);
     const hasAudioContent = samples.some(sample => Math.abs(sample) > 0.01);
     
@@ -219,13 +218,13 @@ export async function transcribeAudio(
       throw new Error("El audio no contiene suficiente contenido para transcribir");
     }
     
-    // Step 1: Create form data for the audio transcription API
+    // Paso 1: Crear formulario de datos para la API de transcripción de audio GROQ
     const formData = new FormData();
     formData.append("file", processedAudio, "audio.wav");
     formData.append("model", "whisper-large-v3-turbo");
     formData.append("response_format", "verbose_json");
     
-    // Create a prompt based on the speaker mode
+    // Crear un prompt basado en el modo de orador
     let prompt = "";
     if (speakerMode === 'single') {
       prompt = `Esta es una grabación con un solo orador principal, enfócate en capturar claramente la voz predominante`;
@@ -241,11 +240,11 @@ export async function transcribeAudio(
     
     formData.append("prompt", prompt);
     
-    // Set language explicitly to Spanish
+    // Establecer explícitamente el idioma a español
     formData.append("language", "es");
     
-    // Make the request to GROQ Audio API for the transcript - using hard-coded API_KEY
-    console.log("Making request to GROQ Audio Transcription API...");
+    // Hacer la solicitud a la API de GROQ Audio para la transcripción - usando clave API hard-coded
+    console.log("Haciendo solicitud a la API de GROQ Audio Transcripción...");
     const transcriptResponse = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
       method: "POST",
       headers: {
@@ -261,7 +260,7 @@ export async function transcribeAudio(
     }
 
     const transcriptData = await transcriptResponse.json();
-    console.log("Transcription response:", transcriptData);
+    console.log("Respuesta de transcripción:", transcriptData);
     
     if (!transcriptData.text) {
       throw new Error("Invalid response from GROQ Audio API");
@@ -269,10 +268,10 @@ export async function transcribeAudio(
     
     const transcript = transcriptData.text.trim();
     
-    // Always set language to Spanish for this particular use case
+    // Siempre establecer el idioma a español para este caso particular
     const language = "es"; 
     
-    // Step 3: Send the transcript to the webhook with subject metadata and speaker mode
+    // Paso 3: Enviar la transcripción al webhook con metadatos del tema y modo de orador
     await sendToWebhook(WEBHOOK_URL, {
       transcript: transcript,
       language: language,
@@ -281,14 +280,14 @@ export async function transcribeAudio(
       processed: true
     });
     
-    // Step 4: Generate a summary and key points based on the transcript and speaker mode
+    // Paso 4: Generar un resumen y puntos clave basados en la transcripción y el modo de orador
     let analysisResult = { summary: "", keyPoints: [], suggestedEvents: [] };
     
     try {
       analysisResult = await generateAnalysis(transcript, language, speakerMode);
     } catch (error) {
-      console.error("Error generating analysis, returning only transcript:", error);
-      // Continue even if analysis fails - transcript is what matters
+      console.error("Error generando análisis, devolviendo solo transcripción:", error);
+      // Continuar incluso si el análisis falla - la transcripción es lo que importa
     }
     
     return {
@@ -301,13 +300,13 @@ export async function transcribeAudio(
       speakerMode
     };
   } catch (error) {
-    console.error("Error in transcribeAudio:", error);
+    console.error("Error en transcribeAudio:", error);
     throw error;
   }
 }
 
 /**
- * Translate the transcript to the target language
+ * Traducir la transcripción al idioma objetivo
  */
 async function translateTranscript(text: string, sourceLanguage: string, targetLanguage: string): Promise<string> {
   try {
@@ -337,7 +336,7 @@ async function translateTranscript(text: string, sourceLanguage: string, targetL
 
     if (!response.ok) {
       console.error(`Translation API error: ${response.status}`);
-      return ""; // Return empty string on error
+      return ""; // Devolver cadena vacía en caso de error
     }
 
     const data = await response.json();
@@ -353,7 +352,7 @@ async function translateTranscript(text: string, sourceLanguage: string, targetL
 }
 
 /**
- * Detect the language of the transcript text
+ * Detectar el idioma de la transcripción de texto
  */
 async function detectLanguage(text: string): Promise<string> {
   try {
@@ -390,10 +389,10 @@ async function detectLanguage(text: string): Promise<string> {
       return "es"; // Default to Spanish on error
     }
     
-    // Extract the language code (should be just "en", "es", etc.)
+    // Extraer el código de idioma (debe ser solo "en", "es", etc.)
     const languageCode = data.choices[0].message.content.trim().toLowerCase();
     
-    // Only return if it's a valid 2-letter language code
+    // Solo devolver si es un código de idioma de 2 letras válido
     if (/^[a-z]{2}$/.test(languageCode)) {
       return languageCode;
     }
@@ -406,7 +405,7 @@ async function detectLanguage(text: string): Promise<string> {
 }
 
 /**
- * Generate a summary and key points from the transcript
+ * Generar un resumen y puntos clave a partir de la transcripción
  */
 async function generateAnalysis(
   transcript: string, 
@@ -422,7 +421,7 @@ async function generateAnalysis(
   }>;
 }> {
   try {
-    // Adjust the system prompt based on detected language and speaker mode
+    // Ajustar el prompt del sistema basado en el idioma detectado y el modo de orador
     let systemPrompt = "";
     
     if (language === "en") {
@@ -487,7 +486,7 @@ async function generateAnalysis(
       throw new Error("Invalid response from analysis API");
     }
     
-    // Parse the JSON from the response
+    // Parsear el JSON de la respuesta
     try {
       const content = analysisData.choices[0].message.content;
       const result = JSON.parse(content);
@@ -500,7 +499,7 @@ async function generateAnalysis(
     } catch (error) {
       console.error("Error parsing analysis response:", error);
       
-      // Return fallback values on error
+      // Devolver valores de fallback en caso de error
       return {
         summary: language === "en" ? "Error generating summary" : "Error al generar resumen",
         keyPoints: [language === "en" ? "Error processing analysis" : "Error al procesar análisis"],
@@ -510,7 +509,7 @@ async function generateAnalysis(
   } catch (error) {
     console.error("Error generating analysis:", error);
     
-    // Return fallback values on error
+    // Devolver valores de fallback en caso de error
     return {
       summary: "Error al generar análisis",
       keyPoints: ["Error al procesar la transcripción"],
@@ -519,7 +518,7 @@ async function generateAnalysis(
   }
 }
 
-// Convert a Blob to base64 string (helper function)
+// Convertir un Blob a cadena base64 (función auxiliar)
 export async function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -532,12 +531,12 @@ export async function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
-// Hook to use GROQ API in React components
+// Hook para usar GROQ API en componentes React
 export function useGroq() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Function to generate content using llama3 model
+  // Función para generar contenido usando el modelo llama3
   const llama3 = useCallback(async ({ 
     messages, 
     temperature = 0.7, 
