@@ -229,8 +229,8 @@ export function AudioRecorderV2() {
         toast.warning("El archivo de audio es muy grande, la transcripción puede tardar más tiempo");
       }
       
-      if (recordingDuration > 180) {
-        toast.info(`El audio dura más de 3 minutos (${Math.floor(recordingDuration / 60)} minutos). Se dividirá en segmentos para procesarlo.`);
+      if (recordingDuration > 600) {
+        toast.info(`El audio dura más de 10 minutos (${Math.floor(recordingDuration / 60)} minutos). Se dividirá en segmentos de 7 minutos para procesarlo.`);
       }
       
       const result = await transcribeAudio(audioBlob);

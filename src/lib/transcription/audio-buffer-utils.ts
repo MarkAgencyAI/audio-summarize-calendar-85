@@ -1,166 +1,275 @@
 
 /**
- * Utility functions for audio buffer processing
+ * Utilidades para trabajar con buffers de audio en el navegador
  */
 
 /**
- * Obtiene la duración en segundos de un blob de audio
+ * Obtiene la duración de un blob de audio
  */
 export async function getAudioDuration(audioBlob: Blob): Promise<number> {
   return new Promise((resolve, reject) => {
-    const audio = new Audio();
-    audio.src = URL.createObjectURL(audioBlob);
+    const audioElement = new Audio();
+    audioElement.src = URL.createObjectURL(audioBlob);
     
-    audio.onloadedmetadata = () => {
-      const duration = audio.duration;
-      URL.revokeObjectURL(audio.src);
-      resolve(isFinite(duration) ? duration : 0);
+    audioElement.onloadedmetadata = () => {
+      const duration = audioElement.duration;
+      URL.revokeObjectURL(audioElement.src);
+      resolve(duration);
     };
     
-    audio.onerror = (error) => {
-      URL.revokeObjectURL(audio.src);
-      console.error("Error obteniendo duración del audio:", error);
-      resolve(0); // Default a 0 en caso de error
+    audioElement.onerror = (error) => {
+      URL.revokeObjectURL(audioElement.src);
+      reject(error);
     };
   });
 }
 
 /**
- * Escribe una cadena UTF8 en un DataView
+ * Convierte un AudioBuffer a formato WAV
  */
-export function writeUTFBytes(view: DataView, offset: number, string: string): void {
-  for (let i = 0; i < string.length; i++) {
-    view.setUint8(offset + i, string.charCodeAt(i));
-  }
-}
-
-/**
- * Convierte un AudioBuffer a un Blob en formato WAV
- */
-export async function audioBufferToWav(buffer: AudioBuffer, mimeType: string): Promise<Blob> {
-  // Función para escribir una cadena UTF8 en un DataView
-  
-  // Obtener datos del buffer
-  const numChannels = buffer.numberOfChannels;
+export async function audioBufferToWav(buffer: AudioBuffer, mimeType: string = 'audio/wav'): Promise<Blob> {
+  // Número de canales
+  const numOfChannels = buffer.numberOfChannels;
+  // Frecuencia de muestreo
   const sampleRate = buffer.sampleRate;
-  const format = 1; // PCM format
-  const bitDepth = 16; // 16-bit
+  // Profundidad de bits
+  const bitsPerSample = 16;
+  // Bytes por muestra
+  const bytesPerSample = bitsPerSample / 8;
+  // Tamaño del bloque
+  const blockAlign = numOfChannels * bytesPerSample;
   
-  // Calcular el tamaño del archivo WAV
-  const bytesPerSample = bitDepth / 8;
-  const blockAlign = numChannels * bytesPerSample;
-  const byteRate = sampleRate * blockAlign;
-  const dataSize = buffer.length * blockAlign;
-  const headerSize = 44;
-  const fileSize = headerSize + dataSize;
+  // Longitud de los datos de audio
+  const dataLength = buffer.length * numOfChannels * bytesPerSample;
+  // Tamaño del header + datos
+  const headerLength = 44;
+  // Longitud total del archivo
+  const fileLength = headerLength + dataLength;
   
-  // Crear ArrayBuffer para el archivo WAV
-  const arrayBuffer = new ArrayBuffer(fileSize);
+  // Crear arrayBuffer para el archivo WAV
+  const arrayBuffer = new ArrayBuffer(fileLength);
+  // Vista para escribir en el buffer
   const view = new DataView(arrayBuffer);
   
-  // Escribir cabecera RIFF
-  writeUTFBytes(view, 0, 'RIFF');
-  view.setUint32(4, fileSize - 8, true);
-  writeUTFBytes(view, 8, 'WAVE');
+  // Escribir el header WAV
+  // "RIFF" en ASCII
+  view.setUint8(0, 'R'.charCodeAt(0));
+  view.setUint8(1, 'I'.charCodeAt(0));
+  view.setUint8(2, 'F'.charCodeAt(0));
+  view.setUint8(3, 'F'.charCodeAt(0));
   
-  // Escribir cabecera fmt
-  writeUTFBytes(view, 12, 'fmt ');
-  view.setUint32(16, 16, true); // tamaño del bloque fmt
-  view.setUint16(20, format, true); // formato PCM
-  view.setUint16(22, numChannels, true); // número de canales
-  view.setUint32(24, sampleRate, true); // frecuencia de muestreo
-  view.setUint32(28, byteRate, true); // byte rate
-  view.setUint16(32, blockAlign, true); // block align
-  view.setUint16(34, bitDepth, true); // bits por muestra
+  // Tamaño total del archivo - 8
+  view.setUint32(4, fileLength - 8, true);
   
-  // Escribir cabecera data
-  writeUTFBytes(view, 36, 'data');
-  view.setUint32(40, dataSize, true); // tamaño de los datos
+  // "WAVE" en ASCII
+  view.setUint8(8, 'W'.charCodeAt(0));
+  view.setUint8(9, 'A'.charCodeAt(0));
+  view.setUint8(10, 'V'.charCodeAt(0));
+  view.setUint8(11, 'E'.charCodeAt(0));
   
-  // Escribir datos de audio
+  // "fmt " en ASCII
+  view.setUint8(12, 'f'.charCodeAt(0));
+  view.setUint8(13, 'm'.charCodeAt(0));
+  view.setUint8(14, 't'.charCodeAt(0));
+  view.setUint8(15, ' '.charCodeAt(0));
+  
+  // Tamaño del bloque fmt
+  view.setUint32(16, 16, true);
+  // Formato de audio (1 = PCM)
+  view.setUint16(20, 1, true);
+  // Número de canales
+  view.setUint16(22, numOfChannels, true);
+  // Frecuencia de muestreo
+  view.setUint32(24, sampleRate, true);
+  // Bytes por segundo
+  view.setUint32(28, sampleRate * blockAlign, true);
+  // Tamaño del bloque
+  view.setUint16(32, blockAlign, true);
+  // Bits por muestra
+  view.setUint16(34, bitsPerSample, true);
+  
+  // "data" en ASCII
+  view.setUint8(36, 'd'.charCodeAt(0));
+  view.setUint8(37, 'a'.charCodeAt(0));
+  view.setUint8(38, 't'.charCodeAt(0));
+  view.setUint8(39, 'a'.charCodeAt(0));
+  
+  // Tamaño de los datos
+  view.setUint32(40, dataLength, true);
+  
+  // Escribir los datos de audio
   let offset = 44;
-  for (let i = 0; i < buffer.length; i++) {
-    for (let channel = 0; channel < numChannels; channel++) {
-      const sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
-      const sample16bit = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
-      view.setInt16(offset, sample16bit, true);
-      offset += 2;
+  const volume = 1;
+  for (let i = 0; i < buffer.numberOfChannels; i++) {
+    const channel = buffer.getChannelData(i);
+    for (let j = 0; j < buffer.length; j++) {
+      const sample = Math.max(-1, Math.min(1, channel[j] * volume));
+      const int16Sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+      view.setInt16(offset, int16Sample, true);
+      offset += bytesPerSample;
     }
   }
   
-  // Crear el Blob
+  // Crear blob desde el arrayBuffer
   return new Blob([arrayBuffer], { type: mimeType });
 }
 
 /**
- * Convierte un buffer a formato WAV
+ * Convierte un AudioBuffer a Blob
  */
-export function bufferToWave(buffer: AudioBuffer, start: number, end: number): ArrayBuffer {
-  const numOfChan = buffer.numberOfChannels;
-  const length = (end - start) * numOfChan * 2 + 44;
-  const result = new ArrayBuffer(length);
-  const view = new DataView(result);
-  
-  // RIFF chunk descriptor
-  writeUTFBytes(view, 0, 'RIFF');
-  view.setUint32(4, length - 8, true);
-  writeUTFBytes(view, 8, 'WAVE');
-  
-  // FMT sub-chunk
-  writeUTFBytes(view, 12, 'fmt ');
-  view.setUint32(16, 16, true); // subchunk size
-  view.setUint16(20, 1, true); // PCM format
-  view.setUint16(22, numOfChan, true); // # channels
-  view.setUint32(24, buffer.sampleRate, true); // sample rate
-  view.setUint32(28, buffer.sampleRate * numOfChan * 2, true); // byte rate
-  view.setUint16(32, numOfChan * 2, true); // block align
-  view.setUint16(34, 16, true); // bits per sample
-  
-  // Data sub-chunk
-  writeUTFBytes(view, 36, 'data');
-  view.setUint32(40, length - 44, true);
-  
-  // Write the PCM samples
-  let offset = 44;
-  
-  // Interleave channels
-  for (let i = start; i < end; i++) {
-    for (let channel = 0; channel < numOfChan; channel++) {
-      // Scale to 16-bit signed int
-      let sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
-      sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
-      view.setInt16(offset, sample, true);
-      offset += 2;
-    }
-  }
-  
-  return result;
+export async function audioBufferToBlob(buffer: AudioBuffer, mimeType: string = 'audio/wav'): Promise<Blob> {
+  return audioBufferToWav(buffer, mimeType);
 }
 
 /**
- * Convierte un AudioBuffer a Blob (método alternativo)
- * @deprecated Usar audioBufferToWav en su lugar
+ * Convierte un buffer de audio a un archivo WAV (forma alternativa)
  */
-export async function audioBufferToBlob(buffer: AudioBuffer, mimeType: string): Promise<Blob> {
-  return new Promise((resolve) => {
-    // Crear un offline context para renderizar el audio
-    const offlineContext = new OfflineAudioContext(
-      buffer.numberOfChannels,
-      buffer.length,
-      buffer.sampleRate
-    );
+export function bufferToWave(abuffer: AudioBuffer): Blob {
+  const numOfChannels = abuffer.numberOfChannels;
+  const length = abuffer.length * numOfChannels * 2 + 44;
+  const buffer = new ArrayBuffer(length);
+  const view = new DataView(buffer);
+  const channels = [];
+  let offset = 0;
+  let pos = 0;
+  
+  // Escribir header "RIFF"
+  setUint32(0x46464952);
+  // Escribir tamaño del chunk
+  setUint32(length - 8);
+  // Escribir header "WAVE"
+  setUint32(0x45564157);
+  // Escribir header "fmt " y tamaño del chunk
+  setUint32(0x20746D66);
+  setUint32(16);
+  // Escribir formato (1 para PCM)
+  setUint16(1);
+  // Canales
+  setUint16(numOfChannels);
+  // Frecuencia de muestreo
+  setUint32(abuffer.sampleRate);
+  // Bytes por segundo
+  setUint32(abuffer.sampleRate * 2 * numOfChannels);
+  // Tamaño de bloque
+  setUint16(numOfChannels * 2);
+  // Bits por muestra
+  setUint16(16);
+  // Escribir subchunk "data" y tamaño
+  setUint32(0x61746164);
+  setUint32(abuffer.length * numOfChannels * 2);
+  
+  // Escribir datos PCM
+  for (let i = 0; i < abuffer.numberOfChannels; i++) {
+    channels.push(abuffer.getChannelData(i));
+  }
+  
+  for (let i = 0; i < abuffer.length; i++) {
+    for (let j = 0; j < numOfChannels; j++) {
+      const sample = Math.max(-1, Math.min(1, channels[j][i]));
+      view.setInt16(pos, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+      pos += 2;
+    }
+  }
+  
+  function setUint16(data: number) {
+    view.setUint16(pos, data, true);
+    pos += 2;
+  }
+  
+  function setUint32(data: number) {
+    view.setUint32(pos, data, true);
+    pos += 4;
+  }
+  
+  return new Blob([buffer], { type: 'audio/wav' });
+}
+
+/**
+ * División de audio en bloques
+ * @param audioBlob Blob del audio
+ * @param maxChunkDuration Duración máxima en segundos de cada bloque
+ */
+export async function splitAudioIntoChunks(
+  audioBlob: Blob, 
+  maxChunkDuration: number = 420 // 7 minutos por defecto
+): Promise<{ blob: Blob, startTime: number, endTime: number }[]> {
+  try {
+    // Convertir blob a ArrayBuffer
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     
-    // Crear una fuente desde el buffer
-    const source = offlineContext.createBufferSource();
-    source.buffer = buffer;
-    source.connect(offlineContext.destination);
-    source.start(0);
+    // Decodificar el audio
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    const totalDuration = audioBuffer.duration;
     
-    // Renderizar el audio
-    offlineContext.startRendering().then(renderedBuffer => {
-      // Convertir el buffer renderizado a WAV
-      const wavBlob = bufferToWave(renderedBuffer, 0, renderedBuffer.length);
-      resolve(new Blob([wavBlob], { type: mimeType || 'audio/wav' }));
-    });
-  });
+    // Si la duración es menor que el máximo, devolver el blob original
+    if (totalDuration <= maxChunkDuration) {
+      return [{
+        blob: audioBlob,
+        startTime: 0,
+        endTime: totalDuration
+      }];
+    }
+    
+    console.log(`Dividiendo audio de ${totalDuration.toFixed(2)} segundos en segmentos de ${maxChunkDuration} segundos`);
+    
+    // Calcular el número de segmentos
+    const segments = [];
+    let startTime = 0;
+    
+    while (startTime < totalDuration) {
+      const endTime = Math.min(startTime + maxChunkDuration, totalDuration);
+      const chunkDuration = endTime - startTime;
+      
+      // Crear un nuevo buffer para este segmento
+      const chunkBuffer = audioContext.createBuffer(
+        audioBuffer.numberOfChannels,
+        Math.floor(chunkDuration * audioBuffer.sampleRate),
+        audioBuffer.sampleRate
+      );
+      
+      // Copiar los datos de cada canal
+      for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+        const channelData = new Float32Array(chunkBuffer.length);
+        const sourceData = audioBuffer.getChannelData(channel);
+        const startOffset = Math.floor(startTime * audioBuffer.sampleRate);
+        
+        // Copiar datos desde la posición de inicio hasta el final del chunk
+        for (let i = 0; i < chunkBuffer.length; i++) {
+          if (startOffset + i < sourceData.length) {
+            channelData[i] = sourceData[startOffset + i];
+          }
+        }
+        
+        // Copiar los datos al buffer del segmento
+        chunkBuffer.copyToChannel(channelData, channel);
+      }
+      
+      // Convertir a WAV
+      const chunkBlob = await audioBufferToWav(chunkBuffer, audioBlob.type || 'audio/wav');
+      
+      segments.push({
+        blob: chunkBlob,
+        startTime,
+        endTime
+      });
+      
+      // Avanzar al siguiente segmento
+      startTime = endTime;
+    }
+    
+    console.log(`Audio dividido en ${segments.length} segmentos`);
+    return segments;
+    
+  } catch (error) {
+    console.error("Error al dividir el audio:", error);
+    
+    // Plan B: Si falla la decodificación, devolver el blob original
+    const duration = await getAudioDuration(audioBlob);
+    return [{
+      blob: audioBlob,
+      startTime: 0,
+      endTime: duration
+    }];
+  }
 }
