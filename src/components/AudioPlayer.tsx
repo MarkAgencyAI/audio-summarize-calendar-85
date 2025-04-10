@@ -1,113 +1,162 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { Audio } from 'expo-av';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { Feather } from '@expo/vector-icons';
 import { useTheme } from '@/context/ThemeContext';
 
-interface AudioPlayerProps {
+export interface AudioPlayerProps {
   audioUrl: string;
   initialDuration?: number;
+  audioBlob?: Blob;
 }
 
-export function AudioPlayer({ audioUrl, initialDuration = 0 }: AudioPlayerProps) {
-  const { isDark } = useTheme();
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
+export function AudioPlayer({ 
+  audioUrl, 
+  initialDuration = 0,
+  audioBlob
+}: AudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(initialDuration);
   const [currentTime, setCurrentTime] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-
-  const loadSound = async () => {
-    try {
-      setIsLoading(true);
-      const { sound: newSound } = await Audio.Sound.createAsync(
-        { uri: audioUrl },
-        { shouldPlay: false }
-      );
-      setSound(newSound);
-
-      newSound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded) {
-          setDuration(status.durationMillis || 0);
-          setCurrentTime(status.positionMillis || 0);
-          setIsPlaying(status.isPlaying);
-        }
-      });
-
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Error loading sound', error);
-      setIsLoading(false);
-    }
-  };
-
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { isDark } = useTheme();
+  
   useEffect(() => {
-    loadSound();
-    return () => {
-      if (sound) {
-        sound.unloadAsync();
+    let audio: HTMLAudioElement;
+    
+    const setupAudio = async () => {
+      try {
+        if (audioRef.current) {
+          // Cleanup existing audio element
+          audioRef.current.pause();
+          audioRef.current.src = '';
+          audioRef.current.load();
+        }
+        
+        audio = new Audio();
+        audioRef.current = audio;
+        
+        // Handle source - either direct URL or Blob
+        if (audioBlob) {
+          const objectUrl = URL.createObjectURL(audioBlob);
+          audio.src = objectUrl;
+        } else if (audioUrl) {
+          audio.src = audioUrl;
+        }
+        
+        // Set up event listeners
+        audio.addEventListener('loadedmetadata', () => {
+          if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
+            setDuration(audio.duration);
+          } else if (initialDuration > 0) {
+            setDuration(initialDuration);
+          }
+          setIsLoading(false);
+        });
+        
+        audio.addEventListener('timeupdate', () => {
+          if (audio.currentTime && !isNaN(audio.currentTime) && isFinite(audio.currentTime)) {
+            setCurrentTime(audio.currentTime);
+          }
+        });
+        
+        audio.addEventListener('ended', () => {
+          setIsPlaying(false);
+          setCurrentTime(0);
+          audio.currentTime = 0;
+        });
+        
+        // Handle loading errors
+        audio.addEventListener('error', (e) => {
+          console.error('Audio loading error:', e);
+          setIsLoading(false);
+        });
+        
+        // Start loading
+        audio.load();
+      } catch (error) {
+        console.error('Error setting up audio:', error);
+        setIsLoading(false);
       }
     };
-  }, [audioUrl]);
-
-  const playPause = async () => {
-    if (!sound) return;
-
-    if (isPlaying) {
-      await sound.pauseAsync();
-    } else {
-      await sound.playAsync();
+    
+    setupAudio();
+    
+    // Cleanup function
+    return () => {
+      if (audio) {
+        audio.pause();
+        audio.src = '';
+        audio.removeEventListener('loadedmetadata', () => {});
+        audio.removeEventListener('timeupdate', () => {});
+        audio.removeEventListener('ended', () => {});
+        audio.removeEventListener('error', () => {});
+        
+        if (audioBlob) {
+          URL.revokeObjectURL(audio.src);
+        }
+      }
+    };
+  }, [audioUrl, audioBlob, initialDuration]);
+  
+  const togglePlayPause = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
     }
   };
-
-  const seekTo = async (position: number) => {
-    if (!sound) return;
-    await sound.setPositionAsync(position);
-    setCurrentTime(position);
+  
+  const handleSliderChange = (value: number) => {
+    if (audioRef.current && !isNaN(value) && isFinite(value)) {
+      audioRef.current.currentTime = value;
+      setCurrentTime(value);
+    }
   };
-
-  const formatTime = (milliseconds: number) => {
-    const totalSeconds = Math.floor(milliseconds / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  
+  const formatTime = (seconds: number): string => {
+    if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
+    
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
   };
-
-  if (isLoading) {
-    return <ActivityIndicator size="large" color="#00b8ae" />;
-  }
-
+  
   return (
-    <View style={[
-      styles.container,
-      { backgroundColor: isDark ? '#2a2a2a' : '#f5f5f5' }
-    ]}>
-      <View style={styles.playerControls}>
-        <TouchableOpacity onPress={playPause}>
-          <Feather 
-            name={isPlaying ? 'pause' : 'play'} 
-            size={24} 
-            color={isDark ? '#ffffff' : '#121212'} 
-          />
+    <View style={styles.container}>
+      <Slider
+        style={styles.slider}
+        minimumValue={0}
+        maximumValue={duration > 0 ? duration : 1}
+        value={currentTime}
+        onValueChange={handleSliderChange}
+        minimumTrackTintColor="#00b8ae"
+        maximumTrackTintColor={isDark ? "#555555" : "#dddddd"}
+        thumbTintColor="#00b8ae"
+        disabled={isLoading}
+      />
+      
+      <View style={styles.controls}>
+        <TouchableOpacity 
+          style={styles.playPauseButton} 
+          onPress={togglePlayPause}
+          disabled={isLoading}
+        >
+          <Text style={styles.playPauseIcon}>
+            {isLoading ? "●" : isPlaying ? "❚❚" : "▶"}
+          </Text>
         </TouchableOpacity>
         
-        <View style={styles.sliderContainer}>
-          <Text style={[styles.timeText, { color: isDark ? '#e0e0e0' : '#666666' }]}>
-            {formatTime(currentTime)}
-          </Text>
-          <Slider
-            value={currentTime}
-            minimumValue={0}
-            maximumValue={duration}
-            minimumTrackTintColor="#00b8ae"
-            maximumTrackTintColor={isDark ? '#666666' : '#cccccc'}
-            onValueChange={seekTo}
-            style={styles.slider}
-          />
-          <Text style={[styles.timeText, { color: isDark ? '#e0e0e0' : '#666666' }]}>
-            {formatTime(duration)}
+        <View style={styles.timeDisplay}>
+          <Text style={[
+            styles.timeText,
+            { color: isDark ? '#e0e0e0' : '#666666' }
+          ]}>
+            {formatTime(currentTime)} / {formatTime(duration)}
           </Text>
         </View>
       </View>
@@ -117,27 +166,36 @@ export function AudioPlayer({ audioUrl, initialDuration = 0 }: AudioPlayerProps)
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 10,
-    padding: 16,
-    marginVertical: 10,
-  },
-  playerControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sliderContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 16,
+    width: '100%',
+    padding: 8,
   },
   slider: {
+    width: '100%',
+    height: 40,
+  },
+  controls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  playPauseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#00b8ae',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playPauseIcon: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  timeDisplay: {
     flex: 1,
-    marginHorizontal: 10,
+    marginLeft: 16,
   },
   timeText: {
-    fontSize: 12,
+    fontSize: 14,
   },
 });
-
-export default AudioPlayer;

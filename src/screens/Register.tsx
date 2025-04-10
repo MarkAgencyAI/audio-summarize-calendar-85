@@ -26,6 +26,7 @@ export default function Register() {
     setIsLoading(true);
     
     try {
+      // Make sure to pass only the parameters that the register function expects
       await register(name, email, password);
       // Navigation will be handled by the Auth context through the Index component
     } catch (err: any) {

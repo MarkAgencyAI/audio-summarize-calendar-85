@@ -14,7 +14,10 @@ export interface Folder {
 }
 
 export interface RecordingsContextType {
+  recordings: Recording[];
   recentRecordings: Recording[];
   folders: Folder[];
   fetchUserData: () => Promise<void>;
+  addRecording: (recording: Recording) => void;
+  deleteRecording: (id: string) => void;
 }
