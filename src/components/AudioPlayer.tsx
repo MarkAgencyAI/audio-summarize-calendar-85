@@ -2,7 +2,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX } from "lucide-react";
 import { formatTime } from "@/lib/audio-utils";
 import { toast } from "sonner";
@@ -22,104 +21,96 @@ export function AudioPlayer({
   autoplay = false,
   onEnded
 }: AudioPlayerProps) {
+  // Audio element ref
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  
+  // State variables
   const [isPlaying, setIsPlaying] = useState(false);
-  const [duration, setDuration] = useState(initialDuration);
+  const [duration, setDuration] = useState(initialDuration || 0);
   const [currentTime, setCurrentTime] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
-  const intervalRef = useRef<number | null>(null);
+  
+  // Timer for updating current time
+  const timeUpdateIntervalRef = useRef<number | null>(null);
   
   // Initialize audio element
   useEffect(() => {
+    // Create new audio element
     const audio = new Audio();
-    audio.preload = "metadata";
     audioRef.current = audio;
     
-    // Event listeners
+    // Configure audio element
+    audio.preload = "metadata";
+    audio.volume = volume;
+    audio.playbackRate = playbackRate;
+    
+    // Set up event listeners
     audio.addEventListener("loadedmetadata", handleLoadedMetadata);
     audio.addEventListener("ended", handleEnded);
     audio.addEventListener("canplay", () => setIsLoading(false));
     audio.addEventListener("waiting", () => setIsLoading(true));
     audio.addEventListener("playing", () => setIsLoading(false));
+    audio.addEventListener("timeupdate", handleTimeUpdate);
     
-    // Set initial values
-    audio.volume = volume;
-    audio.playbackRate = playbackRate;
-    
+    // Clean up on unmount
     return () => {
       if (audioRef.current) {
         const audio = audioRef.current;
+        
+        // Stop playback
         audio.pause();
+        
+        // Remove event listeners
         audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
         audio.removeEventListener("ended", handleEnded);
         audio.removeEventListener("canplay", () => setIsLoading(false));
         audio.removeEventListener("waiting", () => setIsLoading(true));
         audio.removeEventListener("playing", () => setIsLoading(false));
+        audio.removeEventListener("timeupdate", handleTimeUpdate);
         
         // Clear interval if it exists
-        if (intervalRef.current) {
-          window.clearInterval(intervalRef.current);
-          intervalRef.current = null;
+        if (timeUpdateIntervalRef.current) {
+          window.clearInterval(timeUpdateIntervalRef.current);
         }
         
-        URL.revokeObjectURL(audio.src);
+        // Revoke object URL if needed
+        if (audio.src.startsWith('blob:')) {
+          URL.revokeObjectURL(audio.src);
+        }
       }
     };
   }, []);
   
-  // Update audio source when audioUrl changes
+  // Update audio source when audioUrl or audioBlob changes
   useEffect(() => {
-    if (audioRef.current && audioUrl) {
-      setIsLoading(true);
-      
-      // If we have a Blob, use that for better performance
-      if (audioBlob && audioBlob instanceof Blob) {
-        const objectUrl = URL.createObjectURL(audioBlob);
-        audioRef.current.src = objectUrl;
-      } else {
-        audioRef.current.src = audioUrl;
-      }
-      
-      if (autoplay) {
-        playAudio();
-      }
+    if (!audioRef.current) return;
+    
+    setIsLoading(true);
+    
+    // Use audioBlob if available, otherwise use audioUrl
+    if (audioBlob instanceof Blob) {
+      const objectUrl = URL.createObjectURL(audioBlob);
+      audioRef.current.src = objectUrl;
+    } else if (audioUrl) {
+      audioRef.current.src = audioUrl;
+    }
+    
+    // Autoplay if requested
+    if (autoplay) {
+      playAudio();
     }
   }, [audioUrl, audioBlob]);
   
-  // Create an interval to update the current time when playing
+  // Update volume when it changes
   useEffect(() => {
-    if (isPlaying) {
-      // Clear any existing interval
-      if (intervalRef.current) {
-        window.clearInterval(intervalRef.current);
-      }
-      
-      // Create a new interval to update the time
-      intervalRef.current = window.setInterval(() => {
-        if (audioRef.current && !isDragging) {
-          setCurrentTime(audioRef.current.currentTime);
-        }
-      }, 100); // Update every 100ms for smooth slider movement
-    } else {
-      // Clear interval when paused
-      if (intervalRef.current) {
-        window.clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
+    if (audioRef.current) {
+      audioRef.current.volume = isMuted ? 0 : volume;
     }
-    
-    // Clean up interval on unmount
-    return () => {
-      if (intervalRef.current) {
-        window.clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, [isPlaying, isDragging]);
+  }, [volume, isMuted]);
   
   // Update playback rate when it changes
   useEffect(() => {
@@ -128,54 +119,69 @@ export function AudioPlayer({
     }
   }, [playbackRate]);
   
-  // Update volume and mute state
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume;
-    }
-  }, [volume, isMuted]);
-  
+  // Handle metadata loaded event - get audio duration
   const handleLoadedMetadata = () => {
-    if (audioRef.current) {
-      const audioDuration = audioRef.current.duration;
-      // Only update duration if it's a valid number
-      if (audioDuration && !isNaN(audioDuration)) {
-        setDuration(audioDuration);
-      } else if (initialDuration > 0) {
-        setDuration(initialDuration);
-      }
-      setIsLoading(false);
+    if (!audioRef.current) return;
+    
+    const audioDuration = audioRef.current.duration;
+    
+    // Update duration if it's a valid number
+    if (audioDuration && !isNaN(audioDuration) && isFinite(audioDuration)) {
+      setDuration(audioDuration);
+    } else if (initialDuration && initialDuration > 0) {
+      // Fall back to initialDuration if available
+      setDuration(initialDuration);
+    } else {
+      // Use a default duration if all else fails
+      setDuration(100);
+    }
+    
+    setIsLoading(false);
+  };
+  
+  // Handle time update event - update current time
+  const handleTimeUpdate = () => {
+    if (!audioRef.current || isDragging) return;
+    
+    const newTime = audioRef.current.currentTime;
+    if (!isNaN(newTime) && isFinite(newTime)) {
+      setCurrentTime(newTime);
     }
   };
   
+  // Handle ended event
   const handleEnded = () => {
     setIsPlaying(false);
     setCurrentTime(0);
+    
     if (onEnded) {
       onEnded();
     }
   };
   
+  // Play audio
   const playAudio = () => {
-    if (audioRef.current) {
-      audioRef.current.play()
-        .then(() => {
-          setIsPlaying(true);
-        })
-        .catch(error => {
-          console.error("Error playing audio:", error);
-          toast.error("Error al reproducir el audio");
-        });
-    }
+    if (!audioRef.current) return;
+    
+    audioRef.current.play()
+      .then(() => {
+        setIsPlaying(true);
+      })
+      .catch(error => {
+        console.error("Error playing audio:", error);
+        toast.error("Error al reproducir el audio");
+      });
   };
   
+  // Pause audio
   const pauseAudio = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    }
+    if (!audioRef.current) return;
+    
+    audioRef.current.pause();
+    setIsPlaying(false);
   };
   
+  // Toggle play/pause
   const togglePlayPause = () => {
     if (isPlaying) {
       pauseAudio();
@@ -184,33 +190,44 @@ export function AudioPlayer({
     }
   };
   
+  // Skip forward 10 seconds
   const skipForward = () => {
-    if (audioRef.current) {
-      const newTime = Math.min(audioRef.current.currentTime + 10, duration);
+    if (!audioRef.current) return;
+    
+    const newTime = Math.min(audioRef.current.currentTime + 10, duration);
+    if (!isNaN(newTime) && isFinite(newTime)) {
       audioRef.current.currentTime = newTime;
       setCurrentTime(newTime);
     }
   };
   
+  // Skip backward 10 seconds
   const skipBackward = () => {
-    if (audioRef.current) {
-      const newTime = Math.max(audioRef.current.currentTime - 10, 0);
+    if (!audioRef.current) return;
+    
+    const newTime = Math.max(audioRef.current.currentTime - 10, 0);
+    if (!isNaN(newTime) && isFinite(newTime)) {
       audioRef.current.currentTime = newTime;
       setCurrentTime(newTime);
     }
   };
   
+  // Seek to a specific position
   const handleSeek = (value: number[]) => {
-    if (audioRef.current) {
-      const newTime = value[0];
+    if (!audioRef.current) return;
+    
+    const newTime = value[0];
+    if (!isNaN(newTime) && isFinite(newTime)) {
       audioRef.current.currentTime = newTime;
       setCurrentTime(newTime);
     }
   };
   
+  // Change volume
   const handleVolumeChange = (value: number[]) => {
     const newVolume = value[0];
     setVolume(newVolume);
+    
     if (newVolume === 0) {
       setIsMuted(true);
     } else if (isMuted) {
@@ -218,17 +235,25 @@ export function AudioPlayer({
     }
   };
   
+  // Toggle mute
   const toggleMute = () => {
     setIsMuted(!isMuted);
   };
   
+  // Change playback rate
   const changePlaybackRate = (rate: number) => {
     setPlaybackRate(rate);
   };
   
-  // Calculate progress for the progress bar (fixed to avoid NaN or Infinity)
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
-
+  // Calculate progress for the progress bar
+  const calculateProgress = () => {
+    if (duration <= 0) return 0;
+    return (currentTime / duration) * 100;
+  };
+  
+  // Validate and ensure duration is a positive number
+  const validDuration = duration > 0 && isFinite(duration) ? duration : 100;
+  
   return (
     <div className="w-full bg-background border rounded-md p-4 shadow-sm">
       <div className="space-y-4">
@@ -238,7 +263,7 @@ export function AudioPlayer({
             <Slider 
               value={[currentTime]} 
               min={0} 
-              max={duration || 100} 
+              max={validDuration} 
               step={0.01}
               onValueChange={handleSeek}
               onValueCommit={() => setIsDragging(false)}
@@ -248,7 +273,7 @@ export function AudioPlayer({
           </div>
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>{formatTime(Math.floor(currentTime))}</span>
-            <span>{formatTime(Math.floor(duration))}</span>
+            <span>{formatTime(Math.floor(validDuration))}</span>
           </div>
         </div>
         
