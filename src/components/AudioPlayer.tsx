@@ -103,14 +103,15 @@ export function AudioPlayer({
   
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
-      setDuration(Math.floor(audioRef.current.duration));
+      setDuration(audioRef.current.duration || initialDuration);
       setIsLoading(false);
     }
   };
   
   const handleTimeUpdate = () => {
     if (audioRef.current && !isDragging) {
-      setCurrentTime(audioRef.current.currentTime);
+      const newTime = audioRef.current.currentTime;
+      setCurrentTime(newTime);
     }
   };
   
@@ -124,6 +125,9 @@ export function AudioPlayer({
   
   const playAudio = () => {
     if (audioRef.current) {
+      // Make sure our time tracking is reset if needed
+      setCurrentTime(audioRef.current.currentTime);
+      
       audioRef.current.play()
         .then(() => {
           setIsPlaying(true);
@@ -195,9 +199,6 @@ export function AudioPlayer({
   // Calculate progress for the progress bar
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  // Added console.log to debug time updates
-  console.log("Current time:", currentTime, "Duration:", duration, "Progress:", progress);
-  
   return (
     <div className="w-full bg-background border rounded-md p-4 shadow-sm">
       <div className="space-y-4">
