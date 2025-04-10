@@ -9,6 +9,8 @@ declare module '@react-native-community/slider' {
     step?: number;
     minimumTrackTintColor?: string;
     maximumTrackTintColor?: string;
+    thumbTintColor?: string;
+    disabled?: boolean;
     onValueChange?: (value: number) => void;
     style?: ViewStyle;
   }

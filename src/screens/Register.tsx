@@ -9,6 +9,8 @@ export default function Register() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [career, setCareer] = useState('');
+  const [role, setRole] = useState('student'); // Default role
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   
@@ -26,8 +28,8 @@ export default function Register() {
     setIsLoading(true);
     
     try {
-      // Make sure to pass only the parameters that the register function expects
-      await register(name, email, password);
+      // Pass all 5 required arguments
+      await register(name, email, password, career, role);
       // Navigation will be handled by the Auth context through the Index component
     } catch (err: any) {
       setError(err.message || 'Error al registrarse');
