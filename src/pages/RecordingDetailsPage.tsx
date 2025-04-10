@@ -7,12 +7,14 @@ import { RecordingDetails } from "@/components/RecordingDetails";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { loadAudioFromStorage } from "@/lib/storage";
+import { toast } from "sonner";
 
 export default function RecordingDetailsPage() {
   const { recordingId } = useParams<{ recordingId: string }>();
   const navigate = useNavigate();
   const { recordings } = useRecordings();
   const [isOpen, setIsOpen] = useState(true);
+  const [isAudioLoaded, setIsAudioLoaded] = useState(false);
   
   // Find the recording
   const recording = recordings.find(r => r.id === recordingId);
@@ -37,9 +39,23 @@ export default function RecordingDetailsPage() {
     if (recording) {
       const preloadAudio = async () => {
         try {
-          await loadAudioFromStorage(recording.id);
+          const audioBlob = await loadAudioFromStorage(recording.id);
+          if (!audioBlob && recording.audioUrl) {
+            // If not in storage, try to fetch from URL
+            const response = await fetch(recording.audioUrl);
+            if (response.ok) {
+              // Audio loaded successfully
+              setIsAudioLoaded(true);
+            } else {
+              toast.error("No se pudo cargar el audio");
+            }
+          } else if (audioBlob) {
+            // Audio loaded from IndexedDB
+            setIsAudioLoaded(true);
+          }
         } catch (error) {
           console.error("Error preloading audio:", error);
+          toast.error("Error al cargar el audio");
         }
       };
       

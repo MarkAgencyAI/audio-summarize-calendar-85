@@ -218,8 +218,8 @@ export function AudioPlayer({
           </div>
         </div>
         
-        {/* Controls */}
-        <div className="flex items-center justify-between">
+        {/* Controls - Improved layout */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Button 
               variant="ghost" 
@@ -257,8 +257,8 @@ export function AudioPlayer({
             </Button>
           </div>
           
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-1">
               <Button 
                 variant="ghost" 
                 size="sm" 
@@ -285,18 +285,18 @@ export function AudioPlayer({
               </Button>
             </div>
             
-            <div className="flex items-center gap-2 ml-2">
+            <div className="flex items-center gap-1 ml-1">
               <Button 
                 variant="ghost" 
                 size="icon"
                 onClick={toggleMute}
-                className="h-8 w-8"
+                className="h-7 w-7"
                 aria-label={isMuted ? "Activar sonido" : "Silenciar"}
               >
                 {isMuted ? (
-                  <VolumeX className="h-4 w-4" />
+                  <VolumeX className="h-3.5 w-3.5" />
                 ) : (
-                  <Volume2 className="h-4 w-4" />
+                  <Volume2 className="h-3.5 w-3.5" />
                 )}
               </Button>
               
@@ -306,7 +306,7 @@ export function AudioPlayer({
                 max={1}
                 step={0.01}
                 onValueChange={handleVolumeChange}
-                className="w-[80px]"
+                className="w-[60px] sm:w-[80px]"
                 aria-label="Volumen"
               />
             </div>
