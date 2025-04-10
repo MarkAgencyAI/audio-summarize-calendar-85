@@ -50,6 +50,8 @@
     "convertapi": "^1.15.0",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.3.0",
+    "expo": "^52.0.44",
+    "expo-status-bar": "^2.0.1",
     "ffmpeg-kit-react-native": "^5.1.0",
     "input-otp": "^1.2.4",
     "lucide-react": "^0.462.0",

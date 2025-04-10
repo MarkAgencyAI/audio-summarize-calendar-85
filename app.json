@@ -1,5 +1,38 @@
 
 {
-  "name": "AudioSummaryApp",
-  "displayName": "Cali - Asistente de clases"
+  "expo": {
+    "name": "Cali - Asistente de clases",
+    "slug": "audio-summary-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.caliapp.audiosummary"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.caliapp.audiosummary"
+    },
+    "web": {
+      "favicon": "./favicon.ico"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id"
+      }
+    }
+  }
 }

@@ -1,23 +1,26 @@
 
 import React from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { RecordingsProvider } from "@/context/RecordingsContext";
 
-import Index from "./pages/Index";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";
-import CalendarPage from "./pages/CalendarPage";
-import FoldersPage from "./pages/FoldersPage";
-import FolderDetailsPage from "./pages/FolderDetailsPage";
-import ProfilePage from "./pages/ProfilePage";
-import NotFound from "./pages/NotFound";
-import RecordingDetailsPage from "./pages/RecordingDetailsPage";
+// Screens
+import Index from "./screens/Index";
+import Login from "./screens/Login";
+import Register from "./screens/Register";
+import Dashboard from "./screens/Dashboard";
+import Calendar from "./screens/Calendar";
+import Folders from "./screens/Folders";
+import FolderDetails from "./screens/FolderDetails";
+import Profile from "./screens/Profile";
+import RecordingDetails from "./screens/RecordingDetails";
+import NotFound from "./screens/NotFound";
+
+// Create a Stack navigator
+const Stack = createNativeStackNavigator();
 
 // Create a client
 const queryClient = new QueryClient({
@@ -29,40 +32,35 @@ const queryClient = new QueryClient({
   },
 });
 
-// Use function declaration instead of arrow function to avoid issues
 function App() {
-  // Set the app name in the document title
-  document.title = "CALI - Asistente de clases";
-
   return (
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <RecordingsProvider>
-            <TooltipProvider>
-              <div className="relative min-h-screen max-w-full overflow-x-hidden">
-                <Toaster />
-                <Sonner />
-                <BrowserRouter>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/calendar" element={<CalendarPage />} />
-                    <Route path="/folders" element={<FoldersPage />} />
-                    <Route path="/folder/:folderId" element={<FolderDetailsPage />} />
-                    <Route path="/profile" element={<ProfilePage />} />
-                    <Route path="/recordings/:recordingId" element={<RecordingDetailsPage />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </BrowserRouter>
-              </div>
-            </TooltipProvider>
-          </RecordingsProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <RecordingsProvider>
+          <ThemeProvider>
+            <NavigationContainer>
+              <Stack.Navigator 
+                initialRouteName="Index"
+                screenOptions={{
+                  headerShown: false
+                }}
+              >
+                <Stack.Screen name="Index" component={Index} />
+                <Stack.Screen name="Login" component={Login} />
+                <Stack.Screen name="Register" component={Register} />
+                <Stack.Screen name="Dashboard" component={Dashboard} />
+                <Stack.Screen name="Calendar" component={Calendar} />
+                <Stack.Screen name="Folders" component={Folders} />
+                <Stack.Screen name="FolderDetails" component={FolderDetails} />
+                <Stack.Screen name="Profile" component={Profile} />
+                <Stack.Screen name="RecordingDetails" component={RecordingDetails} />
+                <Stack.Screen name="NotFound" component={NotFound} />
+              </Stack.Navigator>
+            </NavigationContainer>
+          </ThemeProvider>
+        </RecordingsProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 
