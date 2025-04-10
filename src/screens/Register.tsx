@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth, UserRole } from '@/context/AuthContext'; // Import UserRole type
 import { useTheme } from '@/context/ThemeContext';
 
 export default function Register() {
@@ -10,7 +10,7 @@ export default function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [career, setCareer] = useState('');
-  const [role, setRole] = useState('student'); // Default role
+  const [role, setRole] = useState<UserRole>('student'); // Explicitly type as UserRole
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   
